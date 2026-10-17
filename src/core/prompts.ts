@@ -14,7 +14,7 @@ function rewrite(goal: string, result: string): string {
 }
 
 export const MODE_PROMPTS: Record<Exclude<Mode, 'tone'>, string> = {
-  fix: 'Fix the grammar, spelling, punctuation and capitalization of the text inside the <text> tags. Do not translate it. Return only the corrected text.',
+  fix: `Fix the grammar, spelling, punctuation and capitalization of the text inside the <text> tags. ${LANGUAGE} Return only the corrected text.`,
   rephrase: rewrite(
     'Rewrite the text inside the <text> tags so it reads clear and natural, with the same meaning, tone and length.',
     'rewritten',
