@@ -7,18 +7,21 @@
       textarea,
       input,
       #ce,
-      #draft {
+      #draft,
+      #lexical {
         display: block;
         width: 400px;
         margin: 8px;
       }
       textarea,
       #ce,
+      #lexical,
       #draft .public-DraftEditor-content {
         min-height: 48px;
       }
       #ce,
-      #draft {
+      #draft,
+      #lexical {
         border: 1px solid #ccc;
       }
     </style>
@@ -28,6 +31,7 @@
     <input id="inp" type="text" />
     <div id="ce" contenteditable="true"></div>
     <div id="draft"></div>
+    <div id="lexical" contenteditable="true"></div>
     <button id="outside" type="button">Outside</button>
     <dialog id="dlg"><textarea id="dlg-ta"></textarea></dialog>
     <script type="module" src="./main.js"></script>

@@ -185,30 +185,39 @@ async function applyRich(
     return { ok: false, reason: 'changed' };
   }
 
+  // Lexical (Facebook) drops the line breaks from insertText but splits pasted text into paragraphs.
+  if (root.dataset.lexicalEditor === 'true') {
+    // Lexical reads the new selection on the next selectionchange.
+    await waitForRender();
+    return paste(root, selection, text);
+  }
+
   const inserted = document.execCommand('insertText', false, text);
   await waitForRender();
   if (showsText(root, text)) return { ok: true };
 
   // A true result means the page already ran the command. Pasting would insert twice.
-  if (!inserted) {
-    selection.removeAllRanges();
-    selection.addRange(range);
-    const anchor = selection.anchorNode;
-    const anchorEl = anchor instanceof Element ? anchor : (anchor?.parentElement ?? null);
-    if (!anchorEl) return { ok: false, reason: 'rejected' };
-    const clipboardData = new DataTransfer();
-    clipboardData.setData('text/plain', text);
-    anchorEl.dispatchEvent(
-      new ClipboardEvent('paste', {
-        clipboardData,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-    await waitForRender();
-    if (showsText(root, text)) return { ok: true };
-  }
-  return { ok: false, reason: 'rejected' };
+  if (inserted) return { ok: false, reason: 'rejected' };
+  selection.removeAllRanges();
+  selection.addRange(range);
+  return paste(root, selection, text);
+}
+
+async function paste(root: HTMLElement, selection: Selection, text: string): Promise<ApplyResult> {
+  const anchor = selection.anchorNode;
+  const anchorEl = anchor instanceof Element ? anchor : (anchor?.parentElement ?? null);
+  if (!anchorEl) return { ok: false, reason: 'rejected' };
+  const clipboardData = new DataTransfer();
+  clipboardData.setData('text/plain', text);
+  anchorEl.dispatchEvent(
+    new ClipboardEvent('paste', {
+      clipboardData,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+  await waitForRender();
+  return showsText(root, text) ? { ok: true } : { ok: false, reason: 'rejected' };
 }
 
 function contentsOf(root: HTMLElement): Range {

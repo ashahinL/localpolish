@@ -26,6 +26,7 @@ type PageApi = {
     captureTarget: (opts: { wholeFieldIfEmpty: boolean }) => { text: string } | null;
     applyReplacement: (target: { text: string } | null, text: string) => Promise<ApplyResult>;
     draftText: () => string;
+    lexicalBlocks: () => string[];
   };
 };
 
@@ -88,6 +89,25 @@ test('Draft.js updates its editor state', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as PageApi).__lp.draftText())).toBe(
     'I went home.',
   );
+});
+
+test('Lexical keeps line breaks and undoes the change', async ({ page }) => {
+  const blocks = () => page.evaluate(() => (window as unknown as PageApi).__lp.lexicalBlocks());
+  await page.locator('#lexical').click();
+  await page.keyboard.type('hi ahmed,');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('hope you are havng a god day');
+  await page.keyboard.press('ControlOrMeta+a');
+
+  expect(await captureText(page, false)).toBe('hi ahmed,\n\nhope you are havng a god day');
+  await page.locator('#outside').click();
+  expect(await apply(page, 'Hi Ahmed,\n\nHope you are having a good day!')).toEqual({ ok: true });
+  expect(await blocks()).toEqual(['Hi Ahmed,', '', 'Hope you are having a good day!']);
+
+  await page.locator('#lexical').click();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect.poll(blocks).toEqual(['hi ahmed,', '', 'hope you are havng a god day']);
 });
 
 test('apply reports changed when the field text moved', async ({ page }) => {

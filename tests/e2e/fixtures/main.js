@@ -2,6 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { Editor, EditorState } from 'draft-js';
 import 'draft-js/dist/Draft.css';
+import { $getRoot, createEditor } from 'lexical';
+import { createEmptyHistoryState, registerHistory } from '@lexical/history';
+import { registerRichText } from '@lexical/rich-text';
 import { applyReplacement, captureTarget } from '../../../src/content/editable.ts';
 import { createButton } from '../../../src/content/button.ts';
 import { createController } from '../../../src/content/controller.ts';
@@ -67,6 +70,17 @@ const popupApi = {
   },
 };
 
+// Facebook's composer is Lexical.
+const lexical = createEditor({
+  namespace: 'fixture',
+  onError: (error) => {
+    throw error;
+  },
+});
+lexical.setRootElement(document.getElementById('lexical'));
+registerRichText(lexical);
+registerHistory(lexical, createEmptyHistoryState(), 0);
+
 function DraftBox() {
   const [editorState, setEditorState] = React.useState(() => EditorState.createEmpty());
   window.__lp = {
@@ -74,6 +88,12 @@ function DraftBox() {
     captureTarget,
     applyReplacement,
     draftText: () => editorState.getCurrentContent().getPlainText(),
+    lexicalBlocks: () =>
+      lexical.getEditorState().read(() =>
+        $getRoot()
+          .getChildren()
+          .map((block) => block.getTextContent()),
+      ),
   };
   return React.createElement(Editor, {
     editorState,
