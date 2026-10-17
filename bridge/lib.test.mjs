@@ -164,7 +164,10 @@ describe('parseLine', () => {
       expect(parseLine(cli, textLine)).toEqual({ text: 'She' });
       expect(parseLine(cli, `  ${textLine}\n`)).toEqual({ text: 'She' });
       expect(parseLine(cli, thinkingLine)).toBeNull();
-      expect(parseLine(cli, resultOk)).toBeNull();
+      expect(parseLine(cli, resultOk)).toEqual({ end: true });
+      expect(
+        parseLine(cli, '{"type":"stream_event","event":{"type":"message_stop"},"session_id":"x"}'),
+      ).toEqual({ end: true });
       expect(parseLine(cli, resultError)).toEqual({ error: 'Not logged in' });
       expect(parseLine(cli, 'Reading additional input from stdin...')).toBeNull();
     }
@@ -184,6 +187,7 @@ describe('parseLine', () => {
       parseLine('codex', '{"type":"turn.failed","error":{"message":"usage limit reached"}}'),
     ).toEqual({ error: 'usage limit reached' });
     expect(parseLine('codex', '{"type":"error","message":"nope"}')).toEqual({ error: 'nope' });
+    expect(parseLine('codex', '{"type":"turn.completed","usage":{}}')).toEqual({ end: true });
     expect(parseLine('codex', 'Reading additional input from stdin...')).toBeNull();
   });
 });

@@ -133,6 +133,34 @@ process.stdin.on('end', () => {
     ]);
   });
 
+  it('sends done at message_stop and stops a cli that keeps running', async () => {
+    const bin = tempDir('lp-bin-');
+    const pidFile = path.join(bin, 'pid');
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
+require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+process.stdin.resume();
+process.stdin.on('end', () => {
+  const delta = { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Fixed.' } };
+  process.stdout.write(JSON.stringify({ type: 'stream_event', event: delta }) + '\\n');
+  process.stdout.write(JSON.stringify({ type: 'stream_event', event: { type: 'message_stop' } }) + '\\n');
+  setTimeout(() => {}, 30000);
+});
+`,
+    );
+    const host = startHost(bin, 4000);
+    const started = Date.now();
+    host.child.stdin.write(rewrite('claude', 'hello'));
+    const pid = await waitForPid(pidFile);
+    pids.push(pid);
+    await host.closed;
+    expect(Date.now() - started).toBeLessThan(3000);
+    expect(host.messages).toEqual([{ type: 'chunk', text: 'Fixed.' }, { type: 'done' }]);
+    expect(() => process.kill(pid, 0)).toThrow();
+  });
+
   it('kills the cli when Chrome closes stdin', async () => {
     const bin = tempDir('lp-bin-');
     const pidFile = path.join(bin, 'pid');

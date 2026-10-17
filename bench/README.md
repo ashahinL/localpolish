@@ -36,8 +36,32 @@ Findings so far:
 - **Haiku missed the email test 4 of 4 times.** It left "hi" lowercase and wrote "reports are". Luna turns the Arabic part of mixed Arabic into Franco-Arabic.
 - Prices: Luna is about $0.10 per 1M input tokens and $0.50 per 1M output. Sol is $2 and $10. These come from secondary sites, not OpenAI.
 
+## Probe results (Mac, 2026-10-17)
+
+`results/2026-10-17-mac-probe.jsonl`, 2 rounds of 3 inputs, so 6 tries per setup. Times are medians in seconds.
+
+| Setup                       | Pass | First text | Final event | Exit | Input tok | Output tok |
+| --------------------------- | ---- | ---------- | ----------- | ---- | --------- | ---------- |
+| Haiku 5.5 low               | 4/6  | 1.8        | 4.6         | 5.4  | 971       | 58         |
+| Luna none                   | 6/6  | 3.8        | 3.8         | 4.8  | 12861     | 42         |
+| Luna none + own base prompt | 6/6  | 3.6        | 3.6         | 4.5  | 9372      | 42         |
+| Grok 4.6 low                | 5/6  | 5.4        | 5.8         | 6.6  | 9558      | 257        |
+| Grok 4.6 low + imports off  | 5/6  | 4.8        | 5.2         | 6.0  | 6533      | 230        |
+| Grok 4.7 low + imports off  | 6/6  | 3.9        | 4.1         | 5.4  | 7569      | 228        |
+
+Findings:
+
+- **Claude Code writes a summary after the answer.** One Haiku run, event by event: the text at 1.3 s, `message_stop` at 1.5 s, a `post_turn_summary` event at 3.7 s, `result` at 3.7 s, exit at 4.5 s. The final event column above is `result`, so it hides this.
+- Every CLI runs about 1 s after its final event before it exits.
+- Grok without its Claude, Codex and Cursor imports sends about 3,000 fewer input tokens. Once, with imports on, Grok added the `~/.claude/CLAUDE.md` answer format ("**Next:** ... **Result:** ...") to a grammar fix.
+- Codex with `model_instructions_file` sends about 3,500 fewer input tokens, with the same score.
+
+## Fixed
+
+1. The bridge sends `done` at `message_stop` (Claude Code, Grok) or `turn.completed` (Codex), then stops the CLI. Live, through `bridge/host.mjs`: Haiku `done` at 1.8 s (was about 4.5 s), Luna at 3.3 s.
+
 ## Still to do
 
-1. Run `probe.mjs`.
-2. Send the results to Sol (`review` lane, high, read-only) and ask what in our setup slows things down or lowers quality.
-3. Likely fix: send `done` at the final event and stop the CLI, instead of waiting for it to exit.
+1. Grok: turn off the Claude, Codex and Cursor imports (`GROK_*_ENABLED=0`).
+2. Codex: replace its built-in prompt with ours (`model_instructions_file`).
+3. Send the results to Sol (`review` lane, high, read-only) and ask what else in our setup slows things down or lowers quality.

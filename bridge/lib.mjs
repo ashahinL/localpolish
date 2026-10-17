@@ -139,7 +139,7 @@ export function buildCommand(cli, { model, effort, system }) {
 /**
  * @param {string} cli
  * @param {string} line
- * @returns {{ text: string } | { error: string } | null}
+ * @returns {{ text: string } | { error: string } | { end: true } | null}
  */
 export function parseLine(cli, line) {
   const trimmed = line.trim();
@@ -167,6 +167,11 @@ export function parseLine(cli, line) {
     if (msg.type === 'result' && msg.is_error === true) {
       return { error: String(msg.result) };
     }
+    // The answer is complete here. The CLI can run for seconds more before it exits.
+    if (msg.type === 'stream_event' && event && event.type === 'message_stop') {
+      return { end: true };
+    }
+    if (msg.type === 'result') return { end: true };
     return null;
   }
 
@@ -174,6 +179,7 @@ export function parseLine(cli, line) {
     if (msg.type === 'item.completed' && msg.item && msg.item.type === 'agent_message') {
       return { text: msg.item.text };
     }
+    if (msg.type === 'turn.completed') return { end: true };
     if (msg.type === 'turn.failed') {
       return { error: msg.error.message };
     }

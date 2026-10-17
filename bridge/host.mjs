@@ -172,15 +172,10 @@ function handleRewrite(msg) {
     if (settled) return;
     settled = true;
     clearTimeout(runTimer);
+    if (message) process.stdout.write(encodeMessage(message));
     const done = () => {
       clearTimeout(killTimer);
       removeDir();
-      if (message) {
-        process.stdout.write(encodeMessage(message), () => {
-          process.exit(0);
-        });
-        return;
-      }
       exitWhenFlushed();
     };
     if (spawnFailed || child.exitCode !== null || child.signalCode !== null) {
@@ -212,10 +207,18 @@ function handleRewrite(msg) {
   // 'close' fires after stdout is finished, so every line is parsed before done.
   const lines = readline.createInterface({ input: child.stdout });
   lines.on('line', (line) => {
+    if (settled) return;
     const parsed = parseLine(cli, line);
     if (!parsed) return;
     if ('text' in parsed) {
       process.stdout.write(encodeMessage({ type: 'chunk', text: parsed.text }));
+      return;
+    }
+    if ('end' in parsed) {
+      // Send done now. Claude Code writes a summary after the answer, which delays its exit by seconds.
+      if (rememberedError !== null) return;
+      killChild();
+      finish({ type: 'done' });
       return;
     }
     rememberedError = parsed.error;
