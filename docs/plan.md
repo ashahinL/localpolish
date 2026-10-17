@@ -110,7 +110,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
 - [ ] **T11. Hardening** (Claude). From two Sol reviews on 2026-10-17: a diff review of T9b-T10 and a full audit.
   - [x] **T11a. CLI tools off.** Codex had its shell; Grok's `--tools ""` removed nothing, so Grok could run commands as the user. Codex now turns off its shell, apps, plugins, browser and web features. Grok removes each local tool by name and denies shell, file, web and MCP tools. Checked live: no tool calls, normal Fix still works.
-  - [ ] **T11b. Page-started requests.** The button and the popup controls act only on trusted (real user) events, so a page cannot start or retry a rewrite with `.click()`.
+  - [x] **T11b. Page-started requests.** The shadow root drops untrusted clicks, and the popup's key handler ignores untrusted keys, so a page cannot start or retry a rewrite with `.click()`. The shadow root stays open for the tests; a page can still read a popup the user opened.
   - [ ] **T11c. Diff-review fixes.** Collapse `
 
 ` only in editors made only of `<p>` blocks. Set `whole` only when no text sits outside the selection. Windows wrapper: `chcp 65001` and `%` escaped. Mount the UI in the dialog that holds the field. Codex login path in the docs and options matches the bridge.

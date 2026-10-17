@@ -189,3 +189,36 @@ test('the floating button follows a textarea selection', async ({ page }) => {
   await expect(page.locator('.lp-popup')).toBeVisible();
   await expect(fab).toHaveCount(0);
 });
+
+test('page scripts cannot press the button or Retry', async ({ page }) => {
+  await page.evaluate(() => (window as unknown as PageApi).__lp.startButton());
+  await typeAndSelectAll(page, 'i has went home');
+  await expect(page.locator('.lp-fab')).toBeVisible();
+
+  // What a hostile page can do: reach the open shadow root and click by script.
+  const pageClick = (label: string) =>
+    page.evaluate((label) => {
+      const buttons = document
+        .querySelector('localpolish-root')
+        ?.shadowRoot?.querySelectorAll('button');
+      const button = [...(buttons ?? [])].find(
+        (el) =>
+          el.getAttribute('aria-label')?.startsWith(label) || el.textContent?.trim() === label,
+      );
+      if (!button) throw new Error(`no ${label} button`);
+      button.click();
+    }, label);
+
+  await pageClick('LocalPolish');
+  await expect(page.locator('.lp-popup')).toHaveCount(0);
+
+  await page.evaluate((scripts) => (window as unknown as PageApi).__lp.setScripts(scripts), [
+    [{ type: 'error', message: 'Boom.' }],
+    SUCCESS,
+  ] as FakeEvent[][]);
+  await page.locator('.lp-fab').click();
+  await expect(page.locator('.lp-popup')).toContainText('Boom.');
+
+  await pageClick('Retry');
+  await expect(page.locator('.lp-popup')).toContainText('Boom.');
+});

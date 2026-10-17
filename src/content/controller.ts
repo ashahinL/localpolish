@@ -52,7 +52,7 @@ export function createController(deps: ControllerDeps): Controller {
   let session: Session | null = null;
 
   const onKeyDown = guarded((event: KeyboardEvent) => {
-    if (!session || event.isComposing) return;
+    if (!session || event.isComposing || !event.isTrusted) return;
     if (event.key === 'Escape') {
       block(event);
       close();

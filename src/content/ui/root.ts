@@ -15,6 +15,8 @@ export function shadowRoot(): ShadowRoot {
     const host = document.createElement('localpolish-root');
     host.style.cssText = 'all: initial; position: fixed; top: 0; left: 0; z-index: 2147483647;';
     shadow = host.attachShadow({ mode: 'open' });
+    // A page can reach this open shadow root and call .click() to start or retry rewrites.
+    shadow.addEventListener('click', dropUntrusted, true);
     const style = document.createElement('style');
     style.textContent = css;
     shadow.append(style);
@@ -22,6 +24,12 @@ export function shadowRoot(): ShadowRoot {
   const parent = mountPoint();
   if (shadow.host.parentElement !== parent) parent.append(shadow.host);
   return shadow;
+}
+
+function dropUntrusted(event: Event): void {
+  if (event.isTrusted) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
 }
 
 export function layer(name: Layer): HTMLElement {
