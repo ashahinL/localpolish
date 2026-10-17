@@ -118,6 +118,13 @@ test('textarea via the floating button', async ({ page, mock }) => {
   await expect(page.locator('#ta')).toHaveValue(REWRITE);
 });
 
+test('textarea inside a modal dialog', async ({ page }) => {
+  await page.evaluate(() => (document.getElementById('dlg') as HTMLDialogElement).showModal());
+  await openRewrite(page, '#dlg-ta');
+  await accept(page);
+  await expect(page.locator('#dlg-ta')).toHaveValue(REWRITE);
+});
+
 test('input via the floating button', async ({ page }) => {
   await openRewrite(page, '#inp');
   await accept(page);

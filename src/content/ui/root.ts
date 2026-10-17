@@ -4,15 +4,23 @@ type Layer = 'button' | 'popup' | 'toast';
 
 let shadow: ShadowRoot | null = null;
 
+// A modal <dialog> draws above the page and makes the rest of it inert, so the UI must live inside it.
+function mountPoint(): Element {
+  const modals = document.querySelectorAll('dialog:modal');
+  return modals[modals.length - 1] ?? document.documentElement;
+}
+
 export function shadowRoot(): ShadowRoot {
-  if (shadow?.host.isConnected) return shadow;
-  const host = document.createElement('localpolish-root');
-  host.style.cssText = 'all: initial; position: fixed; top: 0; left: 0; z-index: 2147483647;';
-  shadow = host.attachShadow({ mode: 'open' });
-  const style = document.createElement('style');
-  style.textContent = css;
-  shadow.append(style);
-  document.documentElement.append(host);
+  if (!shadow?.host.isConnected) {
+    const host = document.createElement('localpolish-root');
+    host.style.cssText = 'all: initial; position: fixed; top: 0; left: 0; z-index: 2147483647;';
+    shadow = host.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = css;
+    shadow.append(style);
+  }
+  const parent = mountPoint();
+  if (shadow.host.parentElement !== parent) parent.append(shadow.host);
   return shadow;
 }
 
