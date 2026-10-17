@@ -1,3 +1,5 @@
 import { render } from 'preact';
+import { App } from '../../options/App';
+import '../../options/options.css';
 
-render(<h1>LocalPolish settings</h1>, document.getElementById('app')!);
+render(<App />, document.getElementById('app')!);
