@@ -151,6 +151,21 @@ describe('cliProvider', () => {
     expect(await rejection(pending)).toBe('The bridge stopped: Native host has exited.');
   });
 
+  it('reads lastError when the host exits after done', async () => {
+    const pending = cliProvider('claude')(
+      prompt,
+      settings(),
+      () => undefined,
+      new AbortController().signal,
+    );
+    emitMessage({ type: 'done' });
+    await pending;
+    const read = vi.fn(() => ({ message: 'Native host has exited.' }));
+    Object.defineProperty(runtime, 'lastError', { get: read });
+    emitDisconnect();
+    expect(read).toHaveBeenCalled();
+  });
+
   it('disconnects and rejects when the request is aborted', async () => {
     const controller = new AbortController();
     const pending = cliProvider('claude')(prompt, settings(), () => undefined, controller.signal);

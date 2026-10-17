@@ -111,10 +111,12 @@ export function cliProvider(cli: CliName): StreamFn {
       });
 
       port.onDisconnect.addListener(() => {
+        // Read it even after "done", or Chrome logs "Unchecked runtime.lastError".
+        const detail = runtime().lastError?.message;
         if (settled) return;
         settled = true;
         signal.removeEventListener('abort', onAbort);
-        reject(new Error(bridgeStoppedMessage(runtime().lastError?.message)));
+        reject(new Error(bridgeStoppedMessage(detail)));
       });
 
       port.postMessage({
