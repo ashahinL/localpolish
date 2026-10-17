@@ -12,7 +12,7 @@ LocalPolish is a Chrome extension (Manifest V3) that fixes or rewrites text you 
 | --- | --- |
 | Main AI path | A local **bridge**: a Node script Chrome starts through **native messaging**. It runs `claude`, `codex` or `grok` headless on your subscriptions. See [ADR 0001](adr/0001-cli-bridge-over-native-messaging.md). |
 | Other providers | OpenAI-compatible HTTP (OpenAI, xAI, OpenRouter, LM Studio, Ollama `/v1`) and Anthropic Messages API, with API keys. |
-| Default provider | Claude CLI, model `haiku` at `low` effort, short prompts. Codex `gpt-6-luna` at `none`, Grok CLI default at `low`. All models and efforts are user settings. See the [benchmark](benchmarks/2026-10-17-fix-mode.md). |
+| Default provider | Codex CLI, model `gpt-6-luna` at `none` effort (since 2026-10-17: 19/21 on the Fix prompt test, Haiku about 9/21). Claude CLI `haiku` at `low`, Grok CLI default at `low`. All models and efforts are user settings. See the [benchmark](benchmarks/2026-10-17-fix-mode.md). |
 | Build tool | WXT. It handles MV3 manifest, content script, service worker and options page builds, plus hot reload. Less config than CRXJS, and actively maintained. |
 | UI | Preact for the options page and the in-page popup. Popup lives in a Shadow DOM. |
 | Floating button | Shows only when text is selected inside an editable field. Hidden on blocklisted sites. |

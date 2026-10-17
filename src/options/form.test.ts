@@ -57,7 +57,7 @@ describe('shortcutKeys', () => {
 describe('pickSettings', () => {
   it('copies only the named fields', () => {
     expect(pickSettings(DEFAULT_SETTINGS, ['provider', 'temperature'])).toEqual({
-      provider: 'claude-cli',
+      provider: 'codex-cli',
       temperature: 0.3,
     });
   });

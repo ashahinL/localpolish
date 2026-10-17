@@ -21,7 +21,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  provider: 'claude-cli',
+  provider: 'codex-cli',
   models: {
     'claude-cli': 'haiku',
     'codex-cli': 'gpt-6-luna',

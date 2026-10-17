@@ -23,6 +23,8 @@ const SETUPS = [
   { name: 'Haiku 5.5 low', cli: 'claude', model: 'haiku', effort: 'low' },
   { name: 'Haiku 5.5 medium', cli: 'claude', model: 'haiku', effort: 'medium' },
   { name: 'GPT-6 Luna none', cli: 'codex', model: 'gpt-6-luna', effort: 'none' },
+  { name: 'GPT-6 Luna low', cli: 'codex', model: 'gpt-6-luna', effort: 'low' },
+  { name: 'GPT-6 Luna medium', cli: 'codex', model: 'gpt-6-luna', effort: 'medium' },
   { name: 'GPT-6.1 Sol low', cli: 'codex', model: 'gpt-6.1-sol', effort: 'low' },
   { name: 'Grok 4.7 low', cli: 'grok', model: 'grok-4.7', effort: 'low' },
   { name: 'Grok 4.6 low', cli: 'grok', model: 'grok-4.6', effort: 'low' },

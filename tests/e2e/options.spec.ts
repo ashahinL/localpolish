@@ -100,7 +100,7 @@ function provider(page: Page, title: string) {
 }
 
 test('switching provider shows that provider’s fields', async ({ page }) => {
-  await openOptions(page);
+  await openOptions(page, { settings: { provider: 'claude-cli' } });
   await expect(page.getByLabel('Model', { exact: true })).toHaveValue('haiku');
   await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('low');
 
@@ -124,7 +124,7 @@ test('switching provider shows that provider’s fields', async ({ page }) => {
 });
 
 test('Custom shows a text input and saves what is typed', async ({ page }) => {
-  await openOptions(page);
+  await openOptions(page, { settings: { provider: 'claude-cli' } });
   await page.getByLabel('Model', { exact: true }).selectOption({ label: 'Custom…' });
   const custom = page.getByLabel('Custom model', { exact: true });
   await expect(custom).toHaveValue('haiku');
@@ -138,7 +138,9 @@ test('Custom shows a text input and saves what is typed', async ({ page }) => {
 });
 
 test('a stored value that is not a preset shows as Custom', async ({ page }) => {
-  await openOptions(page, { settings: { efforts: { 'claude-cli': 'turbo' } } });
+  await openOptions(page, {
+    settings: { provider: 'claude-cli', efforts: { 'claude-cli': 'turbo' } },
+  });
   await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('__custom__');
   await expect(page.getByLabel('Custom thinking effort', { exact: true })).toHaveValue('turbo');
 });

@@ -78,6 +78,18 @@ Findings:
 - Sol's prompt starts with "Make minimal edits". Haiku then often returns the text unchanged.
 - Haiku misses with every prompt: "reports are" in the email, a final period on the fragment, and sometimes "I has an apple" left as it is. Luna's misses are in the mixed Arabic test.
 
+## Luna effort (Mac, 2026-10-17)
+
+`results/2026-10-17-mac-luna-effort.jsonl`, v2 prompt, 21 tries each.
+
+| Effort | Score | Median | Reasoning tokens | Output tokens |
+| ------ | ----- | ------ | ---------------- | ------------- |
+| none   | 18/21 | 4.4 s  | 0                | 28            |
+| low    | 17/21 | 4.4 s  | 0                | 28            |
+| medium | 18/21 | 4.5 s  | 0                | 28            |
+
+Luna does not think on Fix-sized text at low or medium either, so the three efforts give the same answers, time and tokens. The cost differences between runs come from how much input was cached, not from effort. Rephrase and Tone were not tested.
+
 ## Still to do
 
 1. Maybe later, each needs measuring: more Codex config keys (`features.multi_agent`, `features.goals`, `tools.view_image`), an isolated `GROK_HOME`, Claude `--disable-slash-commands`, and a long-lived bridge process.

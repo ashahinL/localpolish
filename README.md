@@ -90,7 +90,7 @@ To hide the button on a site, open the options page and go to **Sites**. Enter o
 
 ## Providers
 
-Choose a provider on the options page. Model and thinking effort are dropdowns. Each one has presets and **Custom**. You can change them at any time.
+Choose a provider on the options page. The default is Codex with `gpt-6-luna`, because it scored best on Fix. Model and thinking effort are dropdowns. Each one has presets and **Custom**. You can change them at any time.
 
 | Provider              | How it connects                                                                            | Default model and effort                                     |
 | --------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -100,7 +100,7 @@ Choose a provider on the options page. Model and thinking effort are dropdowns. 
 | OpenAI-compatible API | HTTP, with an optional API key. This covers OpenAI, xAI, OpenRouter, LM Studio, and Ollama | Base URL `http://localhost:11434/v1` for Ollama. Set a model |
 | Anthropic API         | HTTP, with an API key                                                                      | `claude-haiku-5-5`                                           |
 
-Those defaults are the cheapest setups that scored well on a Fix benchmark. The scores are in the [Fix mode benchmark, 2026-10-17](docs/benchmarks/2026-10-17-fix-mode.md).
+Those defaults are the cheapest setups that scored well on a Fix benchmark. The scores are in the [Fix mode benchmark, 2026-10-17](docs/benchmarks/2026-10-17-fix-mode.md) and the [Fix prompt test](bench/README.md).
 
 The OpenAI-compatible provider can take an API key. Leave the key empty for a local server. The Anthropic provider needs a key. You enter keys on the options page.
 
