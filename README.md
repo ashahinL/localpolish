@@ -151,13 +151,13 @@ Some sites ignore the text LocalPolish writes into the field. The popup then cop
 
 Results from the [manual checklist](docs/manual-checklist.md):
 
-| Site           | Accept works | Notes |
-| -------------- | ------------ | ----- |
-| Gmail          | Yes          | Message body and subject. Undo, line breaks, Esc and the saved draft work. |
-| X              | Yes          | Post composer and reply box. Undo, line breaks and Esc work, and Post and Reply stay ready. |
+| Site           | Accept works | Notes                                                                                                                                                                                                                                                                                                                                    |
+| -------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gmail          | Yes          | Message body and subject. Undo, line breaks, Esc and the saved draft work.                                                                                                                                                                                                                                                               |
+| X              | Yes          | Post composer and reply box. Undo, line breaks and Esc work, and Post and Reply stay ready.                                                                                                                                                                                                                                              |
 | LinkedIn       | Yes          | Post composer and message box. Needed two fixes: the popup now mounts inside the modal dialog, and paragraph breaks no longer double. Two more for the message box: the shortcut now works with several lines, and a blank line no longer shows as three. Selecting only part of a multi-line message there can still fall back to Copy. |
-| GitHub         | Yes          | Issue description. Undo, line breaks and Esc work, and the submit button stays enabled. |
-| Plain textarea | Yes          | Test page. Undo, line breaks, Esc, and the text stays after a click outside. |
+| GitHub         | Yes          | Issue description. Undo, line breaks and Esc work, and the submit button stays enabled.                                                                                                                                                                                                                                                  |
+| Plain textarea | Yes          | Test page. Undo, line breaks, Esc, and the text stays after a click outside.                                                                                                                                                                                                                                                             |
 
 Tested on 2026-10-17 in Brave 1.97 on Windows 11 with the Claude CLI (haiku, low). The Copy fallback showed its note once in the LinkedIn message box, and `Ctrl+V` pasted the new text. The **Sites** list hides the button. `Ctrl+Shift+K` with nothing selected works in the LinkedIn message box, and says "Type some text first." when the box is empty.
 
