@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T9b done, T10 mostly done)
+Status: MVP done (T0-T10)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -107,7 +107,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T8. End-to-end test** (Grok). Playwright loads the built extension, points it at a mock OpenAI-compatible server, and runs select → Fix → Accept on the fixture pages.
 - [x] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.
 - [x] **T9b. Windows bridge** (Claude). The installer writes `%LOCALAPPDATA%\LocalPolish\localpolish-bridge.cmd`, the host manifest next to it, and the registry key `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge`. `findOnPath` tries `.exe`, `.cmd`, `.bat`. npm `.cmd` shims run their script with Node (`resolveCommand`). Kill uses `taskkill /T /F`. The Codex home is `%LOCALAPPDATA%\LocalPolish\codex-home`.
-- [~] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
+- [x] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
 
 ## Later (not MVP, keep the design open)
 
@@ -116,7 +116,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - History of the last 20 rewrites (store in `chrome.storage.local`).
 - Linux bridge installer.
 
-## Handoff (2026-10-17, 12:15 Cairo)
+## Handoff (2026-10-17, 12:15 Cairo, now done: see T10 progress below)
 
 T0-T9 are done and pushed. Next is **T10, real-site testing** (Claude via Claude in Chrome, on a Mac):
 
@@ -140,9 +140,13 @@ Fixed on the way:
 - `<p>`-based editors no longer get an extra empty paragraph per break.
 - The Windows installer registers the host for Chrome, Brave, Edge and Chromium. The browser needs a full restart after the first install.
 
-Left for T10:
-- `Ctrl+Shift+K` on a field that has text, with nothing selected, mainly the LinkedIn message box (CDP key events do not fire extension commands). The **Sites** list passed. On an empty LinkedIn message box the shortcut said "Click into a text field first"; it now says "Type some text first."
-- LinkedIn message box: the shortcut on one line works. With several lines, LinkedIn swapped its `<p>` elements when focus came back, the saved range collapsed, and Accept fell back to Copy. Fixed: when the selection covered the whole field, Accept focuses the field, then selects all of it again. LinkedIn swaps the paragraphs during `focus()`, so the range must be built after it. A part selection in that box can still fall back to Copy. Also, `<p>` blocks are now read as one line each, so a blank line no longer shows as three. Re-check the multi-line shortcut there.
-- `npm run test:e2e` here: Playwright's own Chromium fails to start on this PC ("side-by-side configuration is incorrect"). The editable tests pass when pointed at Brave.
+- LinkedIn message box, shortcut with nothing selected: an empty box now says "Type some text first." With several lines, LinkedIn swaps its `<p>` elements during `focus()`, which collapsed the saved range and made Accept fall back to Copy. Accept now focuses the field first, then selects all of it again when the capture covered the whole field. `<p>` blocks are read as one line each, so a blank line no longer shows as three.
+- The background reads `runtime.lastError` when the bridge exits after a finished rewrite, so Brave no longer logs "Unchecked runtime.lastError: Native host has exited."
+
+Shortcut and **Sites** list checked by hand by the user.
+
+Still open:
+- Selecting only part of a multi-line message in the LinkedIn message box can still fall back to Copy (the saved range collapses when LinkedIn swaps its paragraphs on focus).
+- `npm run test:e2e` here: Playwright's own Chromium fails to start on this PC ("side-by-side configuration is incorrect"). The editable tests pass when pointed at Brave. Run the full suite on a machine where Playwright's Chromium starts.
 
 Quality notes for later: Fix adds a final period to a fragment or a subject line ("I have an apple. and she...").
