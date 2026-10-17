@@ -29,8 +29,12 @@ export function findEditable(
   return null;
 }
 
+export function focusedEditable(): HTMLInputElement | HTMLTextAreaElement | HTMLElement | null {
+  return findEditable(deepActiveElement());
+}
+
 export function captureTarget(opts: { wholeFieldIfEmpty: boolean }): Target | null {
-  const active = findEditable(deepActiveElement());
+  const active = focusedEditable();
   if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
     return captureField(active, opts.wholeFieldIfEmpty);
   }

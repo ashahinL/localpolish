@@ -85,4 +85,4 @@ The README has the same table.
 | GitHub         | Yes          | Issue description. Undo, line breaks and Esc work, and the submit button stays enabled. |
 | Plain textarea | Yes          | Test page. Undo, line breaks, Esc, and the text stays after a click outside. |
 
-Tested on 2026-10-17 in Brave 1.97 on Windows 11 with the Claude CLI (haiku, low). The Copy fallback showed its note once in the LinkedIn message box, and `Ctrl+V` pasted the new text. Not covered yet: the shortcut and the **Sites** list.
+Tested on 2026-10-17 in Brave 1.97 on Windows 11 with the Claude CLI (haiku, low). The Copy fallback showed its note once in the LinkedIn message box, and `Ctrl+V` pasted the new text. The **Sites** list hides the button. Not covered yet: the shortcut on a field that has text.

@@ -141,8 +141,8 @@ Fixed on the way:
 - The Windows installer registers the host for Chrome, Brave, Edge and Chromium. The browser needs a full restart after the first install.
 
 Left for T10:
-- Checks the Chrome tool cannot do: `Ctrl+Shift+K` (CDP key events do not fire extension commands) and the **Sites** list (the options page is a `chrome-extension://` page).
-- LinkedIn message box: a selection set by script (`selectNodeContents` on the box, or text-node bounds over both paragraphs) makes Accept fall back to Copy with "The text in the field changed". A mouse selection over the same text works. The shortcut with no selection uses `selectNodeContents(root)`, so it may hit the same fallback there. Check with the real shortcut. If it fails, find what LinkedIn changes between capture and apply.
+- `Ctrl+Shift+K` on a field that has text, with nothing selected, mainly the LinkedIn message box (CDP key events do not fire extension commands). The **Sites** list passed. On an empty LinkedIn message box the shortcut said "Click into a text field first"; it now says "Type some text first."
+- LinkedIn message box: a selection set by script (`selectNodeContents` on the box, or text-node bounds over both paragraphs) makes Accept fall back to Copy with "The text in the field changed". A mouse selection over the same text works. The shortcut with no selection uses `selectNodeContents(root)`, so it may hit the same fallback there. Check with the real shortcut. If it fails, find what LinkedIn changes between capture and apply. A main-world check of the same steps (selectNodeContents, blur, re-add range, insertText) worked on one line, so the real shortcut may be fine.
 - `npm run test:e2e` here: Playwright's own Chromium fails to start on this PC ("side-by-side configuration is incorrect"). The editable tests pass when pointed at Brave.
 
 Quality notes for later: Fix adds a final period to a fragment or a subject line ("I have an apple. and she...").

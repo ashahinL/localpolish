@@ -3,7 +3,7 @@ import { createController } from '../content/controller';
 // Kept apart so it is erased: WXT loads this file without main() to read its options,
 // and an inline `type` import would still pull in the controller and its CSS.
 import type { PortLike } from '../content/controller';
-import { captureTarget } from '../content/editable';
+import { captureTarget, focusedEditable } from '../content/editable';
 import { guarded } from '../content/guard';
 import { showToast } from '../content/ui/toast';
 import { REWRITE_PORT } from '../core/messages';
@@ -81,6 +81,7 @@ function start(): void {
       if (!isOpenPopup(message) || !document.hasFocus()) return;
       const target = captureTarget({ wholeFieldIfEmpty: true });
       if (target) controller.open(target);
+      else if (focusedEditable()) showToast('Type some text first.');
       else showToast('Click into a text field first.');
     }),
   );
