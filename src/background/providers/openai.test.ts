@@ -163,6 +163,176 @@ describe('openaiProvider', () => {
     );
   });
 
+  it('rejects a stream cut off at the length limit', async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"I "}}]}\n\n' +
+      'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n' +
+      'data: [DONE]\n\n';
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'http://localhost:11434/v1',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe('The answer was cut off. Try a shorter text.');
+  });
+
+  it('rejects with the message from an error event', async () => {
+    const sse = 'data: {"error":{"message":"Overloaded"}}\n\n';
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'http://localhost:11434/v1',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe('Overloaded');
+  });
+
+  it('rejects an error event that has no message', async () => {
+    const sse = 'data: {"error":{}}\n\n';
+    globalThis.fetch = vi.fn(async () => streamResponse([sse])) as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'http://localhost:11434/v1',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe('The model returned an error.');
+  });
+
+  it('rejects a stream that ends without [DONE] or a stop reason', async () => {
+    const sse = 'data: {"choices":[{"delta":{"content":"I "}}]}\n\n';
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'http://localhost:11434/v1',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe('The answer was cut off. Try again.');
+  });
+
+  it('accepts a stream that finishes with stop and no [DONE]', async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"I went."}}]}\n\n' +
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n';
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const parts: string[] = [];
+    await openaiProvider(
+      prompt,
+      settings({
+        openaiBaseUrl: 'http://localhost:11434/v1',
+        models: { 'openai-compatible': 'llama3.2' },
+      }),
+      (text) => parts.push(text),
+      new AbortController().signal,
+    );
+    expect(parts).toEqual(['I went.']);
+  });
+
+  it('refuses to send an API key to a remote http server', async () => {
+    globalThis.fetch = vi.fn(() => {
+      throw new Error('fetch should not run');
+    }) as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'http://example.com/v1',
+          openaiApiKey: 'sk-test',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe(
+      'Use an https:// base URL to send an API key to example.com, or remove the key.',
+    );
+  });
+
+  it('rejects a base URL that is not valid when an API key is set', async () => {
+    globalThis.fetch = vi.fn(() => {
+      throw new Error('fetch should not run');
+    }) as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'not a url',
+          openaiApiKey: 'sk-test',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe('The base URL is not valid: not a url');
+  });
+
+  it('sends an API key to loopback over http', async () => {
+    for (const baseUrl of [
+      'http://127.0.0.1:11434/v1',
+      'http://[::1]:11434/v1',
+      'http://ollama.localhost:11434/v1',
+    ]) {
+      const fetchMock = vi.fn(async () => streamResponse(['data: [DONE]\n\n']));
+      globalThis.fetch = fetchMock as typeof fetch;
+      await openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: baseUrl,
+          openaiApiKey: 'sk-test',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      );
+      expect(fetchMock).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('still calls a remote http server when no API key is set', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => streamResponse(['data: [DONE]\n\n']),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+    await openaiProvider(
+      prompt,
+      settings({
+        openaiBaseUrl: 'http://192.168.1.5:11434/v1',
+        models: { 'openai-compatible': 'llama3.2' },
+      }),
+      () => undefined,
+      new AbortController().signal,
+    );
+    const call = fetchMock.mock.calls[0];
+    if (call === undefined) throw new Error('fetch was not called');
+    expect(String(call[0])).toBe('http://192.168.1.5:11434/v1/chat/completions');
+  });
+
   it('reports a fetch TypeError as an unreachable server', async () => {
     globalThis.fetch = vi.fn(() => {
       throw new TypeError('Failed to fetch');

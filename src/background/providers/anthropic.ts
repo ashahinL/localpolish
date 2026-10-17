@@ -5,7 +5,7 @@ const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
 interface AnthropicEvent {
   type?: string;
-  delta?: { type?: string; text?: string };
+  delta?: { type?: string; text?: string; stop_reason?: string };
   error?: { message?: string };
 }
 
@@ -51,6 +51,10 @@ export const anthropicProvider: StreamFn = async (prompt, settings, onText, sign
     if (parsed.type === 'error') {
       throw new Error(parsed.error?.message ?? 'The model returned an error.');
     }
+    if (parsed.type === 'message_delta' && parsed.delta?.stop_reason === 'max_tokens') {
+      throw new Error('The answer was cut off. Try a shorter text.');
+    }
     if (parsed.type === 'message_stop') return;
   }
+  throw new Error('The answer was cut off. Try again.');
 };

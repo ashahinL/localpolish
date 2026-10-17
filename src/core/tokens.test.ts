@@ -12,6 +12,24 @@ describe('protected tokens', () => {
     expect(findMissingTokens('ask @sara', 'ask')).toEqual(['@sara']);
   });
 
+  it('reports a mention when the output only has a longer handle', () => {
+    expect(findMissingTokens('@sara', '@sara_k')).toEqual(['@sara']);
+  });
+
+  it('reports a hashtag when the output only has a longer tag', () => {
+    expect(findMissingTokens('#bug', '#bugfix')).toEqual(['#bug']);
+  });
+
+  it('keeps a URL when the output only adds a trailing period', () => {
+    expect(findMissingTokens('See https://example.com/a', 'See https://example.com/a.')).toEqual(
+      [],
+    );
+  });
+
+  it('keeps a code span and an emoji that are unchanged', () => {
+    expect(findMissingTokens('run `npm test` 👍', 'run `npm test` 👍')).toEqual([]);
+  });
+
   it('reports a hashtag whose case changed', () => {
     expect(findMissingTokens('use #AI', 'use #ai')).toEqual(['#AI']);
   });

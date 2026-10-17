@@ -106,6 +106,55 @@ describe('anthropicProvider', () => {
     expect(message).toBe('Overloaded');
   });
 
+  it('rejects a stream cut off at max_tokens', async () => {
+    const sse = [
+      'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"I "}}\n\n',
+      'data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"}}\n\n',
+    ].join('');
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const message = await rejection(
+      anthropicProvider(
+        prompt,
+        settings({ anthropicApiKey: 'sk-ant' }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe('The answer was cut off. Try a shorter text.');
+  });
+
+  it('rejects a stream that ends without message_stop', async () => {
+    const sse =
+      'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"I "}}\n\n';
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const message = await rejection(
+      anthropicProvider(
+        prompt,
+        settings({ anthropicApiKey: 'sk-ant' }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe('The answer was cut off. Try again.');
+  });
+
+  it('accepts a stop reason other than max_tokens when message_stop follows', async () => {
+    const sse = [
+      'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"I went."}}\n\n',
+      'data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}\n\n',
+      'data: {"type":"message_stop"}\n\n',
+    ].join('');
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const parts: string[] = [];
+    await anthropicProvider(
+      prompt,
+      settings({ anthropicApiKey: 'sk-ant' }),
+      (text) => parts.push(text),
+      new AbortController().signal,
+    );
+    expect(parts).toEqual(['I went.']);
+  });
+
   it('asks for an API key when the setting is empty', async () => {
     globalThis.fetch = vi.fn(() => {
       throw new Error('fetch should not run');

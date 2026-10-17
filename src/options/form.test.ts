@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import {
+  baseUrlPatch,
   formatSeconds,
   mergeExternal,
   parseBlocklist,
@@ -59,6 +60,34 @@ describe('pickSettings', () => {
     expect(pickSettings(DEFAULT_SETTINGS, ['provider', 'temperature'])).toEqual({
       provider: 'codex-cli',
       temperature: 0.3,
+    });
+  });
+});
+
+describe('baseUrlPatch', () => {
+  const before: Settings = {
+    ...DEFAULT_SETTINGS,
+    openaiBaseUrl: 'http://localhost:11434/v1',
+    openaiApiKey: 'sk-test',
+  };
+
+  it('keeps the key when the origin does not change', () => {
+    expect(baseUrlPatch(before, 'http://localhost:11434/v1/')).toEqual({
+      openaiBaseUrl: 'http://localhost:11434/v1/',
+    });
+  });
+
+  it('clears the key when the host changes', () => {
+    expect(baseUrlPatch(before, 'https://api.openai.com/v1')).toEqual({
+      openaiBaseUrl: 'https://api.openai.com/v1',
+      openaiApiKey: '',
+    });
+  });
+
+  it('leaves an empty key out of the patch', () => {
+    const empty: Settings = { ...before, openaiApiKey: '' };
+    expect(baseUrlPatch(empty, 'https://api.openai.com/v1')).toEqual({
+      openaiBaseUrl: 'https://api.openai.com/v1',
     });
   });
 });

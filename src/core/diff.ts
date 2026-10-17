@@ -5,7 +5,16 @@ export type DiffPart = { type: 'same' | 'add' | 'del'; text: string };
 export function wordDiff(before: string, after: string): DiffPart[] {
   if (before === after) return [{ type: 'same', text: before }];
 
-  const parts: DiffPart[] = diffWordsWithSpace(before, after).map((change) => ({
+  const changes = diffWordsWithSpace(before, after, { timeout: 200 });
+  // `diff` returns undefined when the timeout hits, instead of a partial result.
+  if (changes === undefined) {
+    return [
+      { type: 'del', text: before },
+      { type: 'add', text: after },
+    ];
+  }
+
+  const parts: DiffPart[] = changes.map((change) => ({
     type: change.added ? 'add' : change.removed ? 'del' : 'same',
     text: change.value,
   }));

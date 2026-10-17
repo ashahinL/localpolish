@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T10 done, T11 hardening)
+Status: in progress (T0-T11 done, T12 popup modes next)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -108,18 +108,28 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.
 - [x] **T9b. Windows bridge** (Claude). The installer writes `%USERPROFILE%\AppData\Local\LocalPolish\localpolish-bridge.cmd`, the host manifest next to it, and the registry key `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge`. `findOnPath` tries `.exe`, `.cmd`, `.bat`. npm `.cmd` shims run their script with Node (`resolveCommand`). Kill uses `taskkill /T /F`. The Codex home is `%USERPROFILE%\AppData\Local\LocalPolish\codex-home`.
 - [x] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
-- [ ] **T11. Hardening** (Claude). From two Sol reviews on 2026-10-17: a diff review of T9b-T10 and a full audit.
+- [x] **T11. Hardening** (Claude). From two Sol reviews on 2026-10-17: a diff review of T9b-T10 and a full audit.
   - [x] **T11a. CLI tools off.** Codex had its shell; Grok's `--tools ""` removed nothing, so Grok could run commands as the user. Codex now turns off its shell, apps, plugins, browser and web features. Grok removes each local tool by name and denies shell, file, web and MCP tools. Checked live: no tool calls, normal Fix still works.
   - [x] **T11b. Page-started requests.** The shadow root drops untrusted clicks, and the popup's key handler ignores untrusted keys, so a page cannot start or retry a rewrite with `.click()`. The shadow root stays open for the tests; a page can still read a popup the user opened.
   - [x] **T11c. Diff-review fixes.** Collapse `
 
 ` only in editors made only of `<p>` blocks. Set `whole` only when no text sits outside the selection. Windows wrapper: `chcp 65001` and `%` escaped. Mount the UI in the dialog that holds the field. Codex login path in the docs and options matches the bridge.
-  - [ ] **T11d. From the audit** (split on 2026-10-17, Mac).
+  - [x] **T11d. From the audit** (split on 2026-10-17, Mac).
     - [x] **T11d-1. Bridge** (Claude). Kill the CLI's whole process group on macOS. Split a chunk over 100,000 characters, because Chrome drops a native message over 1 MB. Node 22+ in the README and `engines`.
-    - [ ] **T11d-2. HTTP and core** (Grok). Cut-off streams and error events become errors. A 60 s deadline for HTTP rewrites. Clear the API key when the base URL's origin changes. Refuse an API key over plain HTTP off loopback. A timeout on the word diff. Exact token matching.
+    - [x] **T11d-2. HTTP and core** (Grok). Cut-off streams and error events become errors. A 60 s deadline for HTTP rewrites. Clear the API key when the base URL's origin changes. Refuse an API key over plain HTTP off loopback. A timeout on the word diff. Exact token matching.
     - [x] **T11d-3. Content script** (Grok). Field Accept never writes twice. The rich-editor success check compares before and after. Report a failed copy. `about:blank` frames. Skip email inputs. Exact multiline and tone e2e tests.
 
   - [x] **T11e. Speed and cost review** (2026-10-17, Windows and Mac). Benchmark scripts and results are in `bench/` (see `bench/README.md`). Found so far: the bridge sends `done` only when the CLI exits, which adds 2 to 3 s for Haiku; Codex sends about 13k input tokens and Grok about 10k for a one-line fix. Probe run on the Mac. Fixed: the bridge sends `done` at the final event (Haiku about 1.8 s instead of 4.5 s). Grok runs with its Claude, Codex and Cursor imports off, and Codex with our prompt as its base prompt. Sol reviewed it: fixed an early-success bug on a cut-off answer and two cleanup bugs. New Fix prompt (v2): Luna 19/21, up from 12/21; Haiku about 9/21 with any prompt. Details in `bench/README.md`.
+
+- [ ] **T12. Popup modes: one Rephrase tab with tones** (Claude Opus, art lane). Decided with the user on 2026-10-17:
+  - Tabs become **Fix | Rephrase | Shorter**. The Tone tab goes away.
+  - The Rephrase tab shows chips: **Keep tone** (today's Rephrase prompt), Polite, Formal, Casual, Angry but civil.
+  - Clicking the Rephrase tab sends nothing. A chip click sends one request. Fix and Shorter still send on click.
+  - Fix still runs when the popup opens.
+  - Until a chip is picked, the last answer (usually Fix) stays in the body, and Accept still accepts it.
+  - Each mode and tone keeps its answer for the life of the popup. Going back shows the saved answer with no new request. Retry asks again for the current one.
+  - Remove the **default tone** setting from the options page and from `Settings` (stored values are ignored).
+  - No new keyboard keys.
 
 ## Later (not MVP, keep the design open)
 

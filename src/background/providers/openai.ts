@@ -4,6 +4,15 @@ import { type StreamFn } from './types';
 const OLLAMA_HINT =
   ' Ollama blocks unknown origins: set OLLAMA_ORIGINS=chrome-extension://* and restart Ollama.';
 
+function isLoopbackHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname.startsWith('127.') ||
+    hostname === '[::1]'
+  );
+}
+
 export const openaiProvider: StreamFn = async (prompt, settings, onText, signal) => {
   const model = settings.models['openai-compatible'];
   if (model === '') {
@@ -11,6 +20,20 @@ export const openaiProvider: StreamFn = async (prompt, settings, onText, signal)
   }
 
   const baseUrl = settings.openaiBaseUrl.replace(/\/+$/, '');
+  if (settings.openaiApiKey !== '') {
+    let url: URL;
+    try {
+      url = new URL(baseUrl);
+    } catch {
+      throw new Error(`The base URL is not valid: ${baseUrl}`);
+    }
+    if (url.protocol === 'http:' && !isLoopbackHost(url.hostname)) {
+      throw new Error(
+        `Use an https:// base URL to send an API key to ${url.hostname}, or remove the key.`,
+      );
+    }
+  }
+
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   if (settings.openaiApiKey !== '') {
     headers.authorization = `Bearer ${settings.openaiApiKey}`;
@@ -52,12 +75,25 @@ export const openaiProvider: StreamFn = async (prompt, settings, onText, signal)
     throw new Error(`HTTP ${res.status}: empty response`);
   }
 
+  let sawStop = false;
   for await (const event of readSSE(res.body)) {
     if (event.data === '[DONE]') return;
     const parsed = JSON.parse(event.data) as {
-      choices?: Array<{ delta?: { content?: unknown } }>;
+      choices?: Array<{ delta?: { content?: unknown }; finish_reason?: string | null }>;
+      error?: { message?: string };
     };
-    const content = parsed.choices?.[0]?.delta?.content;
+    if (parsed.error !== undefined) {
+      throw new Error(parsed.error.message ?? 'The model returned an error.');
+    }
+    const choice = parsed.choices?.[0];
+    const content = choice?.delta?.content;
     if (typeof content === 'string' && content !== '') onText(content);
+    if (choice?.finish_reason === 'length') {
+      throw new Error('The answer was cut off. Try a shorter text.');
+    }
+    if (choice?.finish_reason === 'stop') sawStop = true;
+  }
+  if (!sawStop) {
+    throw new Error('The answer was cut off. Try again.');
   }
 };

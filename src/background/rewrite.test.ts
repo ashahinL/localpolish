@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
-import { runRewrite, testConnection } from './rewrite';
+import { REWRITE_TIMEOUT_MS, runRewrite, testConnection } from './rewrite';
 import { type StreamFn } from './providers/types';
 
 function settings(
@@ -67,6 +67,54 @@ describe('runRewrite', () => {
 
     await runRewrite(request, settings(), stream, (event) => events.push(event), controller.signal);
 
+    expect(events).toEqual([]);
+  });
+
+  it('posts a timeout error when the stream is still running after 60 seconds', async () => {
+    vi.useFakeTimers();
+    try {
+      const stream: StreamFn = (_prompt, _settings, _onText, signal) =>
+        new Promise((_resolve, reject) => {
+          const fail = () => reject(new Error('aborted'));
+          if (signal.aborted) fail();
+          else signal.addEventListener('abort', fail, { once: true });
+        });
+      const events: RewriteEvent[] = [];
+      const pending = runRewrite(
+        request,
+        settings(),
+        stream,
+        (event) => events.push(event),
+        new AbortController().signal,
+      );
+
+      await vi.advanceTimersByTimeAsync(REWRITE_TIMEOUT_MS - 1);
+      expect(events).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      await pending;
+      expect(events).toEqual([{ type: 'error', message: 'Timed out after 60 seconds.' }]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('posts nothing when the caller aborts while the stream is running', async () => {
+    const controller = new AbortController();
+    const stream: StreamFn = (_prompt, _settings, _onText, signal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      });
+    const events: RewriteEvent[] = [];
+    const pending = runRewrite(
+      request,
+      settings(),
+      stream,
+      (event) => events.push(event),
+      controller.signal,
+    );
+
+    controller.abort();
+    await pending;
     expect(events).toEqual([]);
   });
 

@@ -35,6 +35,23 @@ export function pickSettings(settings: Settings, keys: Iterable<SettingsKey>): P
   return patch;
 }
 
+function originOf(value: string): string {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value;
+  }
+}
+
+/** Drop the saved key when the base URL points at a different server. */
+export function baseUrlPatch(before: Settings, url: string): Partial<Settings> {
+  const patch: Partial<Settings> = { openaiBaseUrl: url };
+  if (before.openaiApiKey !== '' && originOf(url) !== originOf(before.openaiBaseUrl)) {
+    patch.openaiApiKey = '';
+  }
+  return patch;
+}
+
 /** Take settings saved elsewhere, but keep the fields the user is still editing. */
 export function mergeExternal(
   current: Settings,

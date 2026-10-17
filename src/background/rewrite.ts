@@ -5,6 +5,7 @@ import { type Settings } from '../core/settings';
 import { type StreamFn } from './providers/types';
 
 const TEST_TIMEOUT_MS = 45_000;
+export const REWRITE_TIMEOUT_MS = 60_000;
 const TEST_REQUEST: RewriteRequest = {
   mode: 'fix',
   tone: 'polite',
@@ -20,6 +21,18 @@ export async function runRewrite(
 ): Promise<void> {
   const prompt = buildPrompt(req.mode, req.tone, req.text);
   let raw = '';
+  const inner = new AbortController();
+  let timedOut = false;
+  const onAbort = () => {
+    inner.abort();
+  };
+  signal.addEventListener('abort', onAbort);
+  if (signal.aborted) onAbort();
+  const timer = setTimeout(() => {
+    timedOut = true;
+    inner.abort();
+  }, REWRITE_TIMEOUT_MS);
+
   try {
     await stream(
       prompt,
@@ -28,13 +41,20 @@ export async function runRewrite(
         raw += text;
         post({ type: 'chunk', text });
       },
-      signal,
+      inner.signal,
     );
   } catch (err) {
+    if (timedOut) {
+      post({ type: 'error', message: 'Timed out after 60 seconds.' });
+      return;
+    }
     if (signal.aborted) return;
     const message = err instanceof Error ? err.message : 'The rewrite failed.';
     post({ type: 'error', message });
     return;
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener('abort', onAbort);
   }
 
   const cleaned = cleanOutput(raw, req.text);

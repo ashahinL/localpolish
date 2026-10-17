@@ -1,6 +1,6 @@
 import { type CliProviderId, type ProviderId, type Settings } from '../core/settings';
 import { CodeLine, Field, Note, PresetPicker, SecretInput, TextInput } from './controls';
-import { parseTemperature } from './form';
+import { baseUrlPatch, parseTemperature } from './form';
 import {
   ANTHROPIC_MODELS,
   baseUrlPreset,
@@ -120,7 +120,7 @@ function OpenAiDetails({ settings }: { settings: Settings }) {
         presets={BASE_URL_OPTIONS}
         value={settings.openaiBaseUrl}
         settingsKey="openaiBaseUrl"
-        onValue={(value, typing) => change({ openaiBaseUrl: value }, typing)}
+        onValue={(value, typing) => change((before) => baseUrlPatch(before, value), typing)}
       />
       {isOllamaUrl(settings.openaiBaseUrl) && (
         <Note tone="info">

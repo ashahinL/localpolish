@@ -26,6 +26,18 @@ describe('wordDiff', () => {
     ]);
   });
 
+  it('returns a whole-text replacement when the word diff takes too long', () => {
+    const before = 'a '.repeat(200_000);
+    const after = 'b '.repeat(200_000);
+    const started = Date.now();
+    const parts = wordDiff(before, after);
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(parts).toEqual([
+      { type: 'del', text: before },
+      { type: 'add', text: after },
+    ]);
+  });
+
   it('joins same+add back to after and same+del back to before', () => {
     const cases = [
       ['i has went', 'I have gone'],
