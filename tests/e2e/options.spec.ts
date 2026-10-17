@@ -1,4 +1,5 @@
 import { expect, test as base, type BrowserContext, type Page } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
 
 const DIST = new URL('../../dist', import.meta.url);
 // The built page loads /chunks/... by absolute path, which file:// cannot resolve.
@@ -41,7 +42,7 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
   };
   await page.route(`${ORIGIN}/**`, (route) => {
     const file = new URL(DIST.href + new URL(route.request().url()).pathname);
-    return route.fulfill({ path: decodeURIComponent(file.pathname) });
+    return route.fulfill({ path: fileURLToPath(file) });
   });
   await page.addInitScript((cfg: StubConfig) => {
     const store: Record<string, unknown> = {};
