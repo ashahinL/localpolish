@@ -155,13 +155,12 @@ async function applyRich(
   text: string,
 ): Promise<ApplyResult> {
   const { root } = target;
-  // LinkedIn swaps its <p> elements when focus comes back, which collapses the saved range.
-  const range = target.whole ? contentsOf(root) : target.range;
-  if (!root.isConnected || !root.contains(range.startContainer)) {
-    return { ok: false, reason: 'changed' };
-  }
+  if (!root.isConnected) return { ok: false, reason: 'changed' };
 
   root.focus();
+  // LinkedIn swaps its <p> elements on focus, which collapses the saved range.
+  const range = target.whole ? contentsOf(root) : target.range;
+  if (!root.contains(range.startContainer)) return { ok: false, reason: 'changed' };
   const selection = window.getSelection();
   if (!selection) return { ok: false, reason: 'rejected' };
   selection.removeAllRanges();

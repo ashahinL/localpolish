@@ -175,8 +175,15 @@ test('whole paragraph editor survives its blocks being swapped', async ({ page }
 
   expect(await captureText(page, true)).toBe('\nhi ahmed,\n\nhope your having a good day');
   await page.locator('#outside').click();
+  // LinkedIn replaces its paragraphs when the box gets focus again.
   await page.locator('#ce').evaluate((el, html) => {
-    el.innerHTML = html;
+    el.addEventListener(
+      'focus',
+      () => {
+        el.innerHTML = html;
+      },
+      { once: true },
+    );
   }, html);
   expect(await apply(page, "\nHi Ahmed,\n\nHope you're having a good day!")).toEqual({
     ok: true,

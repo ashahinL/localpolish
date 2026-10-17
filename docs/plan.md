@@ -142,7 +142,7 @@ Fixed on the way:
 
 Left for T10:
 - `Ctrl+Shift+K` on a field that has text, with nothing selected, mainly the LinkedIn message box (CDP key events do not fire extension commands). The **Sites** list passed. On an empty LinkedIn message box the shortcut said "Click into a text field first"; it now says "Type some text first."
-- LinkedIn message box: the shortcut on one line works. With several lines, LinkedIn swapped its `<p>` elements when focus came back, the saved range collapsed, and Accept fell back to Copy. Fixed: when the selection covered the whole field, Accept selects the whole field again. A part selection in that box can still fall back to Copy. Also, `<p>` blocks are now read as one line each, so a blank line no longer shows as three. Re-check the multi-line shortcut there.
+- LinkedIn message box: the shortcut on one line works. With several lines, LinkedIn swapped its `<p>` elements when focus came back, the saved range collapsed, and Accept fell back to Copy. Fixed: when the selection covered the whole field, Accept focuses the field, then selects all of it again. LinkedIn swaps the paragraphs during `focus()`, so the range must be built after it. A part selection in that box can still fall back to Copy. Also, `<p>` blocks are now read as one line each, so a blank line no longer shows as three. Re-check the multi-line shortcut there.
 - `npm run test:e2e` here: Playwright's own Chromium fails to start on this PC ("side-by-side configuration is incorrect"). The editable tests pass when pointed at Brave.
 
 Quality notes for later: Fix adds a final period to a fragment or a subject line ("I have an apple. and she...").
