@@ -1,6 +1,6 @@
 import { h, render } from 'preact';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
-import { type Mode, type Settings, type Tone } from '../core/settings';
+import { type DefaultMode, type Settings, type Tone } from '../core/settings';
 import { copyText } from './clipboard';
 import { applyReplacement, type Target } from './editable';
 import { guarded, settle } from './guard';
@@ -9,9 +9,12 @@ import {
   canAccept,
   initialState,
   isUnchanged,
+  pickAction,
   popupReducer,
+  type Choice,
   type PopupAction,
   type PopupState,
+  type Tab,
 } from './popupState';
 import { Popup } from './ui/Popup';
 import { isInsideUi, layer } from './ui/root';
@@ -75,11 +78,11 @@ export function createController(deps: ControllerDeps): Controller {
 
   function open(target: Target): void {
     close();
-    const settings = deps.getSettings();
+    const choice = defaultChoice(deps.getSettings().defaultMode);
     const s: Session = {
       target,
       anchor: anchorRect(target),
-      state: initialState(target.text, settings.defaultMode, settings.defaultTone),
+      state: initialState(target.text, choice),
       port: null,
       container: layer('popup'),
       copiedTimer: undefined,
@@ -88,7 +91,7 @@ export function createController(deps: ControllerDeps): Controller {
     session = s;
     window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('mousedown', onPointerDown, true);
-    request(s, settings.defaultMode, settings.defaultTone);
+    request(s, { type: 'start', choice });
   }
 
   function close(): void {
@@ -111,24 +114,36 @@ export function createController(deps: ControllerDeps): Controller {
         state: s.state,
         anchor: s.anchor,
         isMac: deps.isMac,
-        onMode: guarded((mode: Mode) => {
-          if (mode !== s.state.mode) request(s, mode, s.state.tone);
+        // Rephrase only opens its chips; the chip click is what sends.
+        onTab: guarded((tab: Tab) => {
+          if (tab === 'rephrase') dispatch(s, { type: 'tab', tab });
+          else choose(s, tab);
         }),
-        onTone: guarded((tone: Tone) => {
-          if (tone !== s.state.tone) request(s, s.state.mode, tone);
-        }),
+        onChoice: guarded((choice: Choice) => choose(s, choice)),
         onClose: guarded(close),
         onAccept: () => settle(accept(s)),
         onCopy: () => settle(copy(s)),
-        onRetry: guarded(() => request(s, s.state.mode, s.state.tone)),
+        onRetry: guarded(() => request(s, { type: 'retry' })),
       }),
       s.container,
     );
   }
 
-  function request(s: Session, mode: Mode, tone: Tone): void {
+  function choose(s: Session, choice: Choice): void {
+    const action = pickAction(s.state, choice);
+    if (action.type === 'start') {
+      request(s, action);
+      return;
+    }
+    // A streaming choice we leave is cancelled; its partial answer is never saved.
+    if (action.type === 'restore') stopPort(s);
+    dispatch(s, action);
+  }
+
+  function request(s: Session, action: Extract<PopupAction, { type: 'start' | 'retry' }>): void {
     stopPort(s);
-    dispatch(s, { type: 'start', mode, tone });
+    dispatch(s, action);
+    const choice = s.state.choice;
     try {
       const port = deps.connect();
       s.port = port;
@@ -144,7 +159,7 @@ export function createController(deps: ControllerDeps): Controller {
           dispatch(s, { type: 'error', message: STOPPED });
         }),
       );
-      port.postMessage({ mode, tone, text: s.target.text });
+      port.postMessage({ ...wireRequest(choice), text: s.target.text });
     } catch {
       s.port = null;
       dispatch(s, { type: 'error', message: UPDATED });
@@ -192,6 +207,17 @@ export function createController(deps: ControllerDeps): Controller {
   }
 
   return { open, close, isOpen: () => session !== null };
+}
+
+function defaultChoice(mode: DefaultMode): Choice {
+  return mode === 'rephrase' ? 'rephrase:keep' : mode;
+}
+
+// The background validates tone on every request, so 'polite' fills it where it is unused.
+function wireRequest(choice: Choice): Omit<RewriteRequest, 'text'> {
+  if (choice === 'fix' || choice === 'shorter') return { mode: choice, tone: 'polite' };
+  if (choice === 'rephrase:keep') return { mode: 'rephrase', tone: 'polite' };
+  return { mode: 'tone', tone: choice.slice('rephrase:'.length) as Tone };
 }
 
 function stopPort(s: Session): void {

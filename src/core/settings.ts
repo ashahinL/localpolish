@@ -7,6 +7,8 @@ export type Mode = 'fix' | 'rephrase' | 'shorter' | 'tone';
 
 export type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
 
+export type DefaultMode = 'fix' | 'rephrase' | 'shorter';
+
 export interface Settings {
   provider: ProviderId;
   models: Record<ProviderId, string>;
@@ -15,8 +17,7 @@ export interface Settings {
   openaiApiKey: string;
   anthropicApiKey: string;
   temperature: number;
-  defaultMode: Mode;
-  defaultTone: Tone;
+  defaultMode: DefaultMode;
   blocklist: string[];
 }
 
@@ -39,7 +40,6 @@ export const DEFAULT_SETTINGS: Settings = {
   anthropicApiKey: '',
   temperature: 0.3,
   defaultMode: 'fix',
-  defaultTone: 'polite',
   blocklist: [],
 };
 
@@ -61,12 +61,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isDefaultMode(value: unknown): value is DefaultMode {
+  return value === 'fix' || value === 'rephrase' || value === 'shorter';
+}
+
 function storedPatch(value: unknown): Partial<Settings> {
   if (!isRecord(value)) return {};
-  const { models, efforts, ...rest } = value;
-  const patch = { ...rest } as Partial<Settings>;
+  const { models, efforts, defaultMode, ...rest } = value;
+  const patch = { ...rest } as Partial<Settings> & { defaultTone?: unknown };
+  // Older versions stored a default tone and allowed 'tone' as the default mode.
+  delete patch.defaultTone;
   if (isRecord(models)) patch.models = models as Settings['models'];
   if (isRecord(efforts)) patch.efforts = efforts as Settings['efforts'];
+  if (defaultMode !== undefined) {
+    patch.defaultMode = isDefaultMode(defaultMode) ? defaultMode : 'fix';
+  }
   return patch;
 }
 

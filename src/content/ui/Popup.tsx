@@ -1,29 +1,43 @@
 import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import { wordDiff } from '../../core/diff';
-import { type Mode, type Tone } from '../../core/settings';
 import { placePopup, type Rect } from '../position';
-import { canAccept, isUnchanged, popupNotes, type Note, type PopupState } from '../popupState';
+import {
+  canAccept,
+  isUnchanged,
+  popupNotes,
+  tabOf,
+  type Choice,
+  type Note,
+  type PopupState,
+  type Tab,
+} from '../popupState';
 
-const MODES: Array<[Mode, string]> = [
+const TABS: Array<[Tab, string]> = [
   ['fix', 'Fix'],
   ['rephrase', 'Rephrase'],
   ['shorter', 'Shorter'],
-  ['tone', 'Tone'],
 ];
 
-const TONES: Array<[Tone, string]> = [
-  ['polite', 'Polite'],
-  ['formal', 'Formal'],
-  ['casual', 'Casual'],
-  ['angry-civil', 'Angry but civil'],
+const CHIPS: Array<[Choice, string]> = [
+  ['rephrase:keep', 'Keep tone'],
+  ['rephrase:polite', 'Polite'],
+  ['rephrase:formal', 'Formal'],
+  ['rephrase:casual', 'Casual'],
+  ['rephrase:angry-civil', 'Angry but civil'],
 ];
+
+function choiceLabel(choice: Choice): string {
+  const tab = TABS.find(([value]) => value === choice);
+  if (tab) return tab[1];
+  return `Rephrase · ${CHIPS.find(([value]) => value === choice)?.[1] ?? ''}`;
+}
 
 export interface PopupProps {
   state: PopupState;
   anchor: Rect;
   isMac: boolean;
-  onMode(mode: Mode): void;
-  onTone(tone: Tone): void;
+  onTab(tab: Tab): void;
+  onChoice(choice: Choice): void;
   onClose(): void;
   onAccept(): void;
   onCopy(): void;
@@ -58,18 +72,20 @@ export function Popup(props: PopupProps) {
 
   const ready = canAccept(state);
   const notes = popupNotes(state, isMac);
+  // No pressed tab or chip names the shown answer, so the body says which one it is.
+  const showCaption = tabOf(state.choice) !== state.tab;
 
   return (
     <div class="lp-popup" ref={ref} role="dialog" aria-label="LocalPolish" tabIndex={-1}>
       <div class="lp-header">
         <div class="lp-tabs" role="group" aria-label="Mode">
-          {MODES.map(([mode, label]) => (
+          {TABS.map(([tab, label]) => (
             <button
-              key={mode}
+              key={tab}
               type="button"
               class="lp-tab"
-              aria-pressed={state.mode === mode}
-              onClick={() => props.onMode(mode)}
+              aria-pressed={state.tab === tab}
+              onClick={() => props.onTab(tab)}
             >
               {label}
             </button>
@@ -85,15 +101,15 @@ export function Popup(props: PopupProps) {
           ×
         </button>
       </div>
-      {state.mode === 'tone' && (
+      {state.tab === 'rephrase' && (
         <div class="lp-chips" role="group" aria-label="Tone">
-          {TONES.map(([tone, label]) => (
+          {CHIPS.map(([choice, label]) => (
             <button
-              key={tone}
+              key={choice}
               type="button"
               class="lp-chip"
-              aria-pressed={state.tone === tone}
-              onClick={() => props.onTone(tone)}
+              aria-pressed={state.choice === choice}
+              onClick={() => props.onChoice(choice)}
             >
               {label}
             </button>
@@ -101,6 +117,7 @@ export function Popup(props: PopupProps) {
         </div>
       )}
       <div class="lp-body">
+        {showCaption && <p class="lp-caption">Showing: {choiceLabel(state.choice)}</p>}
         <Body state={state} />
       </div>
       {notes.length > 0 && (

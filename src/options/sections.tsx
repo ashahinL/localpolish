@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { type BridgeStatus, type TestResult } from '../core/messages';
-import { type Mode, type Settings, type Tone } from '../core/settings';
+import { type DefaultMode, type Settings } from '../core/settings';
 import { bridgeStatus, openShortcutsPage, polishShortcut, testConnection } from './chrome';
 import { CodeLine, Field, Note, TextInput } from './controls';
 import { formatSeconds, parseBlocklist, shortcutKeys } from './form';
@@ -12,18 +12,10 @@ const CLIS: Array<{ key: 'claude' | 'codex' | 'grok'; name: string }> = [
   { key: 'grok', name: 'Grok CLI' },
 ];
 
-const MODES: Array<{ value: Mode; label: string }> = [
+const MODES: Array<{ value: DefaultMode; label: string }> = [
   { value: 'fix', label: 'Fix' },
-  { value: 'rephrase', label: 'Rephrase' },
+  { value: 'rephrase', label: 'Rephrase (keep tone)' },
   { value: 'shorter', label: 'Shorter' },
-  { value: 'tone', label: 'Tone' },
-];
-
-const TONES: Array<{ value: Tone; label: string }> = [
-  { value: 'polite', label: 'Polite' },
-  { value: 'formal', label: 'Formal' },
-  { value: 'casual', label: 'Casual' },
-  { value: 'angry-civil', label: 'Angry but civil' },
 ];
 
 export function BridgeSection() {
@@ -125,24 +117,11 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
           <select
             id="default-mode"
             value={settings.defaultMode}
-            onChange={(event) => change({ defaultMode: event.currentTarget.value as Mode })}
+            onChange={(event) => change({ defaultMode: event.currentTarget.value as DefaultMode })}
           >
             {MODES.map((mode) => (
               <option key={mode.value} value={mode.value}>
                 {mode.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field id="default-tone" label="Default tone">
-          <select
-            id="default-tone"
-            value={settings.defaultTone}
-            onChange={(event) => change({ defaultTone: event.currentTarget.value as Tone })}
-          >
-            {TONES.map((tone) => (
-              <option key={tone.value} value={tone.value}>
-                {tone.label}
               </option>
             ))}
           </select>

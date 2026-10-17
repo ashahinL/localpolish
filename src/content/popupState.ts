@@ -1,24 +1,32 @@
-import { type Mode, type Tone } from '../core/settings';
+import { type Tone } from '../core/settings';
 import { findMissingTokens, lostArabicScript } from '../core/tokens';
 
 export type Phase = 'streaming' | 'done' | 'error';
 export type AcceptFailure = 'changed' | 'rejected';
+export type Tab = 'fix' | 'rephrase' | 'shorter';
+export type Choice = 'fix' | 'shorter' | 'rephrase:keep' | `rephrase:${Tone}`;
 
 export interface PopupState {
   input: string;
-  mode: Mode;
-  tone: Tone;
+  tab: Tab;
+  /** The choice whose answer the body shows; Accept, Copy and Retry act on it. */
+  choice: Choice;
   phase: Phase;
   streamed: string;
   result: string;
   error: string;
+  /** Finished answers for the life of the popup. */
+  cache: Partial<Record<Choice, string>>;
   acceptFailure: AcceptFailure | null;
   acceptCopied: boolean;
   copy: 'idle' | 'copied' | 'failed';
 }
 
 export type PopupAction =
-  | { type: 'start'; mode: Mode; tone: Tone }
+  | { type: 'tab'; tab: Tab }
+  | { type: 'start'; choice: Choice }
+  | { type: 'retry' }
+  | { type: 'restore'; choice: Choice }
   | { type: 'chunk'; text: string }
   | { type: 'done'; text: string }
   | { type: 'error'; message: string }
@@ -32,15 +40,20 @@ export type Note =
 
 const SHORTER_LIMIT = 280;
 
-export function initialState(input: string, mode: Mode, tone: Tone): PopupState {
+export function tabOf(choice: Choice): Tab {
+  return choice === 'fix' || choice === 'shorter' ? choice : 'rephrase';
+}
+
+export function initialState(input: string, choice: Choice): PopupState {
   return {
     input,
-    mode,
-    tone,
+    tab: tabOf(choice),
+    choice,
     phase: 'streaming',
     streamed: '',
     result: '',
     error: '',
+    cache: {},
     acceptFailure: null,
     acceptCopied: false,
     copy: 'idle',
@@ -49,14 +62,41 @@ export function initialState(input: string, mode: Mode, tone: Tone): PopupState 
 
 export function popupReducer(state: PopupState, action: PopupAction): PopupState {
   switch (action.type) {
+    case 'tab':
+      return { ...state, tab: action.tab };
     case 'start':
-      return initialState(state.input, action.mode, action.tone);
+      return {
+        ...initialState(state.input, action.choice),
+        cache: without(state.cache, action.choice),
+      };
+    case 'retry':
+      // Keeps the open tab: Retry while Rephrase is open and Fix is shown stays on Rephrase.
+      return {
+        ...initialState(state.input, state.choice),
+        tab: state.tab,
+        cache: without(state.cache, state.choice),
+      };
+    case 'restore': {
+      const result = state.cache[action.choice];
+      if (result === undefined) return state;
+      return {
+        ...initialState(state.input, action.choice),
+        cache: state.cache,
+        phase: 'done',
+        result,
+      };
+    }
     case 'chunk':
       if (state.phase !== 'streaming') return state;
       return { ...state, streamed: state.streamed + action.text };
     case 'done':
       if (state.phase !== 'streaming') return state;
-      return { ...state, phase: 'done', result: action.text };
+      return {
+        ...state,
+        phase: 'done',
+        result: action.text,
+        cache: { ...state.cache, [state.choice]: action.text },
+      };
     case 'error':
       if (state.phase !== 'streaming') return state;
       return { ...state, phase: 'error', error: action.message };
@@ -66,6 +106,20 @@ export function popupReducer(state: PopupState, action: PopupAction): PopupState
     case 'copy':
       return { ...state, copy: action.copy };
   }
+}
+
+function without(cache: PopupState['cache'], choice: Choice): PopupState['cache'] {
+  const next = { ...cache };
+  delete next[choice];
+  return next;
+}
+
+/** What a click on a tab or chip should do: nothing new, show a saved answer, or send. */
+export function pickAction(state: PopupState, choice: Choice): PopupAction {
+  if (choice === state.choice && state.phase !== 'error')
+    return { type: 'tab', tab: tabOf(choice) };
+  if (state.cache[choice] !== undefined) return { type: 'restore', choice };
+  return { type: 'start', choice };
 }
 
 export function canAccept(state: PopupState): boolean {
@@ -79,7 +133,7 @@ export function isUnchanged(state: PopupState): boolean {
 export function popupNotes(state: PopupState, isMac: boolean): Note[] {
   if (state.phase !== 'done') return [];
   const notes: Note[] = [];
-  if (state.mode === 'shorter') {
+  if (state.choice === 'shorter') {
     const before = [...state.input].length;
     const after = [...state.result].length;
     const over = after > SHORTER_LIMIT;

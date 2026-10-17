@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T11 done, T12 popup modes next)
+Status: done (T0-T12). Ideas for later are under Later.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -60,8 +60,7 @@ interface Settings {
   openaiApiKey: string;                 // default ''
   anthropicApiKey: string;              // default ''
   temperature: number;                  // default 0.3, HTTP providers only
-  defaultMode: Mode;                    // default 'fix'
-  defaultTone: Tone;                    // default 'polite'
+  defaultMode: 'fix' | 'rephrase' | 'shorter'; // default 'fix'; 'rephrase' keeps the tone
   blocklist: string[];                  // hostnames, default []
 }
 ```
@@ -121,7 +120,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 
   - [x] **T11e. Speed and cost review** (2026-10-17, Windows and Mac). Benchmark scripts and results are in `bench/` (see `bench/README.md`). Found so far: the bridge sends `done` only when the CLI exits, which adds 2 to 3 s for Haiku; Codex sends about 13k input tokens and Grok about 10k for a one-line fix. Probe run on the Mac. Fixed: the bridge sends `done` at the final event (Haiku about 1.8 s instead of 4.5 s). Grok runs with its Claude, Codex and Cursor imports off, and Codex with our prompt as its base prompt. Sol reviewed it: fixed an early-success bug on a cut-off answer and two cleanup bugs. New Fix prompt (v2): Luna 19/21, up from 12/21; Haiku about 9/21 with any prompt. Details in `bench/README.md`.
 
-- [ ] **T12. Popup modes: one Rephrase tab with tones** (Claude Opus, art lane). Decided with the user on 2026-10-17:
+- [x] **T12. Popup modes: one Rephrase tab with tones** (Claude Opus, art lane). Decided with the user on 2026-10-17:
   - Tabs become **Fix | Rephrase | Shorter**. The Tone tab goes away.
   - The Rephrase tab shows chips: **Keep tone** (today's Rephrase prompt), Polite, Formal, Casual, Angry but civil.
   - Clicking the Rephrase tab sends nothing. A chip click sends one request. Fix and Shorter still send on click.
@@ -130,6 +129,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Each mode and tone keeps its answer for the life of the popup. Going back shows the saved answer with no new request. Retry asks again for the current one.
   - Remove the **default tone** setting from the options page and from `Settings` (stored values are ignored).
   - No new keyboard keys.
+  - Built: the default mode setting keeps Fix, Rephrase (keep tone) and Shorter. A stored 'tone' default loads as Fix. The wire format did not change: Keep tone sends `mode: 'rephrase'`, a tone chip sends `mode: 'tone'`. Rephrase open with another answer shown adds a small "Showing: Fix" caption.
 
 ## Later (not MVP, keep the design open)
 

@@ -159,18 +159,67 @@ test('Shorter mode flags a result over 280 characters', async ({ page }) => {
   await expect(page.locator('.lp-popup .lp-tab[aria-pressed="true"]')).toHaveText('Shorter');
 });
 
-test('switching mode restarts the request with the new mode', async ({ page }) => {
+test('the Rephrase tab sends nothing until a chip is picked', async ({ page }) => {
   await typeAndSelectAll(page, 'i has went home');
   await openPopup(page, [SUCCESS]);
   const popup = page.locator('.lp-popup');
   await expect(popup.locator('.lp-diff')).toBeVisible();
 
+  // A request from the tab click would take the first script and leave the chip with WRONG.
   await page.evaluate(() =>
-    (window as unknown as PageApi).__lp.setScripts([[{ type: 'done', text: 'i has went home' }]]),
+    (window as unknown as PageApi).__lp.setScripts([
+      [{ type: 'done', text: 'I have returned home.' }],
+      [{ type: 'done', text: 'WRONG' }],
+    ]),
   );
-  await popup.getByRole('button', { name: 'Tone' }).click();
-  await expect(popup.getByRole('button', { name: 'Angry but civil' })).toBeVisible();
-  await expect(popup.locator('.lp-body')).toHaveText('No changes needed.');
+  await popup.getByRole('button', { name: 'Rephrase' }).click();
+  await expect(popup.locator('.lp-chip')).toHaveText([
+    'Keep tone',
+    'Polite',
+    'Formal',
+    'Casual',
+    'Angry but civil',
+  ]);
+  await expect(popup.locator('.lp-chip[aria-pressed="true"]')).toHaveCount(0);
+  await expect(popup.locator('.lp-tab[aria-pressed="true"]')).toHaveText('Rephrase');
+  await expect(popup.locator('.lp-caption')).toHaveText('Showing: Fix');
+  expect(await newText(page)).toBe('I went home.');
+  await expect(popup.getByRole('button', { name: 'Accept' })).toBeEnabled();
+
+  await popup.getByRole('button', { name: 'Formal' }).click();
+  await expect(popup.getByRole('button', { name: 'Formal' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(popup.locator('.lp-caption')).toHaveCount(0);
+  await expect.poll(() => newText(page)).toBe('I have returned home.');
+});
+
+test('going back to a finished choice shows its saved answer without a request', async ({
+  page,
+}) => {
+  await typeAndSelectAll(page, 'i has went home');
+  await openPopup(page, [SUCCESS, [{ type: 'done', text: 'I have returned home.' }]]);
+  const popup = page.locator('.lp-popup');
+  await expect(popup.locator('.lp-diff')).toBeVisible();
+  await popup.getByRole('button', { name: 'Rephrase' }).click();
+  await popup.getByRole('button', { name: 'Formal' }).click();
+  await expect.poll(() => newText(page)).toBe('I have returned home.');
+
+  await page.evaluate(() =>
+    (window as unknown as PageApi).__lp.setScripts([[{ type: 'done', text: 'Home.' }]]),
+  );
+  await popup.getByRole('button', { name: 'Fix' }).click();
+  await expect(popup.locator('.lp-tab[aria-pressed="true"]')).toHaveText('Fix');
+  expect(await newText(page)).toBe('I went home.');
+
+  await popup.getByRole('button', { name: 'Rephrase' }).click();
+  await popup.getByRole('button', { name: 'Formal' }).click();
+  expect(await newText(page)).toBe('I have returned home.');
+
+  // The first new request still gets the first script, so none was sent above.
+  await popup.getByRole('button', { name: 'Shorter' }).click();
+  await expect.poll(() => newText(page)).toBe('Home.');
 });
 
 test('the floating button follows a textarea selection', async ({ page }) => {

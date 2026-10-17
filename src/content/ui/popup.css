@@ -184,6 +184,12 @@ button:focus-visible {
   border-top: 1px solid var(--lp-border);
 }
 
+.lp-caption {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+
 .lp-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

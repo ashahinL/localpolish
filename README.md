@@ -76,7 +76,7 @@ Select text in a text field. A small round button appears under the spot where y
 
 Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field.
 
-The popup has four modes: **Fix**, **Rephrase**, **Shorter**, and **Tone**. Tone has **Polite**, **Formal**, **Casual**, and **Angry but civil**. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green.
+The popup has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green.
 
 **Accept** puts the new text in the field. The site's own Undo still works. Press `Cmd+Z` to bring the old text back. **Copy** copies the new text. **Retry** asks again. Esc closes the popup. `Cmd+Enter` accepts the text. `Ctrl+Enter` does the same.
 

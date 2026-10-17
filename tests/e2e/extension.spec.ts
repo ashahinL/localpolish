@@ -181,10 +181,15 @@ test('textarea keeps a two-line rewrite exactly', async ({ page, mock }) => {
   await expect(page.locator('#ta')).toHaveValue('I went home.\nShe does not know.');
 });
 
-test('tone tab asks for a formal rewrite', async ({ page, mock }) => {
+test('Rephrase tab sends nothing and its Formal chip asks for a formal rewrite', async ({
+  page,
+  mock,
+}) => {
   await openRewrite(page, '#ta');
   const seen = mock.requests.length;
-  await page.getByRole('button', { name: 'Tone' }).click();
+  await page.getByRole('button', { name: 'Rephrase' }).click();
+  await expect(page.getByRole('button', { name: 'Formal' })).toBeVisible();
+  expect(mock.requests.length).toBe(seen);
   await page.getByRole('button', { name: 'Formal' }).click();
 
   await expect

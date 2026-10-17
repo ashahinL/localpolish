@@ -57,6 +57,16 @@ describe('loadSettings', () => {
     });
   });
 
+  it('loads an old tone default mode as Fix and drops the old default tone', async () => {
+    memory.set('settings', { defaultMode: 'tone', defaultTone: 'formal' });
+    const settings = await loadSettings();
+    expect(settings.defaultMode).toBe('fix');
+    expect(settings).not.toHaveProperty('defaultTone');
+
+    memory.set('settings', { defaultMode: 'shorter' });
+    expect((await loadSettings()).defaultMode).toBe('shorter');
+  });
+
   it('keeps the other CLI efforts when one is saved', async () => {
     await saveSettings({ efforts: { 'codex-cli': 'xhigh' } as Settings['efforts'] });
 
@@ -84,7 +94,7 @@ describe('saveSettings', () => {
     expect(settings.temperature).toBe(0);
     expect(settings.blocklist).toEqual(['example.com']);
     expect(settings.defaultMode).toBe('fix');
-    expect(settings.defaultTone).toBe('polite');
+    expect(settings).not.toHaveProperty('defaultTone');
     expect(settings.models['claude-cli']).toBe('haiku');
     expect(settings.openaiBaseUrl).toBe(DEFAULT_SETTINGS.openaiBaseUrl);
   });
