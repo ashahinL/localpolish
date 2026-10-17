@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T8 done)
+Status: in progress (T0-T9 done)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -105,7 +105,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T6. In-page popup and button** (Claude Opus, art lane). Floating button, Shadow DOM popup with modes and tones, streaming view, word diff, char counter for Shorter, missing-token warning, warning when `lostArabicScript()` is true, Accept / Copy / Retry / Close, Esc to close, copy fallback when Accept fails.
 - [x] **T7. Options page** (Claude Opus, art lane). All settings. Per-CLI model and effort are dropdowns with presets plus a custom value (Claude efforts low to max, Codex none to xhigh, Grok low to high). OpenAI-compatible gets base URL presets for xAI, OpenAI, OpenRouter, LM Studio and Ollama. bridge status from `ping`, Test connection, shortcut hint with a button to open `chrome://extensions/shortcuts`.
 - [x] **T8. End-to-end test** (Grok). Playwright loads the built extension, points it at a mock OpenAI-compatible server, and runs select → Fix → Accept on the fixture pages.
-- [~] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.
+- [x] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.
 - [ ] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
 
 ## Later (not MVP, keep the design open)
