@@ -35,24 +35,11 @@ describe('placePopup', () => {
 });
 
 describe('placeButton', () => {
-  it('sits inside the bottom-right corner of a field', () => {
-    expect(placeButton(rect(100, 100, 400, 60), 'field', viewport)).toEqual({
-      top: 128,
-      left: 468,
-    });
-  });
-
-  it('sits just below the end of a rich selection', () => {
-    expect(placeButton(rect(100, 100, 200, 20), 'rich', viewport)).toEqual({
-      top: 124,
-      left: 272,
-    });
+  it('sits just below the caret, centred on it', () => {
+    expect(placeButton(rect(100, 300, 0, 20), viewport)).toEqual({ top: 124, left: 286 });
   });
 
   it('stays inside the viewport', () => {
-    expect(placeButton(rect(780, 950, 100, 20), 'rich', viewport)).toEqual({
-      top: 764,
-      left: 964,
-    });
+    expect(placeButton(rect(780, 990, 0, 20), viewport)).toEqual({ top: 764, left: 964 });
   });
 });

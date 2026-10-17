@@ -1,4 +1,5 @@
 import { h, render } from 'preact';
+import { fieldFocusCaret, focusCaret } from './caret';
 import { findEditable } from './editable';
 import { guarded } from './guard';
 import { placeButton, type Rect } from './position';
@@ -12,11 +13,6 @@ export interface ButtonDeps {
   onActivate(): void;
 }
 
-interface SelectionAnchor {
-  kind: 'field' | 'rich';
-  rect: Rect;
-}
-
 const DEBOUNCE_MS = 150;
 
 export function createButton(deps: ButtonDeps): void {
@@ -24,9 +20,9 @@ export function createButton(deps: ButtonDeps): void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let shown = false;
 
-  function wanted(): SelectionAnchor | null {
+  function wanted(): Rect | null {
     if (!deps.isEnabled() || deps.isPopupOpen()) return null;
-    return selectionAnchor();
+    return selectionCaret();
   }
 
   function hide(): void {
@@ -37,8 +33,8 @@ export function createButton(deps: ButtonDeps): void {
   }
 
   function update(): void {
-    const anchor = wanted();
-    if (!anchor) {
+    const caret = wanted();
+    if (!caret) {
       hide();
       return;
     }
@@ -46,7 +42,7 @@ export function createButton(deps: ButtonDeps): void {
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     render(
       h(FloatingButton, {
-        point: placeButton(anchor.rect, anchor.kind, viewport),
+        point: placeButton(caret, viewport),
         title,
         onActivate: guarded(() => {
           hide();
@@ -72,11 +68,11 @@ export function createButton(deps: ButtonDeps): void {
   window.addEventListener('resize', guarded(hide), { passive: true });
 }
 
-function selectionAnchor(): SelectionAnchor | null {
+function selectionCaret(): Rect | null {
   const field = findEditable(deepActiveElement());
   if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
     if (field.selectionStart === null || field.selectionStart === field.selectionEnd) return null;
-    return { kind: 'field', rect: field.getBoundingClientRect() };
+    return fieldFocusCaret(field);
   }
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
@@ -89,7 +85,7 @@ function selectionAnchor(): SelectionAnchor | null {
   ) {
     return null;
   }
-  return { kind: 'rich', rect: selection.getRangeAt(0).getBoundingClientRect() };
+  return focusCaret();
 }
 
 function deepActiveElement(): Element | null {

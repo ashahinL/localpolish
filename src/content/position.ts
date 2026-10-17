@@ -28,14 +28,8 @@ export function placePopup(anchor: Rect, popup: Size, viewport: Size): Point {
   return clampToViewport({ top, left: anchor.left }, popup, viewport);
 }
 
-export function placeButton(anchor: Rect, kind: 'field' | 'rich', viewport: Size): Point {
-  const point =
-    kind === 'rich'
-      ? { top: anchor.bottom + BUTTON_GAP, left: anchor.right - BUTTON_SIZE }
-      : {
-          top: anchor.bottom - BUTTON_GAP - BUTTON_SIZE,
-          left: anchor.right - BUTTON_GAP - BUTTON_SIZE,
-        };
+export function placeButton(caret: Rect, viewport: Size): Point {
+  const point = { top: caret.bottom + BUTTON_GAP, left: caret.left - BUTTON_SIZE / 2 };
   return clampToViewport(point, { width: BUTTON_SIZE, height: BUTTON_SIZE }, viewport);
 }
 

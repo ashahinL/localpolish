@@ -190,6 +190,46 @@ test('the floating button follows a textarea selection', async ({ page }) => {
   await expect(fab).toHaveCount(0);
 });
 
+test('the floating button sits where the selection ended', async ({ page }) => {
+  await page.evaluate(() => (window as unknown as PageApi).__lp.startButton());
+  const fab = page.locator('.lp-fab');
+  const fabCenter = async () => {
+    const box = await fab.boundingBox();
+    if (!box) throw new Error('no button');
+    return box.x + box.width / 2;
+  };
+  const selectBoth = async (selector: string, select: (el: Element, backward: boolean) => void) => {
+    const field = page.locator(selector);
+    await field.click();
+    await page.keyboard.type('hello there world');
+    const box = await field.boundingBox();
+    if (!box) throw new Error('no field');
+    const centers = [];
+    for (const backward of [false, true]) {
+      await page.keyboard.press('ArrowRight');
+      await expect(fab).toHaveCount(0);
+      await field.evaluate(select, backward);
+      await expect(fab).toBeVisible();
+      centers.push(await fabCenter());
+    }
+    const [forward, backward] = centers;
+    expect(backward).toBeLessThan(box.x + 20);
+    expect(forward).toBeGreaterThan(backward + 40);
+    expect(forward).toBeLessThan(box.x + box.width - 60);
+  };
+
+  await selectBoth('#ta', (el, backward) => {
+    if (!(el instanceof HTMLTextAreaElement)) throw new Error('expected textarea');
+    el.setSelectionRange(0, 11, backward ? 'backward' : 'forward');
+  });
+  await selectBoth('#ce', (el, backward) => {
+    const text = el.firstChild;
+    if (!text) throw new Error('expected text');
+    const [from, to] = backward ? [11, 0] : [0, 11];
+    window.getSelection()?.setBaseAndExtent(text, from, text, to);
+  });
+});
+
 test('page scripts cannot press the button or Retry', async ({ page }) => {
   await page.evaluate(() => (window as unknown as PageApi).__lp.startButton());
   await typeAndSelectAll(page, 'i has went home');

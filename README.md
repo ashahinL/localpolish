@@ -72,7 +72,7 @@ $env:CODEX_HOME="$env:USERPROFILE\AppData\Local\LocalPolish\codex-home"; mkdir -
 
 ## Using it
 
-Select text in a text field. A small round button appears next to the selection. Click it.
+Select text in a text field. A small round button appears under the spot where your selection ends. Click it.
 
 Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field.
 
