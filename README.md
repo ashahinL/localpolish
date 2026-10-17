@@ -59,13 +59,13 @@ grok login
 Codex needs its own login for LocalPolish. Your normal Codex home loads `~/.codex/AGENTS.md` into every rewrite. The command below uses a separate home, so your normal Codex login stays as it is. Add `--device-auth` at the end to log in with a code in the browser.
 
 ```bash
-CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex login
+mkdir -p "$HOME/Library/Application Support/LocalPolish/codex-home" && CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex login
 ```
 
 On Windows, run this in PowerShell instead.
 
 ```powershell
-$env:CODEX_HOME="$env:USERPROFILE\AppData\Local\LocalPolish\codex-home"; codex login
+$env:CODEX_HOME="$env:USERPROFILE\AppData\Local\LocalPolish\codex-home"; mkdir -Force $env:CODEX_HOME | Out-Null; codex login
 ```
 
 7. Open the options page. Right-click the extension icon and choose **Options**. You can also open `chrome://extensions`, then open **LocalPolish**. Click **Details**, then **Extension options**. Pick a provider, then press **Test connection**.

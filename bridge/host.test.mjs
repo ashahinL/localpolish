@@ -184,8 +184,8 @@ process.stderr.write('not logged in\\n', () => process.exit(1));
     expect(host.messages).toHaveLength(1);
     expect(/** @type {{ message: string }} */ (host.messages[0]).message).toMatch(
       windows
-        ? /\$env:CODEX_HOME=".*codex-home"; codex login$/
-        : /CODEX_HOME=".*codex-home" codex login$/,
+        ? /\$env:CODEX_HOME=".*codex-home"; mkdir -Force \$env:CODEX_HOME \| Out-Null; codex login$/
+        : /mkdir -p ".*codex-home" && CODEX_HOME=".*codex-home" codex login$/,
     );
   });
 

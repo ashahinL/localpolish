@@ -256,6 +256,6 @@ export function codexHomeFor(home, platform = process.platform) {
  */
 export function codexLoginCommand(codexHome, platform = process.platform) {
   return platform === 'win32'
-    ? `$env:CODEX_HOME="${codexHome}"; codex login`
-    : `CODEX_HOME="${codexHome}" codex login`;
+    ? `$env:CODEX_HOME="${codexHome}"; mkdir -Force $env:CODEX_HOME | Out-Null; codex login`
+    : `mkdir -p "${codexHome}" && CODEX_HOME="${codexHome}" codex login`;
 }
