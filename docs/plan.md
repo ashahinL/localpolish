@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T9b done)
+Status: in progress (T0-T9b done, T10 mostly done)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -107,7 +107,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T8. End-to-end test** (Grok). Playwright loads the built extension, points it at a mock OpenAI-compatible server, and runs select → Fix → Accept on the fixture pages.
 - [x] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.
 - [x] **T9b. Windows bridge** (Claude). The installer writes `%LOCALAPPDATA%\LocalPolish\localpolish-bridge.cmd`, the host manifest next to it, and the registry key `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge`. `findOnPath` tries `.exe`, `.cmd`, `.bat`. npm `.cmd` shims run their script with Node (`resolveCommand`). Kill uses `taskkill /T /F`. The Codex home is `%LOCALAPPDATA%\LocalPolish\codex-home`.
-- [ ] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
+- [~] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
 
 ## Later (not MVP, keep the design open)
 
@@ -130,3 +130,20 @@ Notes for the orchestrator:
 - Grok and Claude relay sandboxes cannot start Chromium (Mach port errors) or, for Claude, bind local ports. Implementers write the Playwright tests; the orchestrator runs `npm run test:e2e` in a normal shell.
 - A Grok run can finish its report and then hang without exiting. If `events.jsonl` stops growing after the final report, read the report from the events and kill the `grok` process.
 - On the original Mac, `~/.npm` is root-owned, so npm installs there used `--cache /tmp/npm-cache-localpolish`.
+
+## T10 progress (2026-10-17, Windows, Brave)
+
+Done in Brave with the Claude CLI: Accept, undo, line breaks and Esc on Gmail (body, subject), X (post composer), LinkedIn (post composer), GitHub (issue description) and the plain textarea. Results are in the README table.
+
+Fixed on the way:
+- The popup now mounts inside an open modal `<dialog>` (LinkedIn's composer made the page inert).
+- `<p>`-based editors no longer get an extra empty paragraph per break.
+- The Windows installer registers the host for Chrome, Brave, Edge and Chromium. The browser needs a full restart after the first install.
+
+Left for T10:
+- Checks the Chrome tool cannot do: `Ctrl+Shift+K` (CDP key events do not fire extension commands) and the **Sites** list (the options page is a `chrome-extension://` page).
+- X reply box and LinkedIn message box.
+- LinkedIn multi-line re-check on the live site after reloading the extension (the fix is covered by a Playwright test on Brave).
+- `npm run test:e2e` here: Playwright's own Chromium fails to start on this PC ("side-by-side configuration is incorrect"). The editable tests pass when pointed at Brave.
+
+Quality notes for later: Fix adds a final period to a fragment or a subject line ("I have an apple. and she...").

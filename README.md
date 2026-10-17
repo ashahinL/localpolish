@@ -149,15 +149,17 @@ The options page shows the bridge status. Each CLI shows its version, or the wor
 
 Some sites ignore the text LocalPolish writes into the field. The popup then copies the new text and tells you to paste it with `Cmd+V`.
 
-The rows below are placeholders. Fill them in after you test each site with the [manual checklist](docs/manual-checklist.md).
+Results from the [manual checklist](docs/manual-checklist.md):
 
-| Site           | Accept works   | Notes |
-| -------------- | -------------- | ----- |
-| Gmail          | Not tested yet |       |
-| X              | Not tested yet |       |
-| LinkedIn       | Not tested yet |       |
-| GitHub         | Not tested yet |       |
-| Plain textarea | Not tested yet |       |
+| Site           | Accept works | Notes |
+| -------------- | ------------ | ----- |
+| Gmail          | Yes          | Message body and subject. Undo, line breaks, Esc and the saved draft work. |
+| X              | Yes          | Post composer. Undo, line breaks and Esc work, and Post stays ready. Reply box not tested. |
+| LinkedIn       | Yes          | Post composer. Needed two fixes: the popup now mounts inside the modal dialog, and paragraph breaks no longer double. Message box not tested. |
+| GitHub         | Yes          | Issue description. Undo, line breaks and Esc work, and the submit button stays enabled. |
+| Plain textarea | Yes          | Test page. Undo, line breaks, Esc, and the text stays after a click outside. |
+
+Tested on 2026-10-17 in Brave 1.97 on Windows 11 with the Claude CLI (haiku, low). Not covered yet: the shortcut, the **Sites** list, the Copy fallback (no site rejected Accept), and the X reply and LinkedIn message boxes.
 
 ## Troubleshooting
 

@@ -75,12 +75,14 @@ Use any page whose field is a plain `<textarea>`. One example is `tests/e2e/fixt
 
 ## Results
 
-Copy these rows into the table in the README when a site is tested. Until then, leave **Not tested yet**.
+The README has the same table.
 
-| Site           | Accept works   | Notes |
-| -------------- | -------------- | ----- |
-| Gmail          | Not tested yet |       |
-| X              | Not tested yet |       |
-| LinkedIn       | Not tested yet |       |
-| GitHub         | Not tested yet |       |
-| Plain textarea | Not tested yet |       |
+| Site           | Accept works | Notes |
+| -------------- | ------------ | ----- |
+| Gmail          | Yes          | Message body and subject. Undo, line breaks, Esc and the saved draft work. |
+| X              | Yes          | Post composer. Undo, line breaks and Esc work, and Post stays ready. Reply box not tested. |
+| LinkedIn       | Yes          | Post composer. Needed two fixes: the popup now mounts inside the modal dialog, and paragraph breaks no longer double. Message box not tested. |
+| GitHub         | Yes          | Issue description. Undo, line breaks and Esc work, and the submit button stays enabled. |
+| Plain textarea | Yes          | Test page. Undo, line breaks, Esc, and the text stays after a click outside. |
+
+Tested on 2026-10-17 in Brave 1.97 on Windows 11 with the Claude CLI (haiku, low). Not covered yet: the shortcut, the **Sites** list, the Copy fallback (no site rejected Accept), and the X reply and LinkedIn message boxes.
