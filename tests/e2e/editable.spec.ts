@@ -149,6 +149,23 @@ test('contenteditable accepts a multi-line replacement', async ({ page }) => {
   expect(lines).toContain('Line two.');
 });
 
+test('paragraph editor keeps one block per paragraph', async ({ page }) => {
+  await page.locator('#ce').evaluate((el) => {
+    el.innerHTML = '<p>line one</p><p>line two</p>';
+  });
+  await page.locator('#ce').click();
+  await page.keyboard.press('ControlOrMeta+a');
+
+  expect(await captureText(page, false)).toBe('line one\n\nline two');
+  await page.locator('#outside').click();
+  expect(await apply(page, 'Line one.\n\nLine two.')).toEqual({ ok: true });
+
+  const paragraphs = await page
+    .locator('#ce p')
+    .evaluateAll((els) => els.map((el) => el.textContent));
+  expect(paragraphs).toEqual(['Line one.', 'Line two.']);
+});
+
 test('applying the same text leaves the field untouched', async ({ page }) => {
   await page.locator('#ta').click();
   await page.keyboard.type('i has went home');

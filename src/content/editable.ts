@@ -161,7 +161,9 @@ async function applyRich(
     return { ok: false, reason: 'changed' };
   }
 
-  const inserted = document.execCommand('insertText', false, text);
+  // selection.toString() puts two newlines between <p> blocks, but insertText starts a block per newline.
+  const typed = root.querySelector('p') ? text.replaceAll('\n\n', '\n') : text;
+  const inserted = document.execCommand('insertText', false, typed);
   await waitForRender();
   if (showsText(root, text)) return { ok: true };
 
