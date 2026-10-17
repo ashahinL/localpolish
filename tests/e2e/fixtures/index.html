@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LocalPolish fixtures</title>
+    <style>
+      textarea,
+      input,
+      #ce,
+      #draft {
+        display: block;
+        width: 400px;
+        margin: 8px;
+      }
+      textarea,
+      #ce,
+      #draft .public-DraftEditor-content {
+        min-height: 48px;
+      }
+      #ce,
+      #draft {
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="ta"></textarea>
+    <input id="inp" type="text" />
+    <div id="ce" contenteditable="true"></div>
+    <div id="draft"></div>
+    <button id="outside" type="button">Outside</button>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

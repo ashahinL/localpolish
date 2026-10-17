@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T4b done)
+Status: in progress (T0-T5 done)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -101,7 +101,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T3. Bridge** (Grok). `bridge/host.mjs`, `bridge/lib.mjs` (framing, CLI arg builders, stream parsers), `bridge/install.mjs` and `uninstall.mjs` (wrapper script with a fixed PATH, native host manifest in `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`). Tests: framing, arg builders, parsers, and a spawn test with a fake CLI.
 - [x] **T4. Background** (Grok). Provider interface, `cli` provider over `connectNative`, OpenAI-compatible and Anthropic SSE providers, shared SSE parser, `rewrite` port router, `test-connection`, command handler. Tests with mocked `fetch`.
 - [x] **T4b. Per-CLI model and effort** (Claude). From the [benchmark](benchmarks/2026-10-17-fix-mode.md): add `efforts: Record<'claude-cli'|'codex-cli'|'grok-cli', string>` to settings (defaults `low`, `none`, `low`), send `effort` in the bridge `rewrite` message, pass it as `--effort` (claude, grok) and `model_reasoning_effort` (codex).
-- [~] **T5. Text field read and write** (Grok). `src/content/editable.ts`: `captureTarget()` and `applyReplacement(target, text)` for input, textarea and contenteditable (`execCommand('insertText')`, then synthetic paste, then report failure). Playwright tests on local fixture pages: textarea, input, plain contenteditable, Draft.js.
+- [x] **T5. Text field read and write** (Grok). `src/content/editable.ts`: `captureTarget()` and `applyReplacement(target, text)` for input, textarea and contenteditable (`execCommand('insertText')`, then synthetic paste, then report failure). Playwright tests on local fixture pages: textarea, input, plain contenteditable, Draft.js.
 - [ ] **T6. In-page popup and button** (Claude Opus, art lane). Floating button, Shadow DOM popup with modes and tones, streaming view, word diff, char counter for Shorter, missing-token warning, warning when `lostArabicScript()` is true, Accept / Copy / Retry / Close, Esc to close, copy fallback when Accept fails.
 - [ ] **T7. Options page** (Claude Opus, art lane). All settings. Per-CLI model and effort are dropdowns with presets plus a custom value (Claude efforts low to max, Codex none to xhigh, Grok low to high). OpenAI-compatible gets base URL presets for xAI, OpenAI, OpenRouter, LM Studio and Ollama. bridge status from `ping`, Test connection, shortcut hint with a button to open `chrome://extensions/shortcuts`.
 - [ ] **T8. End-to-end test** (Grok). Playwright loads the built extension, points it at a mock OpenAI-compatible server, and runs select → Fix → Accept on the fixture pages.
