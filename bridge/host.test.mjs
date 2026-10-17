@@ -185,6 +185,37 @@ setTimeout(() => {}, 30000);
     expect(() => process.kill(pid, 0)).toThrow();
   });
 
+  it.skipIf(windows)('kills the processes the cli started', async () => {
+    const bin = tempDir('lp-bin-');
+    const pidFile = path.join(bin, 'pid');
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
+const { spawn } = require('child_process');
+const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' });
+require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+setTimeout(() => {}, 30000);
+`,
+    );
+    const host = startHost(bin, 4000);
+    host.child.stdin.write(rewrite('claude', 'hello'));
+    const pid = await waitForPid(pidFile);
+    pids.push(pid);
+    host.child.stdin.end();
+    await host.closed;
+    await expect
+      .poll(() => {
+        try {
+          process.kill(pid, 0);
+          return 'alive';
+        } catch {
+          return 'gone';
+        }
+      })
+      .toBe('gone');
+  });
+
   it('reports stderr when the cli exits with an error', async () => {
     const bin = tempDir('lp-bin-');
     writeCli(

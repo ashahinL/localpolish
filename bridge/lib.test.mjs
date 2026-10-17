@@ -11,6 +11,7 @@ import {
   GROK_REMOVED_TOOLS,
   parseLine,
   resolveCommand,
+  splitText,
 } from './lib.mjs';
 
 describe('encodeMessage', () => {
@@ -249,5 +250,16 @@ endLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & "%_prog%"  "%dp0%\node_
       cmd: '/usr/local/bin/claude',
       args: [],
     });
+  });
+});
+
+describe('splitText', () => {
+  it('keeps short text whole', () => {
+    expect(splitText('abc', 5)).toEqual(['abc']);
+  });
+
+  it('splits long text without cutting a surrogate pair', () => {
+    expect(splitText('abcdef', 4)).toEqual(['abcd', 'ef']);
+    expect(splitText('ab😀cd', 3)).toEqual(['ab', '😀c', 'd']);
   });
 });

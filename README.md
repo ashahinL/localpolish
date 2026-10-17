@@ -4,7 +4,7 @@ LocalPolish is a Manifest V3 Chrome extension that fixes or rewrites text in any
 
 ## Setup
 
-You need macOS or Windows, Google Chrome, Node.js 20 or newer, and npm. You also need a logged-in `claude`, `codex`, or `grok` CLI, or an API key, or a local server.
+You need macOS or Windows, Google Chrome, Node.js 22 or newer, and npm. You also need a logged-in `claude`, `codex`, or `grok` CLI, or an API key, or a local server.
 
 1. Clone the repo and enter the folder.
 

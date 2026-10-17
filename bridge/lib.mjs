@@ -13,6 +13,26 @@ export function encodeMessage(obj) {
 }
 
 /**
+ * Splits text into pieces of at most `size` UTF-16 units, without cutting a surrogate pair.
+ * @param {string} text
+ * @param {number} size
+ * @returns {string[]}
+ */
+export function splitText(text, size) {
+  const pieces = [];
+  let start = 0;
+  while (text.length - start > size) {
+    let end = start + size;
+    const code = text.charCodeAt(end - 1);
+    if (code >= 0xd800 && code <= 0xdbff) end -= 1;
+    pieces.push(text.slice(start, end));
+    start = end;
+  }
+  pieces.push(text.slice(start));
+  return pieces;
+}
+
+/**
  * @param {(message: unknown) => void} onMessage
  * @returns {(chunk: Buffer) => void}
  */

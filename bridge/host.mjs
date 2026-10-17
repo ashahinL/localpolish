@@ -15,10 +15,13 @@ import {
   GROK_IMPORTS_OFF,
   parseLine,
   resolveCommand,
+  splitText,
 } from './lib.mjs';
 
 const CLI_NAMES = ['claude', 'codex', 'grok'];
 const KILL_AFTER_MS = 2000;
+// Chrome drops a native message over 1 MB. JSON can grow a character to 6 bytes.
+const CHUNK_CHARS = 100_000;
 
 let started = false;
 /** @type {(() => void) | null} */
@@ -126,6 +129,8 @@ function handleRewrite(msg) {
     cwd: dir,
     env,
     stdio: ['pipe', 'pipe', 'pipe'],
+    // Its own process group, so a kill also reaches the processes the CLI started.
+    detached: process.platform !== 'win32',
   });
 
   let stderrTail = '';
@@ -158,18 +163,15 @@ function handleRewrite(msg) {
       );
       return;
     }
-    try {
-      child.kill('SIGTERM');
-    } catch {
-      // Already gone.
-    }
-    killTimer = setTimeout(() => {
+    const killGroup = (/** @type {NodeJS.Signals} */ signal) => {
       try {
-        if (child.exitCode === null) child.kill('SIGKILL');
+        if (child.pid !== undefined) process.kill(-child.pid, signal);
       } catch {
         // Already gone.
       }
-    }, KILL_AFTER_MS);
+    };
+    killGroup('SIGTERM');
+    killTimer = setTimeout(() => killGroup('SIGKILL'), KILL_AFTER_MS);
   };
 
   /**
@@ -218,7 +220,9 @@ function handleRewrite(msg) {
     const parsed = parseLine(cli, line);
     if (!parsed) return;
     if ('text' in parsed) {
-      process.stdout.write(encodeMessage({ type: 'chunk', text: parsed.text }));
+      for (const text of splitText(parsed.text, CHUNK_CHARS)) {
+        process.stdout.write(encodeMessage({ type: 'chunk', text }));
+      }
       return;
     }
     if ('end' in parsed) {
