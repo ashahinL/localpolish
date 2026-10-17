@@ -30,7 +30,7 @@ describe('loadSettings', () => {
     loaded.blocklist.push('evil.com');
     loaded.models['claude-cli'] = 'changed';
     expect(DEFAULT_SETTINGS.blocklist).toEqual([]);
-    expect(DEFAULT_SETTINGS.models['claude-cli']).toBe('haiku');
+    expect(DEFAULT_SETTINGS.models['claude-cli']).toBe('sonnet');
     expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
   });
 
@@ -74,7 +74,7 @@ describe('saveSettings', () => {
     expect(settings.blocklist).toEqual(['example.com']);
     expect(settings.defaultMode).toBe('fix');
     expect(settings.defaultTone).toBe('polite');
-    expect(settings.models['claude-cli']).toBe('haiku');
+    expect(settings.models['claude-cli']).toBe('sonnet');
     expect(settings.openaiBaseUrl).toBe(DEFAULT_SETTINGS.openaiBaseUrl);
   });
 });

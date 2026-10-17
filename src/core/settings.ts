@@ -20,7 +20,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   provider: 'claude-cli',
   models: {
-    'claude-cli': 'haiku',
+    'claude-cli': 'sonnet',
     'codex-cli': 'gpt-6-luna',
     'grok-cli': '',
     'openai-compatible': '',

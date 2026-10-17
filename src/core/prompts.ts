@@ -10,8 +10,7 @@ Rules:
 - Keep the writer's voice: plain, direct, simple words. Do not make it sound corporate or robotic.
 - Never use em dashes. Use commas, periods or parentheses instead.
 - Never use these words: delve, leverage, seamless, utilize, robust, streamline, elevate, foster, tapestry, crucial, furthermore, moreover.
-- Keep line breaks, lists and formatting.
-- If the text is already fine, return it unchanged.`;
+- Keep line breaks, lists and formatting.`;
 
 export const MODE_TASKS: Record<Exclude<Mode, 'tone'>, string> = {
   fix: 'Task: fix grammar, spelling and punctuation only. Keep the same words, word order and sentence structure wherever they are already correct. Do not rephrase, do not add or remove ideas, do not change the tone.',
@@ -40,6 +39,7 @@ export function buildPrompt(
   const task = mode === 'tone' ? TONE_TASKS[tone] : MODE_TASKS[mode];
   return {
     system: `${SYSTEM_BASE}\n\n${task}`,
-    user: `<text>\n${text}\n</text>`,
+    // Repeating the task next to the text stops smaller models from returning it unchanged.
+    user: `${task}\n\n<text>\n${text}\n</text>`,
   };
 }

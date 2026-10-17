@@ -7,7 +7,7 @@ describe('buildPrompt', () => {
     expect(prompt.system.startsWith(SYSTEM_BASE)).toBe(true);
     expect(prompt.system.endsWith(MODE_TASKS.fix)).toBe(true);
     expect(prompt.system).toBe(`${SYSTEM_BASE}\n\n${MODE_TASKS.fix}`);
-    expect(prompt.user).toBe('<text>\nhi\n</text>');
+    expect(prompt.user).toBe(`${MODE_TASKS.fix}\n\n<text>\nhi\n</text>`);
   });
 
   it('uses the formal tone task when mode is tone', () => {
