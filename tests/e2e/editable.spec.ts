@@ -195,6 +195,38 @@ test('whole paragraph editor survives its blocks being swapped', async ({ page }
   expect(paragraphs).toEqual(['', 'Hi Ahmed,', '', "Hope you're having a good day!"]);
 });
 
+test('a blank line inside <pre> survives next to a paragraph', async ({ page }) => {
+  await page.locator('#ce').evaluate((el) => {
+    el.innerHTML = '<p>Title</p><pre>first\n\nsecond</pre>';
+    const range = document.createRange();
+    range.selectNodeContents(el.querySelector('pre') as Node);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+  });
+
+  expect(await captureText(page, false)).toBe('first\n\nsecond');
+});
+
+test('a part selection only replaces what was selected', async ({ page }) => {
+  await page.locator('#ce').evaluate((el) => {
+    el.style.whiteSpace = 'pre';
+    el.textContent = '  hello  ';
+  });
+  await page.locator('#ce').click();
+  await page.locator('#ce').evaluate((el) => {
+    const range = document.createRange();
+    range.setStart(el.firstChild as Node, 2);
+    range.setEnd(el.firstChild as Node, 7);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+  });
+
+  expect(await captureText(page, false)).toBe('hello');
+  await page.locator('#outside').click();
+  expect(await apply(page, 'Hello.')).toEqual({ ok: true });
+  expect(await page.locator('#ce').evaluate((el) => el.textContent)).toBe('  Hello.  ');
+});
+
 test('applying the same text leaves the field untouched', async ({ page }) => {
   await page.locator('#ta').click();
   await page.keyboard.type('i has went home');

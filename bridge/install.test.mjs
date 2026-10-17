@@ -126,7 +126,7 @@ describe.runIf(process.platform === 'win32')('installBridge on Windows', () => {
 
     const result = installBridge({
       home,
-      repoDir: 'C:\\repo',
+      repoDir: 'C:\\repo%USERNAME%',
       nodePath: 'C:\\node\\node.exe',
       pathEnv: `${bin};C:\\Windows`,
       platform: 'win32',
@@ -142,8 +142,9 @@ describe.runIf(process.platform === 'win32')('installBridge on Windows', () => {
     expect(fs.readFileSync(result.wrapperPath, 'utf8')).toBe(
       [
         '@echo off',
+        'chcp 65001 >nul',
         `set "PATH=C:\\node;${bin};%PATH%"`,
-        '"C:\\node\\node.exe" "C:\\repo\\bridge\\host.mjs"',
+        '"C:\\node\\node.exe" "C:\\repo%%USERNAME%%\\bridge\\host.mjs"',
         '',
       ].join('\r\n'),
     );

@@ -24,7 +24,7 @@ const PROVIDERS: Array<{ id: ProviderId; title: string; subtitle: string }> = [
 ];
 
 const CODEX_LOGIN = navigator.userAgent.includes('Windows')
-  ? '$env:CODEX_HOME="$env:LOCALAPPDATA\\LocalPolish\\codex-home"; codex login'
+  ? '$env:CODEX_HOME="$env:USERPROFILE\\AppData\\Local\\LocalPolish\\codex-home"; codex login'
   : 'CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex login';
 
 const BASE_URL_OPTIONS = OPENAI_BASE_URLS.map((preset) => ({

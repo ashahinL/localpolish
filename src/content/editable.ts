@@ -102,7 +102,8 @@ function captureRich(wholeFieldIfEmpty: boolean): Target | null {
   if (!isRichHost(root)) return null;
 
   const range = selection.getRangeAt(0).cloneRange();
-  if (range.collapsed) {
+  const expanded = range.collapsed;
+  if (expanded) {
     if (!wholeFieldIfEmpty) return null;
     range.selectNodeContents(root);
     selection.removeAllRanges();
@@ -111,10 +112,25 @@ function captureRich(wholeFieldIfEmpty: boolean): Target | null {
   // selection.toString() keeps breaks between blocks. range.toString() does not.
   // It puts two newlines between <p> blocks, but each block is one line.
   const raw = selection.toString();
-  const text = root.querySelector('p') ? raw.replaceAll('\n\n', '\n') : raw;
+  const text = isParagraphEditor(root) ? raw.replaceAll('\n\n', '\n') : raw;
   if (text.trim() === '') return null;
-  const whole = normalize(text) === normalize(root.innerText);
+  const whole = expanded || nothingOutside(root, range);
   return { kind: 'rich', root, range, text, whole };
+}
+
+function isParagraphEditor(root: HTMLElement): boolean {
+  const blocks = [...root.children];
+  return blocks.length > 0 && blocks.every((block) => block.tagName === 'P');
+}
+
+function nothingOutside(root: HTMLElement, range: Range): boolean {
+  const before = document.createRange();
+  before.setStart(root, 0);
+  before.setEnd(range.startContainer, range.startOffset);
+  const after = document.createRange();
+  after.setStart(range.endContainer, range.endOffset);
+  after.setEnd(root, root.childNodes.length);
+  return before.toString() === '' && after.toString() === '';
 }
 
 function isRichHost(

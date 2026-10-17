@@ -51,10 +51,17 @@ export function installBridge({ home, repoDir, nodePath, pathEnv, platform = pro
     windows ? 'localpolish-bridge.cmd' : 'localpolish-bridge',
   );
   // Chrome on Windows starts native hosts with the user's PATH, so the wrapper only adds to it.
+  // cmd reads the file in the console code page, so it switches to UTF-8 for non-ASCII paths,
+  // and a literal % must be doubled or cmd expands it as a variable.
+  const cmdText = (/** @type {string} */ value) => value.replaceAll('%', '%%');
   const wrapper = windows
-    ? ['@echo off', `set "PATH=${dirs.join(';')};%PATH%"`, `"${nodePath}" "${hostPath}"`, ''].join(
-        '\r\n',
-      )
+    ? [
+        '@echo off',
+        'chcp 65001 >nul',
+        `set "PATH=${cmdText(dirs.join(';'))};%PATH%"`,
+        `"${cmdText(nodePath)}" "${cmdText(hostPath)}"`,
+        '',
+      ].join('\r\n')
     : ['#!/bin/sh', `export PATH="${dirs.join(':')}"`, `exec "${nodePath}" "${hostPath}"`, ''].join(
         '\n',
       );

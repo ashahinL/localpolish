@@ -222,3 +222,25 @@ test('page scripts cannot press the button or Retry', async ({ page }) => {
   await pageClick('Retry');
   await expect(page.locator('.lp-popup')).toContainText('Boom.');
 });
+
+test('the button mounts in the dialog that holds the field', async ({ page }) => {
+  await page.evaluate(() => {
+    const other = document.createElement('dialog');
+    other.id = 'other';
+    document.body.append(other);
+    other.showModal();
+    // #dlg comes first in the DOM but opens last, so it is the top dialog.
+    (document.getElementById('dlg') as HTMLDialogElement).showModal();
+    (window as unknown as PageApi).__lp.startButton();
+  });
+  await page.locator('#dlg-ta').click();
+  await page.keyboard.type('i has went home');
+  await page.keyboard.press('ControlOrMeta+a');
+
+  await expect(page.locator('.lp-fab')).toBeVisible();
+  expect(
+    await page.evaluate(() => document.querySelector('localpolish-root')?.parentElement?.id),
+  ).toBe('dlg');
+  await page.locator('.lp-fab').click();
+  await expect(page.locator('.lp-popup')).toBeVisible();
+});

@@ -65,7 +65,7 @@ CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex logi
 On Windows, run this in PowerShell instead.
 
 ```powershell
-$env:CODEX_HOME="$env:LOCALAPPDATA\LocalPolish\codex-home"; codex login
+$env:CODEX_HOME="$env:USERPROFILE\AppData\Local\LocalPolish\codex-home"; codex login
 ```
 
 7. Open the options page. Right-click the extension icon and choose **Options**. You can also open `chrome://extensions`, then open **LocalPolish**. Click **Details**, then **Extension options**. Pick a provider, then press **Test connection**.
@@ -131,7 +131,7 @@ On macOS, `npm run bridge:install` writes two files.
 - The wrapper script is `~/Library/Application Support/LocalPolish/localpolish-bridge`. Chrome starts native hosts with a minimal PATH, so the wrapper sets a fixed PATH. The wrapper runs `bridge/host.mjs` from this repo. Keep this folder where it is.
 - The host manifest is `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.localpolish.bridge.json`. Chrome allows that host only for extension ID `ealpmjmaclnlpelpcacmbicmdipmbeei`.
 
-On Windows, it writes two files in `%LOCALAPPDATA%\LocalPolish` and one registry key.
+On Windows, it writes two files in `%USERPROFILE%\AppData\Local\LocalPolish` and one registry key per browser.
 
 - The wrapper script is `localpolish-bridge.cmd`. It adds the Node and CLI folders to PATH and runs `bridge/host.mjs` from this repo.
 - The host manifest is `com.localpolish.bridge.json`, next to the wrapper.

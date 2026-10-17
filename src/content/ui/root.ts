@@ -5,7 +5,10 @@ type Layer = 'button' | 'popup' | 'toast';
 let shadow: ShadowRoot | null = null;
 
 // A modal <dialog> draws above the page and makes the rest of it inert, so the UI must live inside it.
+// The field's own dialog wins: the top-layer order is not the DOM order.
 function mountPoint(): Element {
+  const own = document.activeElement?.closest('dialog:modal');
+  if (own) return own;
   const modals = document.querySelectorAll('dialog:modal');
   return modals[modals.length - 1] ?? document.documentElement;
 }
