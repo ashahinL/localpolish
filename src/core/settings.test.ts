@@ -62,7 +62,7 @@ describe('loadSettings', () => {
 
     const settings = await loadSettings();
     expect(settings.efforts).toEqual({
-      'claude-cli': 'xhigh',
+      'claude-cli': 'low',
       'codex-cli': 'xhigh',
       'grok-cli': 'low',
     });

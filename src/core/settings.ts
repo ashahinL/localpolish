@@ -30,8 +30,8 @@ export const DEFAULT_SETTINGS: Settings = {
     'anthropic-api': 'claude-haiku-5-5',
   },
   efforts: {
-    'claude-cli': 'xhigh',
-    'codex-cli': 'high',
+    'claude-cli': 'low',
+    'codex-cli': 'none',
     'grok-cli': 'low',
   },
   openaiBaseUrl: 'http://localhost:11434/v1',
