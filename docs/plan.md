@@ -114,3 +114,18 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - Per-site default tone (add `siteTones: Record<host, Tone>` to settings).
 - History of the last 20 rewrites (store in `chrome.storage.local`).
 - Linux and Windows bridge installers.
+
+## Handoff (2026-10-17, 12:15 Cairo)
+
+T0-T9 are done and pushed. Next is **T10, real-site testing** (Claude via Claude in Chrome, on a Mac):
+
+1. `npm install`, then `npm run build`.
+2. Chrome → `chrome://extensions` → Developer mode → Load unpacked → `dist/`. The ID must be `ealpmjmaclnlpelpcacmbicmdipmbeei` (fixed by the manifest `key`; the private key in the gitignored `.keys/` is only needed to pack a `.crx`).
+3. `npm run bridge:install` on that Mac, and log in to the CLIs there. Codex needs its own login: `CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex login --device-auth`. The bridge is macOS only.
+4. Be logged in to Gmail, X, LinkedIn and GitHub. Follow `docs/manual-checklist.md`. Never press Send, Post, Reply or Comment.
+5. Fill the README "Sites that need Copy" table and the checklist results; fix what breaks, or note the Copy fallback.
+
+Notes for the orchestrator:
+- Grok and Claude relay sandboxes cannot start Chromium (Mach port errors) or, for Claude, bind local ports. Implementers write the Playwright tests; the orchestrator runs `npm run test:e2e` in a normal shell.
+- A Grok run can finish its report and then hang without exiting. If `events.jsonl` stops growing after the final report, read the report from the events and kill the `grok` process.
+- On the original Mac, `~/.npm` is root-owned, so npm installs there used `--cache /tmp/npm-cache-localpolish`.
