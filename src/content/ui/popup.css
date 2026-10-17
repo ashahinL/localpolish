@@ -1,0 +1,358 @@
+:host {
+  all: initial;
+  color-scheme: light dark;
+  --lp-bg: #ffffff;
+  --lp-fg: #1f2328;
+  --lp-muted: #6b7280;
+  --lp-border: rgb(0 0 0 / 0.12);
+  --lp-hover: rgb(0 0 0 / 0.05);
+  --lp-accent: #2563eb;
+  --lp-accent-soft: rgb(37 99 235 / 0.12);
+  --lp-accent-text: #1d4ed8;
+  --lp-focus: rgb(37 99 235 / 0.55);
+  --lp-add-bg: #dcfce7;
+  --lp-add-fg: #14532d;
+  --lp-del-bg: #fee2e2;
+  --lp-del-fg: #7f1d1d;
+  --lp-danger: #b91c1c;
+  --lp-warning: #92400e;
+  --lp-code-bg: rgb(0 0 0 / 0.06);
+  --lp-toast-bg: #1f2328;
+  --lp-toast-fg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host {
+    --lp-bg: #1e1f22;
+    --lp-fg: #e6e7ea;
+    --lp-muted: #9ca3af;
+    --lp-border: rgb(255 255 255 / 0.14);
+    --lp-hover: rgb(255 255 255 / 0.07);
+    --lp-accent-soft: rgb(96 165 250 / 0.18);
+    --lp-accent-text: #93c5fd;
+    --lp-focus: rgb(147 197 253 / 0.7);
+    --lp-add-bg: rgb(34 197 94 / 0.22);
+    --lp-add-fg: #bbf7d0;
+    --lp-del-bg: rgb(239 68 68 / 0.24);
+    --lp-del-fg: #fecaca;
+    --lp-danger: #f87171;
+    --lp-warning: #fcd34d;
+    --lp-code-bg: rgb(255 255 255 / 0.1);
+    --lp-toast-bg: #e6e7ea;
+    --lp-toast-fg: #1f2328;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Page rules like `* { letter-spacing: 1px !important }` beat the host's inline
+   `all: initial` and would be inherited; resetting the top elements stops that. */
+.lp-popup,
+.lp-fab,
+.lp-toast {
+  all: initial;
+}
+
+.lp-popup,
+.lp-fab,
+.lp-toast {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--lp-fg);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--lp-focus);
+  outline-offset: 1px;
+}
+
+.lp-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 16px));
+  max-height: min(60vh, 520px);
+  background: var(--lp-bg);
+  border: 1px solid var(--lp-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+  outline: none;
+  animation: lp-in 120ms ease-out;
+}
+
+@keyframes lp-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-popup {
+    animation: none;
+  }
+}
+
+.lp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 0 10px;
+}
+
+.lp-tabs,
+.lp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.lp-tabs {
+  flex: 1;
+}
+
+.lp-chips {
+  padding: 6px 10px 0;
+}
+
+.lp-tab,
+.lp-chip,
+.lp-close,
+.lp-button {
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.lp-tab {
+  padding: 3px 10px;
+  color: var(--lp-muted);
+}
+
+.lp-chip {
+  padding: 1px 9px;
+  font-size: 13px;
+  color: var(--lp-muted);
+  border-color: var(--lp-border);
+}
+
+.lp-tab:hover,
+.lp-chip:hover,
+.lp-close:hover {
+  background: var(--lp-hover);
+}
+
+.lp-tab[aria-pressed='true'],
+.lp-chip[aria-pressed='true'] {
+  background: var(--lp-accent-soft);
+  color: var(--lp-accent-text);
+  border-color: transparent;
+  font-weight: 500;
+}
+
+.lp-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--lp-muted);
+}
+
+.lp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--lp-border);
+}
+
+.lp-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lp-diff ins,
+.lp-diff del {
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.lp-diff ins {
+  text-decoration: none;
+  background: var(--lp-add-bg);
+  color: var(--lp-add-fg);
+}
+
+.lp-diff del {
+  text-decoration: line-through;
+  background: var(--lp-del-bg);
+  color: var(--lp-del-fg);
+}
+
+/* wordDiff puts a replaced word right next to its replacement. */
+.lp-diff del + ins {
+  margin-left: 3px;
+}
+
+.lp-working {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--lp-muted);
+}
+
+.lp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lp-accent);
+  opacity: 0.7;
+}
+
+.lp-error,
+.lp-muted,
+.lp-note {
+  margin: 0;
+}
+
+.lp-error {
+  color: var(--lp-danger);
+}
+
+.lp-muted {
+  color: var(--lp-muted);
+}
+
+.lp-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--lp-border);
+  font-size: 13px;
+}
+
+.lp-count {
+  color: var(--lp-muted);
+}
+
+.lp-over {
+  color: var(--lp-danger);
+  font-weight: 500;
+}
+
+.lp-warning {
+  color: var(--lp-warning);
+}
+
+.lp-note code {
+  display: inline-block;
+  margin: 0 4px 2px 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--lp-code-bg);
+  color: var(--lp-fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.lp-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--lp-border);
+}
+
+.lp-button {
+  padding: 4px 12px;
+  border-color: var(--lp-border);
+}
+
+.lp-button:hover:not(:disabled) {
+  background: var(--lp-hover);
+}
+
+.lp-primary {
+  background: var(--lp-accent);
+  border-color: var(--lp-accent);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.lp-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.lp-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.lp-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--lp-muted);
+  white-space: nowrap;
+}
+
+.lp-fab {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--lp-border);
+  background: var(--lp-bg);
+  color: var(--lp-accent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+  cursor: pointer;
+}
+
+.lp-fab:hover {
+  color: #ffffff;
+  background: var(--lp-accent);
+}
+
+.lp-toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--lp-toast-bg);
+  color: var(--lp-toast-fg);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+}
+
+.lp-copy {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  opacity: 0;
+  pointer-events: none;
+}

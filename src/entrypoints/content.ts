@@ -1,6 +1,95 @@
+import { createButton } from '../content/button';
+import { createController } from '../content/controller';
+// Kept apart so it is erased: WXT loads this file without main() to read its options,
+// and an inline `type` import would still pull in the controller and its CSS.
+import type { PortLike } from '../content/controller';
+import { captureTarget } from '../content/editable';
+import { guarded } from '../content/guard';
+import { showToast } from '../content/ui/toast';
+import { REWRITE_PORT } from '../core/messages';
+import { DEFAULT_SETTINGS, isBlocked, loadSettings, type Settings } from '../core/settings';
+
+interface ContentChrome {
+  runtime: {
+    id?: string;
+    connect(info: { name: string }): PortLike;
+    onMessage: { addListener(cb: (message: unknown) => void): void };
+  };
+  storage: {
+    onChanged: {
+      addListener(cb: (changes: Record<string, unknown>, areaName: string) => void): void;
+    };
+  };
+}
+
 export default defineContentScript({
   matches: ['<all_urls>'],
   allFrames: true,
   runAt: 'document_idle',
-  main() {},
+  main() {
+    try {
+      start();
+    } catch (error) {
+      console.warn('LocalPolish could not start:', error);
+    }
+  },
 });
+
+function start(): void {
+  const ext = (globalThis as unknown as { chrome: ContentChrome }).chrome;
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+  // Null until loaded, so the button never flashes on a blocklisted site.
+  let settings: Settings | null = null;
+
+  const refresh = () => {
+    loadSettings().then(
+      (loaded) => {
+        settings = loaded;
+      },
+      () => {},
+    );
+  };
+  refresh();
+  ext.storage.onChanged.addListener(
+    guarded((changes, areaName) => {
+      if (areaName === 'local' && 'settings' in changes) refresh();
+    }),
+  );
+
+  const controller = createController({
+    connect() {
+      // runtime.id disappears once the extension reloads and this script is orphaned.
+      if (!ext.runtime?.id) throw new Error('Extension context invalidated');
+      return ext.runtime.connect({ name: REWRITE_PORT });
+    },
+    getSettings: () => settings ?? DEFAULT_SETTINGS,
+    isMac,
+  });
+
+  createButton({
+    isMac,
+    isEnabled: () => settings !== null && !isBlocked(location.hostname, settings.blocklist),
+    isPopupOpen: controller.isOpen,
+    onActivate() {
+      const target = captureTarget({ wholeFieldIfEmpty: false });
+      if (target) controller.open(target);
+    },
+  });
+
+  ext.runtime.onMessage.addListener(
+    guarded((message) => {
+      if (!isOpenPopup(message) || !document.hasFocus()) return;
+      const target = captureTarget({ wholeFieldIfEmpty: true });
+      if (target) controller.open(target);
+      else showToast('Click into a text field first.');
+    }),
+  );
+}
+
+function isOpenPopup(message: unknown): boolean {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    (message as { type?: unknown }).type === 'open-popup'
+  );
+}
