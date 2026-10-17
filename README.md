@@ -129,7 +129,9 @@ On Windows, it writes two files in `%LOCALAPPDATA%\LocalPolish` and one registry
 
 - The wrapper script is `localpolish-bridge.cmd`. It adds the Node and CLI folders to PATH and runs `bridge/host.mjs` from this repo.
 - The host manifest is `com.localpolish.bridge.json`, next to the wrapper.
-- The key `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge` points Chrome to the manifest.
+- Registry keys point Chrome, Brave, Edge and Chromium to the manifest, for example `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge`.
+
+After the first install on Windows, quit the browser fully, then open it again. Closing the window is not enough if the browser keeps running in the background. Check Task Manager. Until then, the popup says the bridge is not installed.
 
 npm installs a CLI on Windows as a `.cmd` file. A `.cmd` file needs a shell, and a shell can break the prompt text, so the bridge runs the script inside it with Node.
 

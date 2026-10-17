@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { HOST_NAME, WINDOWS_REGISTRY_KEY } from './constants.mjs';
+import { HOST_NAME, WINDOWS_REGISTRY_KEYS } from './constants.mjs';
 import { supportDir } from './lib.mjs';
 
 /**
@@ -28,6 +28,8 @@ export function uninstallBridge({ home, platform = process.platform }) {
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   uninstallBridge({ home: os.homedir() });
   if (process.platform === 'win32') {
-    spawnSync('reg', ['delete', WINDOWS_REGISTRY_KEY, '/f'], { stdio: 'ignore' });
+    for (const key of WINDOWS_REGISTRY_KEYS) {
+      spawnSync('reg', ['delete', key, '/f'], { stdio: 'ignore' });
+    }
   }
 }

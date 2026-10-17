@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { EXTENSION_ID, HOST_NAME, WINDOWS_REGISTRY_KEY } from './constants.mjs';
+import { EXTENSION_ID, HOST_NAME, WINDOWS_REGISTRY_KEYS } from './constants.mjs';
 import { codexHomeFor, codexLoginCommand, findOnPath, supportDir } from './lib.mjs';
 
 const CLI_NAMES = ['claude', 'codex', 'grok'];
@@ -94,16 +94,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     pathEnv,
   });
   if (process.platform === 'win32') {
-    execFileSync('reg', [
-      'add',
-      WINDOWS_REGISTRY_KEY,
-      '/ve',
-      '/t',
-      'REG_SZ',
-      '/d',
-      result.manifestPath,
-      '/f',
-    ]);
+    for (const key of WINDOWS_REGISTRY_KEYS) {
+      execFileSync('reg', ['add', key, '/ve', '/t', 'REG_SZ', '/d', result.manifestPath, '/f']);
+    }
   }
   for (const name of CLI_NAMES) {
     console.log(`${name}: ${result.found[name] ?? 'not found'}`);
