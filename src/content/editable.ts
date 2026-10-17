@@ -6,7 +6,7 @@ export type Target =
       end: number;
       text: string;
     }
-  | { kind: 'rich'; root: HTMLElement; range: Range; text: string };
+  | { kind: 'rich'; root: HTMLElement; range: Range; text: string; whole: boolean };
 
 export type ApplyResult = { ok: true } | { ok: false; reason: 'changed' | 'rejected' };
 
@@ -109,9 +109,12 @@ function captureRich(wholeFieldIfEmpty: boolean): Target | null {
     selection.addRange(range);
   }
   // selection.toString() keeps breaks between blocks. range.toString() does not.
-  const text = selection.toString();
+  // It puts two newlines between <p> blocks, but each block is one line.
+  const raw = selection.toString();
+  const text = root.querySelector('p') ? raw.replaceAll('\n\n', '\n') : raw;
   if (text.trim() === '') return null;
-  return { kind: 'rich', root, range, text };
+  const whole = normalize(text) === normalize(root.innerText);
+  return { kind: 'rich', root, range, text, whole };
 }
 
 function isRichHost(
@@ -151,7 +154,9 @@ async function applyRich(
   target: Extract<Target, { kind: 'rich' }>,
   text: string,
 ): Promise<ApplyResult> {
-  const { root, range } = target;
+  const { root } = target;
+  // LinkedIn swaps its <p> elements when focus comes back, which collapses the saved range.
+  const range = target.whole ? contentsOf(root) : target.range;
   if (!root.isConnected || !root.contains(range.startContainer)) {
     return { ok: false, reason: 'changed' };
   }
@@ -165,9 +170,7 @@ async function applyRich(
     return { ok: false, reason: 'changed' };
   }
 
-  // selection.toString() puts two newlines between <p> blocks, but insertText starts a block per newline.
-  const typed = root.querySelector('p') ? text.replaceAll('\n\n', '\n') : text;
-  const inserted = document.execCommand('insertText', false, typed);
+  const inserted = document.execCommand('insertText', false, text);
   await waitForRender();
   if (showsText(root, text)) return { ok: true };
 
@@ -191,6 +194,12 @@ async function applyRich(
     if (showsText(root, text)) return { ok: true };
   }
   return { ok: false, reason: 'rejected' };
+}
+
+function contentsOf(root: HTMLElement): Range {
+  const range = document.createRange();
+  range.selectNodeContents(root);
+  return range;
 }
 
 function showsText(root: HTMLElement, text: string): boolean {

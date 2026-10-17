@@ -156,14 +156,36 @@ test('paragraph editor keeps one block per paragraph', async ({ page }) => {
   await page.locator('#ce').click();
   await page.keyboard.press('ControlOrMeta+a');
 
-  expect(await captureText(page, false)).toBe('line one\n\nline two');
+  expect(await captureText(page, false)).toBe('line one\nline two');
   await page.locator('#outside').click();
-  expect(await apply(page, 'Line one.\n\nLine two.')).toEqual({ ok: true });
+  expect(await apply(page, 'Line one.\nLine two.')).toEqual({ ok: true });
 
   const paragraphs = await page
     .locator('#ce p')
     .evaluateAll((els) => els.map((el) => el.textContent));
   expect(paragraphs).toEqual(['Line one.', 'Line two.']);
+});
+
+test('whole paragraph editor survives its blocks being swapped', async ({ page }) => {
+  const html = '<p><br></p><p>hi ahmed,</p><p><br></p><p>hope your having a good day</p>';
+  await page.locator('#ce').evaluate((el, html) => {
+    el.innerHTML = html;
+  }, html);
+  await page.locator('#ce p').nth(1).click();
+
+  expect(await captureText(page, true)).toBe('\nhi ahmed,\n\nhope your having a good day');
+  await page.locator('#outside').click();
+  await page.locator('#ce').evaluate((el, html) => {
+    el.innerHTML = html;
+  }, html);
+  expect(await apply(page, "\nHi Ahmed,\n\nHope you're having a good day!")).toEqual({
+    ok: true,
+  });
+
+  const paragraphs = await page
+    .locator('#ce p')
+    .evaluateAll((els) => els.map((el) => el.textContent));
+  expect(paragraphs).toEqual(['', 'Hi Ahmed,', '', "Hope you're having a good day!"]);
 });
 
 test('applying the same text leaves the field untouched', async ({ page }) => {
