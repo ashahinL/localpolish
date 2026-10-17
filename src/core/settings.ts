@@ -1,6 +1,8 @@
 export type ProviderId =
   'claude-cli' | 'codex-cli' | 'grok-cli' | 'openai-compatible' | 'anthropic-api';
 
+export type CliProviderId = 'claude-cli' | 'codex-cli' | 'grok-cli';
+
 export type Mode = 'fix' | 'rephrase' | 'shorter' | 'tone';
 
 export type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
@@ -8,6 +10,7 @@ export type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
 export interface Settings {
   provider: ProviderId;
   models: Record<ProviderId, string>;
+  efforts: Record<CliProviderId, string>;
   openaiBaseUrl: string;
   openaiApiKey: string;
   anthropicApiKey: string;
@@ -25,6 +28,11 @@ export const DEFAULT_SETTINGS: Settings = {
     'grok-cli': '',
     'openai-compatible': '',
     'anthropic-api': 'claude-haiku-5-5',
+  },
+  efforts: {
+    'claude-cli': 'xhigh',
+    'codex-cli': 'high',
+    'grok-cli': 'low',
   },
   openaiBaseUrl: 'http://localhost:11434/v1',
   openaiApiKey: '',
@@ -55,9 +63,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function storedPatch(value: unknown): Partial<Settings> {
   if (!isRecord(value)) return {};
-  const { models, ...rest } = value;
+  const { models, efforts, ...rest } = value;
   const patch = { ...rest } as Partial<Settings>;
   if (isRecord(models)) patch.models = models as Settings['models'];
+  if (isRecord(efforts)) patch.efforts = efforts as Settings['efforts'];
   return patch;
 }
 
@@ -68,6 +77,10 @@ function mergeSettings(patch: Partial<Settings>): Settings {
     models: {
       ...DEFAULT_SETTINGS.models,
       ...patch.models,
+    },
+    efforts: {
+      ...DEFAULT_SETTINGS.efforts,
+      ...patch.efforts,
     },
     blocklist: Array.isArray(patch.blocklist)
       ? [...patch.blocklist]
@@ -88,6 +101,10 @@ export async function saveSettings(patch: Partial<Settings>): Promise<void> {
     models: {
       ...current.models,
       ...patch.models,
+    },
+    efforts: {
+      ...current.efforts,
+      ...patch.efforts,
     },
   });
   await storageLocal().set({ [STORAGE_KEY]: next });

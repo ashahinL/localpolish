@@ -34,17 +34,15 @@ export function createDecoder(onMessage) {
 
 /**
  * @param {string} cli
- * @param {string} model
- * @param {string} system
+ * @param {{ model: string, effort: string, system: string }} opts
  * @returns {{ cmd: string, args: string[] }}
  */
-export function buildCommand(cli, model, system) {
+export function buildCommand(cli, { model, effort, system }) {
   if (cli === 'claude') {
     const args = ['-p'];
     if (model) args.push('--model', model);
+    if (effort) args.push('--effort', effort);
     args.push(
-      '--effort',
-      'low',
       '--system-prompt',
       system,
       '--tools',
@@ -63,6 +61,7 @@ export function buildCommand(cli, model, system) {
   if (cli === 'grok') {
     const args = ['-p', '-'];
     if (model) args.push('-m', model);
+    if (effort) args.push('--effort', effort);
     args.push(
       '--system-prompt-override',
       system,
@@ -78,13 +77,8 @@ export function buildCommand(cli, model, system) {
   if (cli === 'codex') {
     const args = ['exec', '-', '--skip-git-repo-check', '--ephemeral', '-s', 'read-only'];
     if (model) args.push('-m', model);
-    args.push(
-      '-c',
-      'model_reasoning_effort=low',
-      '-c',
-      `developer_instructions=${JSON.stringify(system)}`,
-      '--json',
-    );
+    if (effort) args.push('-c', `model_reasoning_effort=${effort}`);
+    args.push('-c', `developer_instructions=${JSON.stringify(system)}`, '--json');
     return { cmd: 'codex', args };
   }
   throw new Error(`Unknown CLI: ${cli}`);
@@ -158,4 +152,13 @@ export function findOnPath(name, pathEnv) {
     }
   }
   return null;
+}
+
+/**
+ * Codex always loads `$CODEX_HOME/AGENTS.md`, so LocalPolish gives it a home with only a login.
+ * @param {string} home
+ * @returns {string}
+ */
+export function codexHomeFor(home) {
+  return path.join(home, 'Library', 'Application Support', 'LocalPolish', 'codex-home');
 }

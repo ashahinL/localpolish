@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { EXTENSION_ID, HOST_NAME } from './constants.mjs';
-import { findOnPath } from './lib.mjs';
+import { codexHomeFor, findOnPath } from './lib.mjs';
 
 const CLI_NAMES = ['claude', 'codex', 'grok'];
 const SYSTEM_PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'];
@@ -88,4 +88,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
   console.log(result.wrapperPath);
   console.log(result.manifestPath);
+  const codexHome = codexHomeFor(os.homedir());
+  fs.mkdirSync(codexHome, { recursive: true });
+  if (result.found.codex && !fs.existsSync(path.join(codexHome, 'auth.json'))) {
+    console.log(`To use Codex, log in once for LocalPolish: CODEX_HOME="${codexHome}" codex login`);
+  }
 }

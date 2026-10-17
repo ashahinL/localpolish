@@ -121,6 +121,7 @@ export function cliProvider(cli: CliName): StreamFn {
         type: 'rewrite',
         cli,
         model: settings.models[MODEL_KEY[cli]],
+        effort: settings.efforts[MODEL_KEY[cli]],
         system: prompt.system,
         user: prompt.user,
       });

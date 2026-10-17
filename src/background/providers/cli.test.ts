@@ -74,10 +74,13 @@ describe('cliProvider', () => {
     ['claude', 'claude-cli', 'opus'],
     ['codex', 'codex-cli', 'gpt-6-luna'],
     ['grok', 'grok-cli', 'grok-3'],
-  ] as const)('posts a %s rewrite with the saved model', async (cli, key, model) => {
+  ] as const)('posts a %s rewrite with the saved model and effort', async (cli, key, model) => {
     const pending = cliProvider(cli)(
       prompt,
-      settings({ models: { [key]: model } }),
+      settings({
+        models: { [key]: model },
+        efforts: { ...DEFAULT_SETTINGS.efforts, [key]: 'medium' },
+      }),
       () => undefined,
       new AbortController().signal,
     );
@@ -87,6 +90,7 @@ describe('cliProvider', () => {
       type: 'rewrite',
       cli,
       model,
+      effort: 'medium',
       system: 'Be brief.',
       user: 'Fix this.',
     });

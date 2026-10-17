@@ -5,7 +5,14 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { TIMEOUT_MS } from './constants.mjs';
-import { buildCommand, createDecoder, encodeMessage, findOnPath, parseLine } from './lib.mjs';
+import {
+  buildCommand,
+  codexHomeFor,
+  createDecoder,
+  encodeMessage,
+  findOnPath,
+  parseLine,
+} from './lib.mjs';
 
 const CLI_NAMES = ['claude', 'codex', 'grok'];
 const KILL_AFTER_MS = 2000;
@@ -60,6 +67,7 @@ async function handlePing() {
 function handleRewrite(msg) {
   const cli = typeof msg.cli === 'string' ? msg.cli : '';
   const model = typeof msg.model === 'string' ? msg.model : '';
+  const effort = typeof msg.effort === 'string' ? msg.effort : '';
   const system = typeof msg.system === 'string' ? msg.system : '';
   const user = typeof msg.user === 'string' ? msg.user : '';
 
@@ -71,11 +79,24 @@ function handleRewrite(msg) {
     return;
   }
 
-  const { cmd, args } = buildCommand(cli, model, system);
+  const env = { ...process.env };
+  if (cli === 'codex') {
+    const codexHome = codexHomeFor(os.homedir());
+    if (!fs.existsSync(path.join(codexHome, 'auth.json'))) {
+      sendAndExit({
+        type: 'error',
+        message: `Codex needs its own login for LocalPolish. In a terminal run: CODEX_HOME="${codexHome}" codex login`,
+      });
+      return;
+    }
+    env.CODEX_HOME = codexHome;
+  }
+
+  const { cmd, args } = buildCommand(cli, { model, effort, system });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'localpolish-'));
   const child = spawn(cmd, args, {
     cwd: dir,
-    env: process.env,
+    env,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 

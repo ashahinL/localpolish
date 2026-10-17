@@ -40,117 +40,78 @@ describe('createDecoder', () => {
 });
 
 describe('buildCommand', () => {
-  it('builds claude args and omits an empty model', () => {
-    expect(buildCommand('claude', 'm1', 'S')).toEqual({
+  const claudeTail = [
+    '--system-prompt',
+    'S',
+    '--tools',
+    '',
+    '--setting-sources',
+    '',
+    '--strict-mcp-config',
+    '--no-session-persistence',
+    '--output-format',
+    'stream-json',
+    '--include-partial-messages',
+    '--verbose',
+  ];
+  const grokTail = [
+    '--system-prompt-override',
+    'S',
+    '--tools',
+    '',
+    '--disable-web-search',
+    '--output-format',
+    'streaming-messages-json',
+    '--include-partial-messages',
+  ];
+  const codexHead = ['exec', '-', '--skip-git-repo-check', '--ephemeral', '-s', 'read-only'];
+  const codexTail = ['-c', `developer_instructions=${JSON.stringify('S')}`, '--json'];
+
+  it('builds claude args with model and effort', () => {
+    expect(buildCommand('claude', { model: 'm1', effort: 'high', system: 'S' })).toEqual({
       cmd: 'claude',
-      args: [
-        '-p',
-        '--model',
-        'm1',
-        '--effort',
-        'low',
-        '--system-prompt',
-        'S',
-        '--tools',
-        '',
-        '--setting-sources',
-        '',
-        '--strict-mcp-config',
-        '--no-session-persistence',
-        '--output-format',
-        'stream-json',
-        '--include-partial-messages',
-        '--verbose',
-      ],
+      args: ['-p', '--model', 'm1', '--effort', 'high', ...claudeTail],
     });
-    expect(buildCommand('claude', '', 'S').args).toEqual([
+  });
+
+  it('omits an empty claude model and effort', () => {
+    expect(buildCommand('claude', { model: '', effort: '', system: 'S' }).args).toEqual([
       '-p',
-      '--effort',
-      'low',
-      '--system-prompt',
-      'S',
-      '--tools',
-      '',
-      '--setting-sources',
-      '',
-      '--strict-mcp-config',
-      '--no-session-persistence',
-      '--output-format',
-      'stream-json',
-      '--include-partial-messages',
-      '--verbose',
+      ...claudeTail,
     ]);
   });
 
-  it('builds grok args and omits an empty model', () => {
-    expect(buildCommand('grok', 'm1', 'S')).toEqual({
+  it('builds grok args with model and effort', () => {
+    expect(buildCommand('grok', { model: 'm1', effort: 'low', system: 'S' })).toEqual({
       cmd: 'grok',
-      args: [
-        '-p',
-        '-',
-        '-m',
-        'm1',
-        '--system-prompt-override',
-        'S',
-        '--tools',
-        '',
-        '--disable-web-search',
-        '--output-format',
-        'streaming-messages-json',
-        '--include-partial-messages',
-      ],
+      args: ['-p', '-', '-m', 'm1', '--effort', 'low', ...grokTail],
     });
-    expect(buildCommand('grok', '', 'S').args).toEqual([
+  });
+
+  it('omits an empty grok model and effort', () => {
+    expect(buildCommand('grok', { model: '', effort: '', system: 'S' }).args).toEqual([
       '-p',
       '-',
-      '--system-prompt-override',
-      'S',
-      '--tools',
-      '',
-      '--disable-web-search',
-      '--output-format',
-      'streaming-messages-json',
-      '--include-partial-messages',
+      ...grokTail,
     ]);
   });
 
-  it('builds codex args and omits an empty model', () => {
-    const instructions = `developer_instructions=${JSON.stringify('S')}`;
-    expect(buildCommand('codex', 'm1', 'S')).toEqual({
+  it('builds codex args with model and effort', () => {
+    expect(buildCommand('codex', { model: 'm1', effort: 'high', system: 'S' })).toEqual({
       cmd: 'codex',
-      args: [
-        'exec',
-        '-',
-        '--skip-git-repo-check',
-        '--ephemeral',
-        '-s',
-        'read-only',
-        '-m',
-        'm1',
-        '-c',
-        'model_reasoning_effort=low',
-        '-c',
-        instructions,
-        '--json',
-      ],
+      args: [...codexHead, '-m', 'm1', '-c', 'model_reasoning_effort=high', ...codexTail],
     });
-    expect(buildCommand('codex', '', 'S').args).toEqual([
-      'exec',
-      '-',
-      '--skip-git-repo-check',
-      '--ephemeral',
-      '-s',
-      'read-only',
-      '-c',
-      'model_reasoning_effort=low',
-      '-c',
-      instructions,
-      '--json',
+  });
+
+  it('omits an empty codex model and effort', () => {
+    expect(buildCommand('codex', { model: '', effort: '', system: 'S' }).args).toEqual([
+      ...codexHead,
+      ...codexTail,
     ]);
   });
 
   it('rejects an unknown cli', () => {
-    expect(() => buildCommand('llama', 'm1', 'S')).toThrow(/llama/);
+    expect(() => buildCommand('llama', { model: 'm1', effort: '', system: 'S' })).toThrow(/llama/);
   });
 });
 

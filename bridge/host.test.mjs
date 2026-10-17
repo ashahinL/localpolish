@@ -52,10 +52,11 @@ function writeCli(binDir, name, body) {
  * @param {string} binDir
  * @param {number} closeMs
  */
-function startHost(binDir, closeMs = 5000) {
+function startHost(binDir, closeMs = 5000, home = process.env.HOME) {
   const child = spawn(process.execPath, [hostPath], {
     env: {
       ...process.env,
+      HOME: home,
       PATH: `${binDir}:${path.dirname(process.execPath)}:/usr/bin:/bin`,
     },
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -158,6 +159,47 @@ process.stderr.write('not logged in\\n', () => process.exit(1));
     expect(/** @type {{ message: string }} */ (host.messages[0]).message).toContain(
       'not logged in',
     );
+  });
+
+  it('asks for a LocalPolish codex login when the codex home has none', async () => {
+    const bin = tempDir('lp-bin-');
+    writeCli(bin, 'codex', '#!/bin/sh\nexit 0\n');
+    const host = startHost(bin, 5000, tempDir('lp-home-'));
+    host.child.stdin.write(rewrite('codex', 'hello'));
+    await host.closed;
+    expect(host.messages).toHaveLength(1);
+    expect(/** @type {{ message: string }} */ (host.messages[0]).message).toContain(
+      'codex-home" codex login',
+    );
+  });
+
+  it('runs codex with the LocalPolish codex home', async () => {
+    const bin = tempDir('lp-bin-');
+    const home = tempDir('lp-home-');
+    const codexHome = path.join(
+      home,
+      'Library',
+      'Application Support',
+      'LocalPolish',
+      'codex-home',
+    );
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(path.join(codexHome, 'auth.json'), '{}');
+    writeCli(
+      bin,
+      'codex',
+      `#!/usr/bin/env node
+process.stdin.resume();
+process.stdin.on('end', () => {
+  const item = { type: 'agent_message', text: process.env.CODEX_HOME };
+  process.stdout.write(JSON.stringify({ type: 'item.completed', item }) + '\\n', () => process.exit(0));
+});
+`,
+    );
+    const host = startHost(bin, 5000, home);
+    host.child.stdin.write(rewrite('codex', 'hello'));
+    await host.closed;
+    expect(host.messages).toEqual([{ type: 'chunk', text: codexHome }, { type: 'done' }]);
   });
 
   it('reports a missing codex cli', async () => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, isBlocked, loadSettings, saveSettings } from './settings';
+import { DEFAULT_SETTINGS, isBlocked, loadSettings, saveSettings, type Settings } from './settings';
 
 let memory: Map<string, unknown>;
 
@@ -54,6 +54,17 @@ describe('loadSettings', () => {
       'grok-cli': '',
       'openai-compatible': '',
       'anthropic-api': 'claude-haiku-5-5',
+    });
+  });
+
+  it('keeps the other CLI efforts when one is saved', async () => {
+    await saveSettings({ efforts: { 'codex-cli': 'xhigh' } as Settings['efforts'] });
+
+    const settings = await loadSettings();
+    expect(settings.efforts).toEqual({
+      'claude-cli': 'xhigh',
+      'codex-cli': 'xhigh',
+      'grok-cli': 'low',
     });
   });
 });
