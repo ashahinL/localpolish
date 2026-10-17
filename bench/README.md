@@ -64,7 +64,20 @@ Findings:
 
 4. From Sol's review (2026-10-17): the bridge finishes early only on `stop_reason` `end_turn` or `stop_sequence`, and reports `max_tokens` as a cut-off answer. Codex no longer gets the prompt twice. Cleanup no longer collapses `,,` in text where it replaced no dash, and keeps a heading such as `Corrected:` when the input starts with one.
 
+## Fix prompt test (Mac, 2026-10-17)
+
+`results/2026-10-17-mac-prompt.jsonl`. 7 inputs, 3 rounds, so 21 tries per row. Two new inputs: a subject line, and a fragment cut from a longer sentence (`i has an apple`), where a final period is wrong. `BENCH_PROMPT=v1|sol|v2` picks the prompt. Times are to process exit, so they include the 1 to 3 s the bridge no longer waits for.
+
+| Setup        | v1 (old) | sol   | v2 (now in `prompts.ts`) |
+| ------------ | -------- | ----- | ------------------------ |
+| Luna none    | 12/21    | 18/21 | 19/21                    |
+| Haiku low    | 9/21     | 5/21  | 9/21                     |
+| Haiku medium | 11/21    | -     | 10/21                    |
+
+- v2 keeps v1's first sentence and adds short rules: capitalize greetings and names, keep singular or plural, keep each part's script, do not transliterate, add no final punctuation.
+- Sol's prompt starts with "Make minimal edits". Haiku then often returns the text unchanged.
+- Haiku misses with every prompt: "reports are" in the email, a final period on the fragment, and sometimes "I has an apple" left as it is. Luna's misses are in the mixed Arabic test.
+
 ## Still to do
 
-1. Test Sol's Fix prompt against the current one, with new fragment and subject-line inputs (see below).
-2. Maybe later, each needs measuring: more Codex config keys (`features.multi_agent`, `features.goals`, `tools.view_image`), an isolated `GROK_HOME`, Claude `--disable-slash-commands`, and a long-lived bridge process.
+1. Maybe later, each needs measuring: more Codex config keys (`features.multi_agent`, `features.goals`, `tools.view_image`), an isolated `GROK_HOME`, Claude `--disable-slash-commands`, and a long-lived bridge process.

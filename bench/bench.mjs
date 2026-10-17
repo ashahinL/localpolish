@@ -9,11 +9,19 @@ import { INPUTS } from './inputs.mjs';
 
 const [repoDir, outFile, runsArg, filter] = process.argv.slice(2);
 const lib = await import(pathToFileURL(path.join(repoDir, 'bridge', 'lib.mjs')).href);
-const SYSTEM =
-  'Fix the grammar, spelling, punctuation and capitalization of the text inside the <text> tags. Do not translate it. Return only the corrected text.';
+// BENCH_PROMPT picks the Fix prompt to test. "v2" is the one in src/core/prompts.ts.
+const PROMPTS = {
+  v1: 'Fix the grammar, spelling, punctuation and capitalization of the text inside the <text> tags. Do not translate it. Return only the corrected text.',
+  sol: "Fix grammar, spelling, punctuation and capitalization inside <text>. Make minimal edits. Capitalize greetings and names. Keep nouns singular or plural as written; fix verb agreement. Preserve meaning, line breaks, links, @mentions, #hashtags, code and emojis. Keep each part's language and script: Arabic stays Arabic; Franco-Arabic stays Franco-Arabic. Never translate, transliterate or answer the text. If the text ends without punctuation, do not add any. Return only corrected text.",
+  v2: 'Fix the grammar, spelling, punctuation and capitalization of the text inside the <text> tags. Capitalize greetings and names. Keep nouns singular or plural as written. Keep each part in its own language and script: Arabic stays Arabic, Franco-Arabic stays Franco-Arabic. Do not translate or transliterate. If the text ends without punctuation, do not add any. Return only the corrected text.',
+};
+const promptName = process.env.BENCH_PROMPT ?? 'v2';
+const SYSTEM = PROMPTS[promptName];
+if (!SYSTEM) throw new Error(`Unknown BENCH_PROMPT: ${promptName}`);
 
 const SETUPS = [
   { name: 'Haiku 5.5 low', cli: 'claude', model: 'haiku', effort: 'low' },
+  { name: 'Haiku 5.5 medium', cli: 'claude', model: 'haiku', effort: 'medium' },
   { name: 'GPT-6 Luna none', cli: 'codex', model: 'gpt-6-luna', effort: 'none' },
   { name: 'GPT-6.1 Sol low', cli: 'codex', model: 'gpt-6.1-sol', effort: 'low' },
   { name: 'Grok 4.7 low', cli: 'grok', model: 'grok-4.7', effort: 'low' },
@@ -24,15 +32,23 @@ function runOnce(setup, input) {
   return new Promise((resolve) => {
     const bin = lib.findOnPath(setup.cli, process.env.PATH);
     const run = lib.resolveCommand(bin);
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'lp-bench-'));
+    let instructionsFile;
+    if (setup.cli === 'codex') {
+      instructionsFile = path.join(cwd, 'instructions.md');
+      fs.writeFileSync(instructionsFile, SYSTEM);
+    }
     const { args } = lib.buildCommand(setup.cli, {
       model: setup.model,
       effort: setup.effort,
       system: SYSTEM,
+      instructionsFile,
     });
     const env = { ...process.env };
-    if (setup.cli === 'grok') Object.assign(env, { GROK_MEMORY: '0', GROK_WORKFLOWS: '0' });
+    if (setup.cli === 'grok') {
+      Object.assign(env, lib.GROK_IMPORTS_OFF, { GROK_MEMORY: '0', GROK_WORKFLOWS: '0' });
+    }
     if (setup.cli === 'codex') env.CODEX_HOME = lib.codexHomeFor(os.homedir());
-    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'lp-bench-'));
     const start = performance.now();
     let first = null;
     let text = '';
@@ -66,7 +82,7 @@ function runOnce(setup, input) {
       fs.rmSync(cwd, { recursive: true, force: true });
       const end = performance.now();
       resolve({
-        setup: setup.name,
+        setup: `${setup.name} (${promptName} prompt)`,
         input: input.name,
         ms: Math.round(end - start),
         firstMs: first === null ? null : Math.round(first - start),

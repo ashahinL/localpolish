@@ -29,7 +29,19 @@ export const INPUTS = [
   {
     name: 'mixed arabic',
     text: 'ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you',
-    pass: (o) => /fahem/i.test(o) && has(o, 'بكرة') && /works for you/i.test(o),
+    pass: (o) =>
+      /fahem/i.test(o) && has(o, 'بس', 'بكرة') && /[اأ]نا/.test(o) && /works for you/i.test(o),
+  },
+  {
+    name: 'subject line',
+    text: 'quick question about teh budget for q3',
+    pass: (o) => /^Quick question about the budget for Q3$/.test(o.trim()),
+  },
+  {
+    // Part of a longer sentence the user selected, so a final period would break it.
+    name: 'fragment',
+    text: 'i has an apple',
+    pass: (o) => o.trim() === 'I have an apple',
   },
   {
     name: 'email',
