@@ -133,7 +133,7 @@ process.stdin.on('end', () => {
     ]);
   });
 
-  it('sends done at message_stop and stops a cli that keeps running', async () => {
+  it('sends done at the end_turn stop and stops a cli that keeps running', async () => {
     const bin = tempDir('lp-bin-');
     const pidFile = path.join(bin, 'pid');
     writeCli(
@@ -145,7 +145,8 @@ process.stdin.resume();
 process.stdin.on('end', () => {
   const delta = { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Fixed.' } };
   process.stdout.write(JSON.stringify({ type: 'stream_event', event: delta }) + '\\n');
-  process.stdout.write(JSON.stringify({ type: 'stream_event', event: { type: 'message_stop' } }) + '\\n');
+  const stop = { type: 'message_delta', delta: { stop_reason: 'end_turn' } };
+  process.stdout.write(JSON.stringify({ type: 'stream_event', event: stop }) + '\\n');
   setTimeout(() => {}, 30000);
 });
 `,

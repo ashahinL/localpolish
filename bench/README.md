@@ -62,6 +62,9 @@ Findings:
 2. Grok runs with its Claude, Codex and Cursor imports off (`GROK_IMPORTS_OFF` in `bridge/lib.mjs`). Grok 4.7 `done` at 2.8 s live.
 3. Codex runs with our system prompt as its base prompt (`model_instructions_file`, written to the temp folder of each run).
 
+4. From Sol's review (2026-10-17): the bridge finishes early only on `stop_reason` `end_turn` or `stop_sequence`, and reports `max_tokens` as a cut-off answer. Codex no longer gets the prompt twice. Cleanup no longer collapses `,,` in text where it replaced no dash, and keeps a heading such as `Corrected:` when the input starts with one.
+
 ## Still to do
 
-1. Send the results to Sol (`review` lane, high, read-only) and ask what else in our setup slows things down or lowers quality.
+1. Test Sol's Fix prompt against the current one, with new fragment and subject-line inputs (see below).
+2. Maybe later, each needs measuring: more Codex config keys (`features.multi_agent`, `features.goals`, `tools.view_image`), an isolated `GROK_HOME`, Claude `--disable-slash-commands`, and a long-lived bridge process.

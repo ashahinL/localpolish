@@ -140,9 +140,10 @@ export function buildCommand(cli, { model, effort, system, instructionsFile }) {
     args.push('-c', 'web_search=disabled');
     if (model) args.push('-m', model);
     if (effort) args.push('-c', `model_reasoning_effort=${effort}`);
-    args.push('-c', `developer_instructions=${JSON.stringify(system)}`);
     if (instructionsFile) {
       args.push('-c', `model_instructions_file=${JSON.stringify(instructionsFile)}`);
+    } else {
+      args.push('-c', `developer_instructions=${JSON.stringify(system)}`);
     }
     args.push('--json');
     return { cmd: 'codex', args };
@@ -182,8 +183,13 @@ export function parseLine(cli, line) {
       return { error: String(msg.result) };
     }
     // The answer is complete here. The CLI can run for seconds more before it exits.
-    if (msg.type === 'stream_event' && event && event.type === 'message_stop') {
-      return { end: true };
+    if (msg.type === 'stream_event' && event && event.type === 'message_delta' && delta) {
+      if (delta.stop_reason === 'end_turn' || delta.stop_reason === 'stop_sequence') {
+        return { end: true };
+      }
+      if (delta.stop_reason === 'max_tokens') {
+        return { error: 'The answer was cut off. Try a shorter text.' };
+      }
     }
     if (msg.type === 'result') return { end: true };
     return null;

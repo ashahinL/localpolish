@@ -12,7 +12,7 @@ export function cleanOutput(raw: string, input: string): string {
   let out = raw.trim();
   out = stripTextTags(out);
   out = stripFence(out, input);
-  out = stripPreamble(out);
+  out = stripPreamble(out, input);
   out = stripWrappingQuotes(out, input);
   out = replaceEmDashes(out, input);
   out = replaceSmartQuotes(out, input);
@@ -36,12 +36,14 @@ function stripFence(out: string, input: string): string {
   return lines.join('\n').trim();
 }
 
-function stripPreamble(out: string): string {
+function stripPreamble(out: string, input: string): string {
   const splitAt = out.indexOf('\n');
   if (splitAt === -1) return out;
   const firstLine = out.slice(0, splitAt);
   const rest = out.slice(splitAt + 1);
   if (!PREAMBLE_LINE.test(firstLine) || rest.trim() === '') return out;
+  // The user's own text can start with a heading like "Corrected:".
+  if (PREAMBLE_LINE.test(input.trim().split('\n')[0] ?? '')) return out;
   return rest.trim();
 }
 
@@ -58,21 +60,8 @@ function stripWrappingQuotes(out: string, input: string): string {
 
 function replaceEmDashes(out: string, input: string): string {
   if (input.includes('\u2014')) return out;
-  let next = out
-    .replaceAll(' \u2014 ', ', ')
-    .replaceAll(' \u2014', ', ')
-    .replaceAll('\u2014 ', ', ');
-  let previous = '';
-  while (next !== previous) {
-    previous = next;
-    next = next.replace(/(\S)\u2014(\S)/g, '$1, $2');
-  }
-  previous = '';
-  while (next !== previous) {
-    previous = next;
-    next = next.replaceAll(', ,', ',').replaceAll(',,', ',');
-  }
-  return next;
+  // Absorb a comma next to the dash, so "a, \u2014 b" does not become "a, , b".
+  return out.replace(/,?[ \t]*\u2014[ \t]*,?[ \t]*/g, ', ');
 }
 
 function hasCurlyQuotes(text: string): boolean {

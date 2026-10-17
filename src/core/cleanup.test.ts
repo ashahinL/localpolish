@@ -50,6 +50,21 @@ describe('cleanOutput', () => {
     expect(cleanOutput('', ' \n')).toBe(' \n');
   });
 
+  it('keeps a heading the input already had', () => {
+    expect(cleanOutput('Corrected:\nThe bug is fixed.', 'Corrected:\nthe bug is fix')).toBe(
+      'Corrected:\nThe bug is fixed.',
+    );
+  });
+
+  it('keeps double commas when no dash was replaced', () => {
+    expect(cleanOutput('Use `foo,,bar` here.', 'use `foo,,bar` here')).toBe('Use `foo,,bar` here.');
+  });
+
+  it('does not double a comma next to a replaced dash', () => {
+    expect(cleanOutput('Yes, \u2014 mostly.', 'yes mostly')).toBe('Yes, mostly.');
+    expect(cleanOutput('Yes \u2014, mostly.', 'yes mostly')).toBe('Yes, mostly.');
+  });
+
   it('keeps a line that is not a preamble', () => {
     expect(cleanOutput('Sure, I can help with that.', 'sure i can help with that')).toBe(
       'Sure, I can help with that.',

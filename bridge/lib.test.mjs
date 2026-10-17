@@ -156,6 +156,7 @@ describe('buildCommand', () => {
       'model_instructions_file="/tmp/x/instructions.md"',
       '--json',
     ]);
+    expect(args.join(' ')).not.toContain('developer_instructions');
   });
 
   it('rejects an unknown cli', () => {
@@ -179,9 +180,14 @@ describe('parseLine', () => {
       expect(parseLine(cli, `  ${textLine}\n`)).toEqual({ text: 'She' });
       expect(parseLine(cli, thinkingLine)).toBeNull();
       expect(parseLine(cli, resultOk)).toEqual({ end: true });
-      expect(
-        parseLine(cli, '{"type":"stream_event","event":{"type":"message_stop"},"session_id":"x"}'),
-      ).toEqual({ end: true });
+      const stop = (reason) =>
+        `{"type":"stream_event","event":{"type":"message_delta","delta":{"stop_reason":"${reason}"}}}`;
+      expect(parseLine(cli, stop('end_turn'))).toEqual({ end: true });
+      expect(parseLine(cli, stop('max_tokens'))).toEqual({
+        error: 'The answer was cut off. Try a shorter text.',
+      });
+      expect(parseLine(cli, stop('tool_use'))).toBeNull();
+      expect(parseLine(cli, '{"type":"stream_event","event":{"type":"message_stop"}}')).toBeNull();
       expect(parseLine(cli, resultError)).toEqual({ error: 'Not logged in' });
       expect(parseLine(cli, 'Reading additional input from stdin...')).toBeNull();
     }
