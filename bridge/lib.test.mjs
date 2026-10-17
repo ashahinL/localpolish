@@ -144,6 +144,20 @@ describe('buildCommand', () => {
     ]);
   });
 
+  it('passes a codex instructions file before --json', () => {
+    const args = buildCommand('codex', {
+      model: '',
+      effort: '',
+      system: 'S',
+      instructionsFile: '/tmp/x/instructions.md',
+    }).args;
+    expect(args.slice(-3)).toEqual([
+      '-c',
+      'model_instructions_file="/tmp/x/instructions.md"',
+      '--json',
+    ]);
+  });
+
   it('rejects an unknown cli', () => {
     expect(() => buildCommand('llama', { model: 'm1', effort: '', system: 'S' })).toThrow(/llama/);
   });

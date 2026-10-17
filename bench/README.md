@@ -59,9 +59,9 @@ Findings:
 ## Fixed
 
 1. The bridge sends `done` at `message_stop` (Claude Code, Grok) or `turn.completed` (Codex), then stops the CLI. Live, through `bridge/host.mjs`: Haiku `done` at 1.8 s (was about 4.5 s), Luna at 3.3 s.
+2. Grok runs with its Claude, Codex and Cursor imports off (`GROK_IMPORTS_OFF` in `bridge/lib.mjs`). Grok 4.7 `done` at 2.8 s live.
+3. Codex runs with our system prompt as its base prompt (`model_instructions_file`, written to the temp folder of each run).
 
 ## Still to do
 
-1. Grok: turn off the Claude, Codex and Cursor imports (`GROK_*_ENABLED=0`).
-2. Codex: replace its built-in prompt with ours (`model_instructions_file`).
-3. Send the results to Sol (`review` lane, high, read-only) and ask what else in our setup slows things down or lowers quality.
+1. Send the results to Sol (`review` lane, high, read-only) and ask what else in our setup slows things down or lowers quality.

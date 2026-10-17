@@ -12,6 +12,7 @@ import {
   createDecoder,
   encodeMessage,
   findOnPath,
+  GROK_IMPORTS_OFF,
   parseLine,
   resolveCommand,
 } from './lib.mjs';
@@ -91,6 +92,7 @@ function handleRewrite(msg) {
 
   const env = { ...process.env };
   if (cli === 'grok') {
+    Object.assign(env, GROK_IMPORTS_OFF);
     env.GROK_MEMORY = '0';
     env.GROK_WORKFLOWS = '0';
   }
@@ -113,8 +115,13 @@ function handleRewrite(msg) {
     sendAndExit({ type: 'error', message: /** @type {Error} */ (err).message });
     return;
   }
-  const { args } = buildCommand(cli, { model, effort, system });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'localpolish-'));
+  let instructionsFile;
+  if (cli === 'codex') {
+    instructionsFile = path.join(dir, 'instructions.md');
+    fs.writeFileSync(instructionsFile, system);
+  }
+  const { args } = buildCommand(cli, { model, effort, system, instructionsFile });
   const child = spawn(run.cmd, [...run.args, ...args], {
     cwd: dir,
     env,

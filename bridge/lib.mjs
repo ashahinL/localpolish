@@ -78,12 +78,22 @@ export const CODEX_DISABLED_FEATURES = [
   'in_app_browser',
 ];
 
+// Grok loads Claude, Codex and Cursor rules (such as ~/.claude/CLAUDE.md) into its prompt by default.
+/** @type {Record<string, string>} */
+export const GROK_IMPORTS_OFF = {};
+for (const source of ['CLAUDE', 'CODEX', 'CURSOR']) {
+  for (const kind of ['AGENTS', 'HOOKS', 'MCPS', 'RULES', 'SKILLS', 'SESSIONS']) {
+    GROK_IMPORTS_OFF[`GROK_${source}_${kind}_ENABLED`] = '0';
+  }
+}
+
 /**
+ * `instructionsFile` replaces Codex's built-in prompt, which is about 3,500 tokens.
  * @param {string} cli
- * @param {{ model: string, effort: string, system: string }} opts
+ * @param {{ model: string, effort: string, system: string, instructionsFile?: string }} opts
  * @returns {{ cmd: string, args: string[] }}
  */
-export function buildCommand(cli, { model, effort, system }) {
+export function buildCommand(cli, { model, effort, system, instructionsFile }) {
   if (cli === 'claude') {
     const args = ['-p'];
     if (model) args.push('--model', model);
@@ -130,7 +140,11 @@ export function buildCommand(cli, { model, effort, system }) {
     args.push('-c', 'web_search=disabled');
     if (model) args.push('-m', model);
     if (effort) args.push('-c', `model_reasoning_effort=${effort}`);
-    args.push('-c', `developer_instructions=${JSON.stringify(system)}`, '--json');
+    args.push('-c', `developer_instructions=${JSON.stringify(system)}`);
+    if (instructionsFile) {
+      args.push('-c', `model_instructions_file=${JSON.stringify(instructionsFile)}`);
+    }
+    args.push('--json');
     return { cmd: 'codex', args };
   }
   throw new Error(`Unknown CLI: ${cli}`);
