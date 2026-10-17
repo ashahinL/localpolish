@@ -13,7 +13,8 @@ export interface PopupState {
   result: string;
   error: string;
   acceptFailure: AcceptFailure | null;
-  copied: boolean;
+  acceptCopied: boolean;
+  copy: 'idle' | 'copied' | 'failed';
 }
 
 export type PopupAction =
@@ -21,8 +22,8 @@ export type PopupAction =
   | { type: 'chunk'; text: string }
   | { type: 'done'; text: string }
   | { type: 'error'; message: string }
-  | { type: 'accept-failed'; reason: AcceptFailure }
-  | { type: 'copied'; copied: boolean };
+  | { type: 'accept-failed'; reason: AcceptFailure; copied: boolean }
+  | { type: 'copy'; copy: 'idle' | 'copied' | 'failed' };
 
 export type Note =
   | { kind: 'count'; text: string; over: boolean }
@@ -41,7 +42,8 @@ export function initialState(input: string, mode: Mode, tone: Tone): PopupState 
     result: '',
     error: '',
     acceptFailure: null,
-    copied: false,
+    acceptCopied: false,
+    copy: 'idle',
   };
 }
 
@@ -60,9 +62,9 @@ export function popupReducer(state: PopupState, action: PopupAction): PopupState
       return { ...state, phase: 'error', error: action.message };
     case 'accept-failed':
       if (state.phase !== 'done') return state;
-      return { ...state, acceptFailure: action.reason };
-    case 'copied':
-      return { ...state, copied: action.copied };
+      return { ...state, acceptFailure: action.reason, acceptCopied: action.copied };
+    case 'copy':
+      return { ...state, copy: action.copy };
   }
 }
 
@@ -96,15 +98,20 @@ export function popupNotes(state: PopupState, isMac: boolean): Note[] {
     });
   }
   if (state.acceptFailure) {
-    notes.push({ kind: 'warning', text: acceptFailureText(state.acceptFailure, isMac) });
+    notes.push({
+      kind: 'warning',
+      text: acceptFailureText(state.acceptFailure, isMac, state.acceptCopied),
+    });
   }
   return notes;
 }
 
-function acceptFailureText(reason: AcceptFailure, isMac: boolean): string {
-  const paste = `The new text is copied. Paste it with ${isMac ? '⌘V' : 'Ctrl+V'}.`;
+function acceptFailureText(reason: AcceptFailure, isMac: boolean, copied: boolean): string {
+  const ending = copied
+    ? `The new text is copied. Paste it with ${isMac ? '⌘V' : 'Ctrl+V'}.`
+    : 'Copying failed too. Select the new text in this popup and copy it.';
   if (reason === 'changed') {
-    return `The text in the field changed since you selected it. ${paste}`;
+    return `The text in the field changed since you selected it. ${ending}`;
   }
-  return `This site did not accept the change. ${paste}`;
+  return `This site did not accept the change. ${ending}`;
 }

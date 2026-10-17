@@ -169,6 +169,37 @@ test('mode switch asks for a shorter rewrite', async ({ page, mock }) => {
   expect(content.startsWith('Make the text')).toBe(true);
 });
 
+test('textarea keeps a two-line rewrite exactly', async ({ page, mock }) => {
+  mock.reply({ chunks: ['I went home.\n', 'She does not know.'] });
+  await page.locator('#ta').click();
+  await page.keyboard.type('i has went home');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('she dont know');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.locator('.lp-fab').click();
+  await accept(page);
+  await expect(page.locator('#ta')).toHaveValue('I went home.\nShe does not know.');
+});
+
+test('tone tab asks for a formal rewrite', async ({ page, mock }) => {
+  await openRewrite(page, '#ta');
+  const seen = mock.requests.length;
+  await page.getByRole('button', { name: 'Tone' }).click();
+  await page.getByRole('button', { name: 'Formal' }).click();
+
+  await expect
+    .poll(() =>
+      mock.requests.slice(seen).some((request) => {
+        const content = request.body?.messages?.[0]?.content;
+        return (
+          typeof content === 'string' &&
+          content.startsWith('Rewrite the text inside the <text> tags in a formal')
+        );
+      }),
+    )
+    .toBe(true);
+});
+
 test('server error can be retried', async ({ page, mock }) => {
   mock.reply({ status: 500, body: 'boom' });
   await selectAllIn(page, '#ta');

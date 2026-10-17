@@ -10,7 +10,7 @@ export type Target =
 
 export type ApplyResult = { ok: true } | { ok: false; reason: 'changed' | 'rejected' };
 
-const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'url']);
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url']);
 
 export function findEditable(
   node: Node | null,
@@ -152,16 +152,19 @@ function applyField(target: Extract<Target, { kind: 'field' }>, text: string): A
 
   // insertText keeps the browser undo stack and fires beforeinput/input.
   const inserted = document.execCommand('insertText', false, text);
-  if (!inserted || el.value.slice(start, start + text.length) !== text) {
-    el.setRangeText(text, start, end, 'end');
-    el.dispatchEvent(
-      new InputEvent('input', {
-        bubbles: true,
-        inputType: 'insertReplacementText',
-        data: text,
-      }),
-    );
+  // A true result means the page already ran the command. Writing again would apply it twice.
+  if (inserted) {
+    if (el.value.slice(start, start + text.length) === text) return { ok: true };
+    return { ok: false, reason: 'rejected' };
   }
+  el.setRangeText(text, start, end, 'end');
+  el.dispatchEvent(
+    new InputEvent('input', {
+      bubbles: true,
+      inputType: 'insertReplacementText',
+      data: text,
+    }),
+  );
   if (el.value.slice(start, start + text.length) === text) return { ok: true };
   return { ok: false, reason: 'rejected' };
 }
@@ -184,26 +187,33 @@ async function applyRich(
   if (normalize(selection.toString()) !== normalize(target.text)) {
     return { ok: false, reason: 'changed' };
   }
+  const before = normalize(root.innerText);
 
   // Lexical (Facebook) drops the line breaks from insertText but splits pasted text into paragraphs.
   if (root.dataset.lexicalEditor === 'true') {
     // Lexical reads the new selection on the next selectionchange.
     await waitForRender();
-    return paste(root, selection, text);
+    return paste(root, selection, text, before, target.text);
   }
 
   const inserted = document.execCommand('insertText', false, text);
   await waitForRender();
-  if (showsText(root, text)) return { ok: true };
+  if (replaced(root, before, text, target.text)) return { ok: true };
 
   // A true result means the page already ran the command. Pasting would insert twice.
   if (inserted) return { ok: false, reason: 'rejected' };
   selection.removeAllRanges();
   selection.addRange(range);
-  return paste(root, selection, text);
+  return paste(root, selection, text, before, target.text);
 }
 
-async function paste(root: HTMLElement, selection: Selection, text: string): Promise<ApplyResult> {
+async function paste(
+  root: HTMLElement,
+  selection: Selection,
+  text: string,
+  before: string,
+  original: string,
+): Promise<ApplyResult> {
   const anchor = selection.anchorNode;
   const anchorEl = anchor instanceof Element ? anchor : (anchor?.parentElement ?? null);
   if (!anchorEl) return { ok: false, reason: 'rejected' };
@@ -217,7 +227,7 @@ async function paste(root: HTMLElement, selection: Selection, text: string): Pro
     }),
   );
   await waitForRender();
-  return showsText(root, text) ? { ok: true } : { ok: false, reason: 'rejected' };
+  return replaced(root, before, text, original) ? { ok: true } : { ok: false, reason: 'rejected' };
 }
 
 function contentsOf(root: HTMLElement): Range {
@@ -228,6 +238,15 @@ function contentsOf(root: HTMLElement): Range {
 
 function showsText(root: HTMLElement, text: string): boolean {
   return normalize(root.innerText).includes(normalize(text));
+}
+
+function replaced(root: HTMLElement, before: string, text: string, original: string): boolean {
+  // The same words may already sit elsewhere in the field. Success means the
+  // field changed, or the replacement is the text that was already there.
+  return (
+    showsText(root, text) &&
+    (normalize(root.innerText) !== before || normalize(text) === normalize(original))
+  );
 }
 
 function normalize(value: string): string {

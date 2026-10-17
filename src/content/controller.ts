@@ -176,8 +176,8 @@ export function createController(deps: ControllerDeps): Controller {
         close();
         return;
       }
-      await copyText(text);
-      dispatch(s, { type: 'accept-failed', reason: result.reason });
+      const copied = await copyText(text);
+      dispatch(s, { type: 'accept-failed', reason: result.reason, copied });
     } finally {
       s.accepting = false;
     }
@@ -185,10 +185,10 @@ export function createController(deps: ControllerDeps): Controller {
 
   async function copy(s: Session): Promise<void> {
     if (!canAccept(s.state)) return;
-    await copyText(s.state.result);
-    dispatch(s, { type: 'copied', copied: true });
+    const copied = await copyText(s.state.result);
+    dispatch(s, { type: 'copy', copy: copied ? 'copied' : 'failed' });
     clearTimeout(s.copiedTimer);
-    s.copiedTimer = setTimeout(() => dispatch(s, { type: 'copied', copied: false }), 1500);
+    s.copiedTimer = setTimeout(() => dispatch(s, { type: 'copy', copy: 'idle' }), 1500);
   }
 
   return { open, close, isOpen: () => session !== null };

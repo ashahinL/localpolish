@@ -67,6 +67,12 @@ test('input replaces the whole selection', async ({ page }) => {
   await expect(page.locator('#inp')).toHaveValue("She doesn't like it.");
 });
 
+test('email input is not a target', async ({ page }) => {
+  await page.locator('#email').click();
+  await page.keyboard.type('ada@example.com');
+  expect(await captureText(page, true)).toBeNull();
+});
+
 test('plain contenteditable replaces the selection', async ({ page }) => {
   await page.locator('#ce').click();
   await page.keyboard.type('i has went home');

@@ -120,7 +120,7 @@ export function Popup(props: PopupProps) {
           Accept
         </button>
         <button type="button" class="lp-button" disabled={!ready} onClick={props.onCopy}>
-          {state.copied ? 'Copied' : 'Copy'}
+          {state.copy === 'copied' ? 'Copied' : state.copy === 'failed' ? 'Copy failed' : 'Copy'}
         </button>
         <button type="button" class="lp-button" onClick={props.onRetry}>
           Retry

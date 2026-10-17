@@ -1,9 +1,9 @@
 import { shadowRoot } from './ui/root';
 
-export async function copyText(text: string): Promise<void> {
+export async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
-    return;
+    return true;
   } catch {
     // Falls back below: writeText fails when the page blocks the clipboard permission.
   }
@@ -15,7 +15,8 @@ export async function copyText(text: string): Promise<void> {
   area.readOnly = true;
   root.append(area);
   area.select();
-  document.execCommand('copy');
+  const copied = document.execCommand('copy');
   area.remove();
   if (previous instanceof HTMLElement) previous.focus({ preventScroll: true });
+  return copied;
 }
