@@ -156,6 +156,6 @@ Shortcut and **Sites** list checked by hand by the user.
 
 Still open:
 - Selecting only part of a multi-line message in the LinkedIn message box can still fall back to Copy (the saved range collapses when LinkedIn swaps its paragraphs on focus).
-- `npm run test:e2e` here: Playwright's own Chromium fails to start on this PC ("side-by-side configuration is incorrect"). The editable tests pass when pointed at Brave. Run the full suite on a machine where Playwright's Chromium starts.
+- `npm run test:e2e` on Windows: Playwright's own Chromium fails to start on that PC ("side-by-side configuration is incorrect"). On the Mac (2026-10-17, 19:30 Cairo) the full suite passes: 41 e2e.
 
 Quality notes for later: Fix adds a final period to a fragment or a subject line ("I have an apple. and she...").

@@ -212,7 +212,7 @@ test('the floating button sits where the selection ended', async ({ page }) => {
       await expect(fab).toBeVisible();
       centers.push(await fabCenter());
     }
-    const [forward, backward] = centers;
+    const [forward, backward] = centers as [number, number];
     expect(backward).toBeLessThan(box.x + 20);
     expect(forward).toBeGreaterThan(backward + 40);
     expect(forward).toBeLessThan(box.x + box.width - 60);
