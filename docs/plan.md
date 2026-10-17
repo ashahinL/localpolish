@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T3 done)
+Status: in progress (T0-T4 done)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -99,8 +99,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T1. Scaffold** (Grok). WXT + TypeScript + Preact, ESLint flat config, Prettier, Vitest. Manifest: name, `key`, permissions `storage`, `nativeMessaging`, `host_permissions: ["<all_urls>"]`, content script on `<all_urls>` with `all_frames`, command `polish`. Empty entrypoints. `npm run build` outputs a loadable extension at `dist/`. Gates: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 - [x] **T2. Core logic** (Grok). `src/core/`: `settings.ts` (types, defaults, load/save), `prompts.ts` (system prompt per mode and tone, `buildPrompt`), `cleanup.ts` (`cleanOutput(raw, input)`), `tokens.ts` (`findMissingTokens(input, output)` for URLs, mentions, hashtags, code spans, emojis), `diff.ts` (`wordDiff` over the `diff` package). Unit tests for all.
 - [x] **T3. Bridge** (Grok). `bridge/host.mjs`, `bridge/lib.mjs` (framing, CLI arg builders, stream parsers), `bridge/install.mjs` and `uninstall.mjs` (wrapper script with a fixed PATH, native host manifest in `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`). Tests: framing, arg builders, parsers, and a spawn test with a fake CLI.
-- [~] **T4. Background** (Grok). Provider interface, `cli` provider over `connectNative`, OpenAI-compatible and Anthropic SSE providers, shared SSE parser, `rewrite` port router, `test-connection`, command handler. Tests with mocked `fetch`.
-- [ ] **T4b. Per-CLI model and effort** (Claude). From the [benchmark](benchmarks/2026-10-17-fix-mode.md): add `efforts: Record<'claude-cli'|'codex-cli'|'grok-cli', string>` to settings (defaults `high`, `high`, `low`), grok default model `grok-4.7-build-fast`, send `effort` in the bridge `rewrite` message, pass it as `--effort` (claude, grok) and `model_reasoning_effort` (codex).
+- [x] **T4. Background** (Grok). Provider interface, `cli` provider over `connectNative`, OpenAI-compatible and Anthropic SSE providers, shared SSE parser, `rewrite` port router, `test-connection`, command handler. Tests with mocked `fetch`.
+- [~] **T4b. Per-CLI model and effort** (Claude). From the [benchmark](benchmarks/2026-10-17-fix-mode.md): add `efforts: Record<'claude-cli'|'codex-cli'|'grok-cli', string>` to settings (defaults `high`, `high`, `low`), grok default model `grok-4.7-build-fast`, send `effort` in the bridge `rewrite` message, pass it as `--effort` (claude, grok) and `model_reasoning_effort` (codex).
 - [ ] **T5. Text field read and write** (Grok). `src/content/editable.ts`: `captureTarget()` and `applyReplacement(target, text)` for input, textarea and contenteditable (`execCommand('insertText')`, then synthetic paste, then report failure). Playwright tests on local fixture pages: textarea, input, plain contenteditable, Draft.js.
 - [ ] **T6. In-page popup and button** (Claude Opus, art lane). Floating button, Shadow DOM popup with modes and tones, streaming view, word diff, char counter for Shorter, missing-token warning, warning when `lostArabicScript()` is true, Accept / Copy / Retry / Close, Esc to close, copy fallback when Accept fails.
 - [ ] **T7. Options page** (Claude Opus, art lane). All settings (including per-CLI model and effort), bridge status from `ping`, Test connection, shortcut hint with a button to open `chrome://extensions/shortcuts`.
