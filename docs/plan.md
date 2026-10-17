@@ -116,6 +116,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 ` only in editors made only of `<p>` blocks. Set `whole` only when no text sits outside the selection. Windows wrapper: `chcp 65001` and `%` escaped. Mount the UI in the dialog that holds the field. Codex login path in the docs and options matches the bridge.
   - [ ] **T11d. Later, from the audit.** Treat cut-off API streams as errors (stop reasons, OpenAI error events). Clear the API key when the base URL's origin changes; require HTTPS off loopback. Deadline for HTTP rewrites. Field fallback must not write twice; rich success check must look at the right place. Limit the word diff. Split bridge output under 1 MB. Kill the process group on macOS. Check the clipboard result. Exact token matching. `about:blank` frames. Email inputs. Exact multiline and tone tests. Node 22+ in the README. Grok loads `~/.claude` rules into its prompt; find a way to stop that.
 
+  - [ ] **T11e. Speed and cost review** (started 2026-10-17 on Windows). Benchmark scripts and results are in `bench/` (see `bench/README.md`). Found so far: the bridge sends `done` only when the CLI exits, which adds 2 to 3 s for Haiku; Codex sends about 13k input tokens and Grok about 10k for a one-line fix. Next: run `bench/probe.mjs`, send the results to Sol (review, high) for a second opinion, then fix.
+
 ## Later (not MVP, keep the design open)
 
 - Passive underlines while typing.
