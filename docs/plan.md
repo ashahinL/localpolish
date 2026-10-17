@@ -12,7 +12,7 @@ LocalPolish is a Chrome extension (Manifest V3) that fixes or rewrites text you 
 | --- | --- |
 | Main AI path | A local **bridge**: a Node script Chrome starts through **native messaging**. It runs `claude`, `codex` or `grok` headless on your subscriptions. See [ADR 0001](adr/0001-cli-bridge-over-native-messaging.md). |
 | Other providers | OpenAI-compatible HTTP (OpenAI, xAI, OpenRouter, LM Studio, Ollama `/v1`) and Anthropic Messages API, with API keys. |
-| Default provider | Claude CLI, model `sonnet` at low effort. Haiku missed obvious errors in tests ("I has went") at the same speed. |
+| Default provider | Claude CLI, model `haiku` at high effort, with short prompts. See the [benchmark](benchmarks/2026-10-17-fix-mode.md): long rule lists made Haiku copy text back unchanged. |
 | Build tool | WXT. It handles MV3 manifest, content script, service worker and options page builds, plus hot reload. Less config than CRXJS, and actively maintained. |
 | UI | Preact for the options page and the in-page popup. Popup lives in a Shadow DOM. |
 | Floating button | Shows only when text is selected inside an editable field. Hidden on blocklisted sites. |
@@ -53,7 +53,7 @@ type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
 
 interface Settings {
   provider: ProviderId;                 // default 'claude-cli'
-  models: Record<ProviderId, string>;   // defaults: claude-cli 'sonnet', codex-cli 'gpt-6-luna',
+  models: Record<ProviderId, string>;   // defaults: claude-cli 'haiku', codex-cli 'gpt-6-luna',
                                         // grok-cli '' (CLI default), openai-compatible '',
                                         // anthropic-api 'claude-haiku-5-5'
   openaiBaseUrl: string;                // default 'http://localhost:11434/v1'
@@ -100,9 +100,9 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T2. Core logic** (Grok). `src/core/`: `settings.ts` (types, defaults, load/save), `prompts.ts` (system prompt per mode and tone, `buildPrompt`), `cleanup.ts` (`cleanOutput(raw, input)`), `tokens.ts` (`findMissingTokens(input, output)` for URLs, mentions, hashtags, code spans, emojis), `diff.ts` (`wordDiff` over the `diff` package). Unit tests for all.
 - [x] **T3. Bridge** (Grok). `bridge/host.mjs`, `bridge/lib.mjs` (framing, CLI arg builders, stream parsers), `bridge/install.mjs` and `uninstall.mjs` (wrapper script with a fixed PATH, native host manifest in `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`). Tests: framing, arg builders, parsers, and a spawn test with a fake CLI.
 - [~] **T4. Background** (Grok). Provider interface, `cli` provider over `connectNative`, OpenAI-compatible and Anthropic SSE providers, shared SSE parser, `rewrite` port router, `test-connection`, command handler. Tests with mocked `fetch`.
-- [ ] **T4b. Per-CLI model and effort** (Claude). From the [benchmark](benchmarks/2026-10-17-fix-mode.md): add `efforts: Record<'claude-cli'|'codex-cli'|'grok-cli', string>` to settings (defaults `low`, `high`, `low`), grok default model `grok-4.7-build-fast`, send `effort` in the bridge `rewrite` message, pass it as `--effort` (claude, grok) and `model_reasoning_effort` (codex).
+- [ ] **T4b. Per-CLI model and effort** (Claude). From the [benchmark](benchmarks/2026-10-17-fix-mode.md): add `efforts: Record<'claude-cli'|'codex-cli'|'grok-cli', string>` to settings (defaults `high`, `high`, `low`), grok default model `grok-4.7-build-fast`, send `effort` in the bridge `rewrite` message, pass it as `--effort` (claude, grok) and `model_reasoning_effort` (codex).
 - [ ] **T5. Text field read and write** (Grok). `src/content/editable.ts`: `captureTarget()` and `applyReplacement(target, text)` for input, textarea and contenteditable (`execCommand('insertText')`, then synthetic paste, then report failure). Playwright tests on local fixture pages: textarea, input, plain contenteditable, Draft.js.
-- [ ] **T6. In-page popup and button** (Claude Opus, art lane). Floating button, Shadow DOM popup with modes and tones, streaming view, word diff, char counter for Shorter, missing-token warning, Accept / Copy / Retry / Close, Esc to close, copy fallback when Accept fails.
+- [ ] **T6. In-page popup and button** (Claude Opus, art lane). Floating button, Shadow DOM popup with modes and tones, streaming view, word diff, char counter for Shorter, missing-token warning, warning when `lostArabicScript()` is true, Accept / Copy / Retry / Close, Esc to close, copy fallback when Accept fails.
 - [ ] **T7. Options page** (Claude Opus, art lane). All settings (including per-CLI model and effort), bridge status from `ping`, Test connection, shortcut hint with a button to open `chrome://extensions/shortcuts`.
 - [ ] **T8. End-to-end test** (Grok). Playwright loads the built extension, points it at a mock OpenAI-compatible server, and runs select → Fix → Accept on the fixture pages.
 - [ ] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.

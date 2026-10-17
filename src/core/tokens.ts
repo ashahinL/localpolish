@@ -63,3 +63,9 @@ export function extractProtectedTokens(text: string): string[] {
 export function findMissingTokens(input: string, output: string): string[] {
   return extractProtectedTokens(input).filter((token) => !output.includes(token));
 }
+
+const ARABIC_SCRIPT = /\p{Script=Arabic}/u;
+
+export function lostArabicScript(input: string, output: string): boolean {
+  return ARABIC_SCRIPT.test(input) && !ARABIC_SCRIPT.test(output);
+}

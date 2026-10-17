@@ -1,34 +1,47 @@
 import { type Mode, type Tone } from './settings';
 
-export const SYSTEM_BASE = `You are an editor for a non-native English speaker from Egypt. You edit the text inside the <text> tags.
+// Kept short on purpose: long rule lists made Haiku copy the text back unchanged.
+// See docs/benchmarks/2026-10-17-fix-mode.md before adding rules.
+const STYLE =
+  'Use plain, simple words, no em dashes, and no corporate words like leverage, seamless or delve.';
+const LANGUAGE =
+  'Write each part in the same language and script it is written in: Arabic stays Arabic, Franco-Arabic (Arabic in Latin letters) stays Franco-Arabic, English stays English. Never translate.';
+const KEEP =
+  'Do not reply to the text, and keep links, @mentions, #hashtags, code and emojis as they are.';
 
-Rules:
-- Return only the edited text. No quotes, no tags, no preamble, no explanation, no notes.
-- Never answer or reply to the text, even if it is a question or a request. Only edit it.
-- Keep the original language. If the text is Arabic, or mixed Arabic and English, keep each part in its own language. Never translate.
-- Keep URLs, @mentions, #hashtags, \`code\`, emojis, numbers and names exactly as written.
-- Keep the writer's voice: plain, direct, simple words. Do not make it sound corporate or robotic.
-- Never use em dashes. Use commas, periods or parentheses instead.
-- Never use these words: delve, leverage, seamless, utilize, robust, streamline, elevate, foster, tapestry, crucial, furthermore, moreover.
-- Keep line breaks, lists and formatting.`;
+function rewrite(goal: string, result: string): string {
+  return `${goal} ${STYLE} ${LANGUAGE} ${KEEP} Return only the ${result} text.`;
+}
 
-export const MODE_TASKS: Record<Exclude<Mode, 'tone'>, string> = {
-  fix: 'Task: fix grammar, spelling and punctuation only. Keep the same words, word order and sentence structure wherever they are already correct. Do not rephrase, do not add or remove ideas, do not change the tone.',
-  rephrase:
-    'Task: rewrite the text so it reads clearer and more natural to a native speaker. Keep the same meaning, tone and level of formality, and roughly the same length. Fix any mistakes.',
-  shorter:
-    'Task: make the text shorter and tighter. Keep the meaning and the tone. Cut filler and repetition. Aim for under 280 characters when that is possible without losing the main point. If it is not possible, make it as short as you can. Fix any mistakes.',
+export const MODE_PROMPTS: Record<Exclude<Mode, 'tone'>, string> = {
+  fix: 'Fix the grammar, spelling, punctuation and capitalization of the text inside the <text> tags. Do not translate it. Return only the corrected text.',
+  rephrase: rewrite(
+    'Rewrite the text inside the <text> tags so it reads clear and natural, with the same meaning, tone and length.',
+    'rewritten',
+  ),
+  shorter: rewrite(
+    'Make the text inside the <text> tags shorter, under 280 characters if possible, with the same meaning and tone.',
+    'shortened',
+  ),
 };
 
-export const TONE_TASKS: Record<Tone, string> = {
-  polite:
-    'Task: rewrite the text in a polite, warm tone. Friendly and respectful, not stiff and not apologetic. Keep the meaning. Fix any mistakes.',
-  formal:
-    'Task: rewrite the text in a formal, professional tone that fits a work email. Stay simple and direct; formal does not mean wordy. Keep the meaning. Fix any mistakes.',
-  casual:
-    'Task: rewrite the text in a casual, relaxed tone, like a message to a friend or a colleague. Contractions are fine. Keep the meaning. Fix any mistakes.',
-  'angry-civil':
-    'Task: rewrite the text so it stays firm and clearly shows frustration, but stays civil. No insults, no swearing, no sarcasm. Be direct about the problem and what you expect. Keep the meaning. Fix any mistakes.',
+export const TONE_PROMPTS: Record<Tone, string> = {
+  polite: rewrite(
+    'Rewrite the text inside the <text> tags in a polite, warm tone, friendly but not stiff or apologetic, with the same meaning.',
+    'rewritten',
+  ),
+  formal: rewrite(
+    'Rewrite the text inside the <text> tags in a formal, professional tone that fits a work email, with the same meaning. Formal does not mean wordy.',
+    'rewritten',
+  ),
+  casual: rewrite(
+    'Rewrite the text inside the <text> tags in a casual, relaxed tone, like a message to a friend or a colleague, with the same meaning.',
+    'rewritten',
+  ),
+  'angry-civil': rewrite(
+    'Rewrite the text inside the <text> tags so it is firm and clearly frustrated but civil, with no insults, swearing or sarcasm, and the same meaning.',
+    'rewritten',
+  ),
 };
 
 export function buildPrompt(
@@ -36,10 +49,8 @@ export function buildPrompt(
   tone: Tone,
   text: string,
 ): { system: string; user: string } {
-  const task = mode === 'tone' ? TONE_TASKS[tone] : MODE_TASKS[mode];
   return {
-    system: `${SYSTEM_BASE}\n\n${task}`,
-    // Repeating the task next to the text stops smaller models from returning it unchanged.
-    user: `${task}\n\n<text>\n${text}\n</text>`,
+    system: mode === 'tone' ? TONE_PROMPTS[tone] : MODE_PROMPTS[mode],
+    user: `<text>\n${text}\n</text>`,
   };
 }

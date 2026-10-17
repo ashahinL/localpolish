@@ -1,26 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { buildPrompt, MODE_TASKS, SYSTEM_BASE, TONE_TASKS } from './prompts';
+import { buildPrompt, MODE_PROMPTS, TONE_PROMPTS } from './prompts';
 
 describe('buildPrompt', () => {
-  it('builds a fix prompt and wraps the user text', () => {
-    const prompt = buildPrompt('fix', 'polite', 'hi');
-    expect(prompt.system.startsWith(SYSTEM_BASE)).toBe(true);
-    expect(prompt.system.endsWith(MODE_TASKS.fix)).toBe(true);
-    expect(prompt.system).toBe(`${SYSTEM_BASE}\n\n${MODE_TASKS.fix}`);
-    expect(prompt.user).toBe(`${MODE_TASKS.fix}\n\n<text>\nhi\n</text>`);
+  it('uses the fix prompt and wraps the user text in tags', () => {
+    expect(buildPrompt('fix', 'polite', 'hi')).toEqual({
+      system: MODE_PROMPTS.fix,
+      user: '<text>\nhi\n</text>',
+    });
   });
 
-  it('uses the formal tone task when mode is tone', () => {
-    const prompt = buildPrompt('tone', 'formal', 'hi');
-    expect(prompt.system.endsWith(TONE_TASKS.formal)).toBe(true);
-    expect(prompt.system).toBe(`${SYSTEM_BASE}\n\n${TONE_TASKS.formal}`);
+  it('uses the tone prompt when mode is tone', () => {
+    expect(buildPrompt('tone', 'formal', 'hi').system).toBe(TONE_PROMPTS.formal);
   });
 
   it('ignores tone for non-tone modes', () => {
-    const modes = ['fix', 'rephrase', 'shorter'] as const;
-    for (const mode of modes) {
+    for (const mode of ['fix', 'rephrase', 'shorter'] as const) {
       expect(buildPrompt(mode, 'polite', 'x')).toEqual(buildPrompt(mode, 'angry-civil', 'x'));
-      expect(buildPrompt(mode, 'polite', 'x').system.endsWith(MODE_TASKS[mode])).toBe(true);
+    }
+  });
+
+  it('tells every rewrite prompt to keep the language and not reply', () => {
+    const rewrites = [MODE_PROMPTS.rephrase, MODE_PROMPTS.shorter, ...Object.values(TONE_PROMPTS)];
+    for (const prompt of rewrites) {
+      expect(prompt).toContain('Never translate.');
+      expect(prompt).toContain('Do not reply to the text');
     }
   });
 });

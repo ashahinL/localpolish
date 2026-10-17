@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractProtectedTokens, findMissingTokens } from './tokens';
+import { extractProtectedTokens, findMissingTokens, lostArabicScript } from './tokens';
 
 describe('protected tokens', () => {
   it('strips a trailing period from a URL and ignores it when the URL remains', () => {
@@ -34,5 +34,19 @@ describe('protected tokens', () => {
 
   it('does not take a hashtag out of a URL fragment', () => {
     expect(extractProtectedTokens('https://x.com/a#top')).toEqual(['https://x.com/a#top']);
+  });
+});
+
+describe('lostArabicScript', () => {
+  it('flags output that turned Arabic script into Latin letters', () => {
+    expect(lostArabicScript('بس انا هكون free بكرة', 'bas ana hakon free bokra')).toBe(true);
+  });
+
+  it('accepts output that keeps Arabic script', () => {
+    expect(lostArabicScript('بس انا هكون free بكرة', 'بس أنا هكون free بكرة')).toBe(false);
+  });
+
+  it('ignores input without Arabic script', () => {
+    expect(lostArabicScript('ana mesh fahem', 'I do not understand')).toBe(false);
   });
 });
