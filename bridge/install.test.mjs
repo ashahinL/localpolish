@@ -1,0 +1,117 @@
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterEach, describe, expect, it } from 'vitest';
+import { EXTENSION_ID, HOST_NAME } from './constants.mjs';
+import { installBridge } from './install.mjs';
+import { uninstallBridge } from './uninstall.mjs';
+
+const repoDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const dirs = [];
+
+afterEach(() => {
+  for (const dir of dirs) fs.rmSync(dir, { recursive: true, force: true });
+  dirs.length = 0;
+});
+
+function tempDir(prefix) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  dirs.push(dir);
+  return dir;
+}
+
+describe('installBridge', () => {
+  it('writes an executable wrapper and a Chrome manifest, then uninstall removes both', () => {
+    const home = tempDir('lp-home-');
+    const bin = tempDir('lp-bin-');
+    for (const name of ['claude', 'grok']) {
+      const file = path.join(bin, name);
+      fs.writeFileSync(file, '#!/bin/sh\nexit 0\n');
+      fs.chmodSync(file, 0o755);
+    }
+
+    const nodePath = process.execPath;
+    const result = installBridge({
+      home,
+      repoDir: '/repo',
+      nodePath,
+      pathEnv: `${bin}:/usr/bin:/bin`,
+    });
+
+    expect(result.found).toEqual({
+      claude: path.join(bin, 'claude'),
+      codex: null,
+      grok: path.join(bin, 'grok'),
+    });
+
+    const dirsOnPath = [
+      path.dirname(nodePath),
+      bin,
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+    ].filter((dir, index, all) => all.indexOf(dir) === index);
+    const wrapper = [
+      '#!/bin/sh',
+      `export PATH="${dirsOnPath.join(':')}"`,
+      `exec "${nodePath}" "/repo/bridge/host.mjs"`,
+      '',
+    ].join('\n');
+    expect(fs.readFileSync(result.wrapperPath, 'utf8')).toBe(wrapper);
+    expect(fs.statSync(result.wrapperPath).mode & 0o777).toBe(0o755);
+
+    const manifest = {
+      name: HOST_NAME,
+      description: 'LocalPolish bridge to local AI CLIs',
+      path: result.wrapperPath,
+      type: 'stdio',
+      allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
+    };
+    const manifestRaw = fs.readFileSync(result.manifestPath, 'utf8');
+    expect(manifestRaw).toBe(`${JSON.stringify(manifest, null, 2)}\n`);
+    expect(JSON.parse(manifestRaw)).toEqual(manifest);
+
+    uninstallBridge({ home });
+    expect(fs.existsSync(result.wrapperPath)).toBe(false);
+    expect(fs.existsSync(result.manifestPath)).toBe(false);
+    expect(fs.existsSync(path.join(home, 'Library', 'Application Support', 'LocalPolish'))).toBe(
+      false,
+    );
+  });
+
+  it('installs and uninstalls when the scripts are executed directly', () => {
+    const home = tempDir('lp-home-');
+    const env = { ...process.env, HOME: home };
+    const install = spawnSync(process.execPath, ['bridge/install.mjs'], {
+      cwd: repoDir,
+      env,
+      encoding: 'utf8',
+    });
+    expect({ status: install.status, stderr: install.stderr }).toMatchObject({ status: 0 });
+    const wrapper = path.join(home, 'Library/Application Support/LocalPolish/localpolish-bridge');
+    const manifest = path.join(
+      home,
+      'Library/Application Support/Google/Chrome/NativeMessagingHosts',
+      `${HOST_NAME}.json`,
+    );
+    expect(install.stdout).toContain('claude:');
+    expect(install.stdout).toContain('codex:');
+    expect(install.stdout).toContain('grok:');
+    expect(install.stdout).toContain(wrapper);
+    expect(install.stdout).toContain(manifest);
+    expect(fs.existsSync(wrapper)).toBe(true);
+    expect(fs.existsSync(manifest)).toBe(true);
+
+    const uninstall = spawnSync(process.execPath, ['bridge/uninstall.mjs'], {
+      cwd: repoDir,
+      env,
+      encoding: 'utf8',
+    });
+    expect(uninstall.status).toBe(0);
+    expect(fs.existsSync(wrapper)).toBe(false);
+    expect(fs.existsSync(manifest)).toBe(false);
+  });
+});

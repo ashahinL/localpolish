@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T2 done)
+Status: in progress (T0-T3 done)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -12,7 +12,7 @@ LocalPolish is a Chrome extension (Manifest V3) that fixes or rewrites text you 
 | --- | --- |
 | Main AI path | A local **bridge**: a Node script Chrome starts through **native messaging**. It runs `claude`, `codex` or `grok` headless on your subscriptions. See [ADR 0001](adr/0001-cli-bridge-over-native-messaging.md). |
 | Other providers | OpenAI-compatible HTTP (OpenAI, xAI, OpenRouter, LM Studio, Ollama `/v1`) and Anthropic Messages API, with API keys. |
-| Default provider | Claude CLI, model `haiku`. |
+| Default provider | Claude CLI, model `sonnet` at low effort. Haiku missed obvious errors in tests ("I has went") at the same speed. |
 | Build tool | WXT. It handles MV3 manifest, content script, service worker and options page builds, plus hot reload. Less config than CRXJS, and actively maintained. |
 | UI | Preact for the options page and the in-page popup. Popup lives in a Shadow DOM. |
 | Floating button | Shows only when text is selected inside an editable field. Hidden on blocklisted sites. |
@@ -53,7 +53,7 @@ type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
 
 interface Settings {
   provider: ProviderId;                 // default 'claude-cli'
-  models: Record<ProviderId, string>;   // defaults: claude-cli 'haiku', codex-cli 'gpt-6-luna',
+  models: Record<ProviderId, string>;   // defaults: claude-cli 'sonnet', codex-cli 'gpt-6-luna',
                                         // grok-cli '' (CLI default), openai-compatible '',
                                         // anthropic-api 'claude-haiku-5-5'
   openaiBaseUrl: string;                // default 'http://localhost:11434/v1'
@@ -98,7 +98,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T0. Repo and plan** (Claude). git init, private GitHub repo, this plan, ADR 0001, extension key.
 - [x] **T1. Scaffold** (Grok). WXT + TypeScript + Preact, ESLint flat config, Prettier, Vitest. Manifest: name, `key`, permissions `storage`, `nativeMessaging`, `host_permissions: ["<all_urls>"]`, content script on `<all_urls>` with `all_frames`, command `polish`. Empty entrypoints. `npm run build` outputs a loadable extension at `dist/`. Gates: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 - [x] **T2. Core logic** (Grok). `src/core/`: `settings.ts` (types, defaults, load/save), `prompts.ts` (system prompt per mode and tone, `buildPrompt`), `cleanup.ts` (`cleanOutput(raw, input)`), `tokens.ts` (`findMissingTokens(input, output)` for URLs, mentions, hashtags, code spans, emojis), `diff.ts` (`wordDiff` over the `diff` package). Unit tests for all.
-- [~] **T3. Bridge** (Grok). `bridge/host.mjs`, `bridge/lib.mjs` (framing, CLI arg builders, stream parsers), `bridge/install.mjs` and `uninstall.mjs` (wrapper script with a fixed PATH, native host manifest in `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`). Tests: framing, arg builders, parsers, and a spawn test with a fake CLI.
+- [x] **T3. Bridge** (Grok). `bridge/host.mjs`, `bridge/lib.mjs` (framing, CLI arg builders, stream parsers), `bridge/install.mjs` and `uninstall.mjs` (wrapper script with a fixed PATH, native host manifest in `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`). Tests: framing, arg builders, parsers, and a spawn test with a fake CLI.
 - [ ] **T4. Background** (Grok). Provider interface, `cli` provider over `connectNative`, OpenAI-compatible and Anthropic SSE providers, shared SSE parser, `rewrite` port router, `test-connection`, command handler. Tests with mocked `fetch`.
 - [ ] **T5. Text field read and write** (Grok). `src/content/editable.ts`: `captureTarget()` and `applyReplacement(target, text)` for input, textarea and contenteditable (`execCommand('insertText')`, then synthetic paste, then report failure). Playwright tests on local fixture pages: textarea, input, plain contenteditable, Draft.js.
 - [ ] **T6. In-page popup and button** (Claude Opus, art lane). Floating button, Shadow DOM popup with modes and tones, streaming view, word diff, char counter for Shorter, missing-token warning, Accept / Copy / Retry / Close, Esc to close, copy fallback when Accept fails.
