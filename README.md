@@ -118,7 +118,13 @@ launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"
 
 ## The bridge
 
-The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with tools off. It streams the answer back. The installer supports macOS and Windows. [ADR 0001, CLI bridge over native messaging](docs/adr/0001-cli-bridge-over-native-messaging.md) explains why.
+The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with its tools off. It streams the answer back.
+
+Each CLI turns tools off in its own way:
+
+- Claude Code gets `--tools ""`, which leaves it with no tools.
+- Codex runs in a read-only sandbox, in its own home, with the shell, apps, plugins, browser and web search turned off.
+- Grok gets every local tool removed by name, plus deny rules for shell, file, web and MCP tools. `grok --tools ""` alone keeps every tool. Grok can still search X. Grok keeps its session history in `~/.grok`. The installer supports macOS and Windows. [ADR 0001, CLI bridge over native messaging](docs/adr/0001-cli-bridge-over-native-messaging.md) explains why.
 
 On macOS, `npm run bridge:install` writes two files.
 

@@ -2,7 +2,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildCommand, createDecoder, encodeMessage, parseLine, resolveCommand } from './lib.mjs';
+import {
+  buildCommand,
+  CODEX_DISABLED_FEATURES,
+  createDecoder,
+  encodeMessage,
+  GROK_DENY_RULES,
+  GROK_REMOVED_TOOLS,
+  parseLine,
+  resolveCommand,
+} from './lib.mjs';
 
 describe('encodeMessage', () => {
   it('round-trips a message and prefixes the UTF-8 byte length', () => {
@@ -60,15 +69,37 @@ describe('buildCommand', () => {
   const grokTail = [
     '--system-prompt-override',
     'S',
-    '--tools',
-    '',
+    '--disallowed-tools',
+    GROK_REMOVED_TOOLS.join(','),
+    '--deny',
+    GROK_DENY_RULES,
+    '--no-subagents',
+    '--no-plan',
     '--disable-web-search',
     '--output-format',
     'streaming-messages-json',
     '--include-partial-messages',
   ];
-  const codexHead = ['exec', '-', '--skip-git-repo-check', '--ephemeral', '-s', 'read-only'];
+  const codexHead = [
+    'exec',
+    '-',
+    '--skip-git-repo-check',
+    '--ephemeral',
+    '-s',
+    'read-only',
+    ...CODEX_DISABLED_FEATURES.flatMap((feature) => ['-c', `features.${feature}=false`]),
+    '-c',
+    'web_search=disabled',
+  ];
   const codexTail = ['-c', `developer_instructions=${JSON.stringify('S')}`, '--json'];
+
+  it('turns off the tools that can run commands or read files', () => {
+    expect(CODEX_DISABLED_FEATURES).toEqual(expect.arrayContaining(['shell_tool', 'unified_exec']));
+    expect(GROK_REMOVED_TOOLS).toEqual(
+      expect.arrayContaining(['run_terminal_cmd', 'read_file', 'search_tool', 'use_tool']),
+    );
+    expect(GROK_DENY_RULES.split(',')).toEqual(expect.arrayContaining(['Bash', 'Read', 'MCPTool']));
+  });
 
   it('builds claude args with model and effort', () => {
     expect(buildCommand('claude', { model: 'm1', effort: 'high', system: 'S' })).toEqual({

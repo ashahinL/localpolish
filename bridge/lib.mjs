@@ -32,6 +32,52 @@ export function createDecoder(onMessage) {
   };
 }
 
+// `grok --tools ""` keeps every tool, so each one is removed by name, and the deny rules
+// block whole tool types in case a later Grok adds a tool under a new name.
+export const GROK_REMOVED_TOOLS = [
+  'run_terminal_cmd',
+  'read_file',
+  'search_replace',
+  'list_dir',
+  'grep',
+  'write',
+  'todo_write',
+  'task',
+  'kill_task',
+  'get_task_output',
+  'wait_tasks',
+  'scheduler_create',
+  'scheduler_delete',
+  'scheduler_list',
+  'monitor',
+  'search_tool',
+  'use_tool',
+  'update_goal',
+  'web_search',
+  'web_fetch',
+  'image_gen',
+  'image_edit',
+  'image_to_video',
+  'reference_to_video',
+  'send_feedback',
+  'lsp',
+  'workflow',
+  'Agent',
+];
+export const GROK_DENY_RULES = 'Bash,Read,Edit,Write,Grep,WebFetch,MCPTool';
+
+// `codex -s read-only` still lets Codex read files and run commands. Unknown keys are ignored,
+// so older Codex versions still start.
+export const CODEX_DISABLED_FEATURES = [
+  'shell_tool',
+  'unified_exec',
+  'apps',
+  'plugins',
+  'browser_use',
+  'computer_use',
+  'in_app_browser',
+];
+
 /**
  * @param {string} cli
  * @param {{ model: string, effort: string, system: string }} opts
@@ -65,8 +111,12 @@ export function buildCommand(cli, { model, effort, system }) {
     args.push(
       '--system-prompt-override',
       system,
-      '--tools',
-      '',
+      '--disallowed-tools',
+      GROK_REMOVED_TOOLS.join(','),
+      '--deny',
+      GROK_DENY_RULES,
+      '--no-subagents',
+      '--no-plan',
       '--disable-web-search',
       '--output-format',
       'streaming-messages-json',
@@ -76,6 +126,8 @@ export function buildCommand(cli, { model, effort, system }) {
   }
   if (cli === 'codex') {
     const args = ['exec', '-', '--skip-git-repo-check', '--ephemeral', '-s', 'read-only'];
+    for (const feature of CODEX_DISABLED_FEATURES) args.push('-c', `features.${feature}=false`);
+    args.push('-c', 'web_search=disabled');
     if (model) args.push('-m', model);
     if (effort) args.push('-c', `model_reasoning_effort=${effort}`);
     args.push('-c', `developer_instructions=${JSON.stringify(system)}`, '--json');

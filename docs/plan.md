@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: MVP done (T0-T10)
+Status: in progress (T0-T10 done, T11 hardening)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -108,6 +108,13 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.
 - [x] **T9b. Windows bridge** (Claude). The installer writes `%LOCALAPPDATA%\LocalPolish\localpolish-bridge.cmd`, the host manifest next to it, and the registry key `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge`. `findOnPath` tries `.exe`, `.cmd`, `.bat`. npm `.cmd` shims run their script with Node (`resolveCommand`). Kill uses `taskkill /T /F`. The Codex home is `%LOCALAPPDATA%\LocalPolish\codex-home`.
 - [x] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
+- [ ] **T11. Hardening** (Claude). From two Sol reviews on 2026-10-17: a diff review of T9b-T10 and a full audit.
+  - [x] **T11a. CLI tools off.** Codex had its shell; Grok's `--tools ""` removed nothing, so Grok could run commands as the user. Codex now turns off its shell, apps, plugins, browser and web features. Grok removes each local tool by name and denies shell, file, web and MCP tools. Checked live: no tool calls, normal Fix still works.
+  - [ ] **T11b. Page-started requests.** The button and the popup controls act only on trusted (real user) events, so a page cannot start or retry a rewrite with `.click()`.
+  - [ ] **T11c. Diff-review fixes.** Collapse `
+
+` only in editors made only of `<p>` blocks. Set `whole` only when no text sits outside the selection. Windows wrapper: `chcp 65001` and `%` escaped. Mount the UI in the dialog that holds the field. Codex login path in the docs and options matches the bridge.
+  - [ ] **T11d. Later, from the audit.** Treat cut-off API streams as errors (stop reasons, OpenAI error events). Clear the API key when the base URL's origin changes; require HTTPS off loopback. Deadline for HTTP rewrites. Field fallback must not write twice; rich success check must look at the right place. Limit the word diff. Split bridge output under 1 MB. Kill the process group on macOS. Check the clipboard result. Exact token matching. `about:blank` frames. Email inputs. Exact multiline and tone tests. Node 22+ in the README. Grok loads `~/.claude` rules into its prompt; find a way to stop that.
 
 ## Later (not MVP, keep the design open)
 

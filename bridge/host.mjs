@@ -90,6 +90,10 @@ function handleRewrite(msg) {
   }
 
   const env = { ...process.env };
+  if (cli === 'grok') {
+    env.GROK_MEMORY = '0';
+    env.GROK_WORKFLOWS = '0';
+  }
   if (cli === 'codex') {
     const codexHome = codexHomeFor(os.homedir());
     if (!fs.existsSync(path.join(codexHome, 'auth.json'))) {
