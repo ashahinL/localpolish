@@ -134,31 +134,76 @@ export function parseLine(cli, line) {
   return null;
 }
 
+const WINDOWS_EXTENSIONS = ['.exe', '.cmd', '.bat'];
+
 /**
  * @param {string} name
  * @param {string | undefined} pathEnv
+ * @param {NodeJS.Platform} [platform]
  * @returns {string | null}
  */
-export function findOnPath(name, pathEnv) {
+export function findOnPath(name, pathEnv, platform = process.platform) {
   if (!name || !pathEnv) return null;
-  for (const dir of pathEnv.split(':')) {
+  const windows = platform === 'win32';
+  const names = windows ? WINDOWS_EXTENSIONS.map((ext) => name + ext) : [name];
+  for (const dir of pathEnv.split(windows ? ';' : ':')) {
     if (!dir) continue;
-    const candidate = path.join(dir, name);
-    try {
-      fs.accessSync(candidate, fs.constants.X_OK);
-      return candidate;
-    } catch {
-      // Missing or not executable.
+    for (const file of names) {
+      const candidate = path.join(dir, file);
+      try {
+        fs.accessSync(candidate, fs.constants.X_OK);
+        return candidate;
+      } catch {
+        // Missing or not executable.
+      }
     }
   }
   return null;
 }
 
 /**
- * Codex always loads `$CODEX_HOME/AGENTS.md`, so LocalPolish gives it a home with only a login.
+ * Node cannot spawn a .cmd file without a shell, and a shell would mangle the system prompt.
+ * npm installs a CLI on Windows as a .cmd shim around a script, so run that script with Node.
+ * @param {string} bin
+ * @param {string} [nodePath]
+ * @returns {{ cmd: string, args: string[] }}
+ */
+export function resolveCommand(bin, nodePath = process.execPath) {
+  if (!/\.(cmd|bat)$/i.test(bin)) return { cmd: bin, args: [] };
+  const match = fs.readFileSync(bin, 'utf8').match(/"%~?dp0%?\\([^"]+\.[cm]?js)"/i);
+  if (!match) throw new Error(`Cannot run ${bin}. Install the CLI with npm, or as an .exe.`);
+  return { cmd: nodePath, args: [path.join(path.dirname(bin), ...match[1].split('\\'))] };
+}
+
+/**
+ * The folder for the wrapper, the Windows host manifest and the Codex home.
  * @param {string} home
+ * @param {NodeJS.Platform} [platform]
  * @returns {string}
  */
-export function codexHomeFor(home) {
-  return path.join(home, 'Library', 'Application Support', 'LocalPolish', 'codex-home');
+export function supportDir(home, platform = process.platform) {
+  return platform === 'win32'
+    ? path.join(home, 'AppData', 'Local', 'LocalPolish')
+    : path.join(home, 'Library', 'Application Support', 'LocalPolish');
+}
+
+/**
+ * Codex always loads `$CODEX_HOME/AGENTS.md`, so LocalPolish gives it a home with only a login.
+ * @param {string} home
+ * @param {NodeJS.Platform} [platform]
+ * @returns {string}
+ */
+export function codexHomeFor(home, platform = process.platform) {
+  return path.join(supportDir(home, platform), 'codex-home');
+}
+
+/**
+ * @param {string} codexHome
+ * @param {NodeJS.Platform} [platform]
+ * @returns {string}
+ */
+export function codexLoginCommand(codexHome, platform = process.platform) {
+  return platform === 'win32'
+    ? `$env:CODEX_HOME="${codexHome}"; codex login`
+    : `CODEX_HOME="${codexHome}" codex login`;
 }

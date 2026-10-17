@@ -8,10 +8,12 @@ import { TIMEOUT_MS } from './constants.mjs';
 import {
   buildCommand,
   codexHomeFor,
+  codexLoginCommand,
   createDecoder,
   encodeMessage,
   findOnPath,
   parseLine,
+  resolveCommand,
 } from './lib.mjs';
 
 const CLI_NAMES = ['claude', 'codex', 'grok'];
@@ -44,7 +46,14 @@ function exitWhenFlushed() {
  */
 function readVersion(bin) {
   return new Promise((resolve) => {
-    execFile(bin, ['--version'], { timeout: 5000 }, (_err, stdout) => {
+    let run;
+    try {
+      run = resolveCommand(bin);
+    } catch {
+      resolve('');
+      return;
+    }
+    execFile(run.cmd, [...run.args, '--version'], { timeout: 5000 }, (_err, stdout) => {
       const text = typeof stdout === 'string' ? stdout : '';
       resolve(text.split('\n')[0].trim());
     });
@@ -71,7 +80,8 @@ function handleRewrite(msg) {
   const system = typeof msg.system === 'string' ? msg.system : '';
   const user = typeof msg.user === 'string' ? msg.user : '';
 
-  if (!findOnPath(cli, process.env.PATH)) {
+  const bin = findOnPath(cli, process.env.PATH);
+  if (!bin) {
     sendAndExit({
       type: 'error',
       message: `${cli} CLI not found. Install it, log in, then run "npm run bridge:install" again.`,
@@ -85,16 +95,23 @@ function handleRewrite(msg) {
     if (!fs.existsSync(path.join(codexHome, 'auth.json'))) {
       sendAndExit({
         type: 'error',
-        message: `Codex needs its own login for LocalPolish. In a terminal run: CODEX_HOME="${codexHome}" codex login`,
+        message: `Codex needs its own login for LocalPolish. In a terminal run: ${codexLoginCommand(codexHome)}`,
       });
       return;
     }
     env.CODEX_HOME = codexHome;
   }
 
-  const { cmd, args } = buildCommand(cli, { model, effort, system });
+  let run;
+  try {
+    run = resolveCommand(bin);
+  } catch (err) {
+    sendAndExit({ type: 'error', message: /** @type {Error} */ (err).message });
+    return;
+  }
+  const { args } = buildCommand(cli, { model, effort, system });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'localpolish-'));
-  const child = spawn(cmd, args, {
+  const child = spawn(run.cmd, [...run.args, ...args], {
     cwd: dir,
     env,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -106,6 +123,7 @@ function handleRewrite(msg) {
   let settled = false;
   let stdinClosed = false;
   let spawnFailed = false;
+  let killed = false;
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   let killTimer;
   /** @type {ReturnType<typeof setTimeout> | undefined} */
@@ -117,7 +135,18 @@ function handleRewrite(msg) {
 
   // A CLI can ignore SIGTERM. SIGKILL follows if it is still running.
   const killChild = () => {
-    if (killTimer) return;
+    if (killed) return;
+    killed = true;
+    if (process.platform === 'win32') {
+      // Windows does not kill child processes with the parent, and npm shims run the CLI as one.
+      const system32 = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32');
+      execFile(
+        path.join(system32, 'taskkill.exe'),
+        ['/pid', String(child.pid), '/T', '/F'],
+        () => {},
+      );
+      return;
+    }
     try {
       child.kill('SIGTERM');
     } catch {

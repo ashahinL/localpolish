@@ -22,7 +22,7 @@ function tempDir(prefix) {
   return dir;
 }
 
-describe('installBridge', () => {
+describe.runIf(process.platform === 'darwin')('installBridge on macOS', () => {
   it('writes an executable wrapper and a Chrome manifest, then uninstall removes both', () => {
     const home = tempDir('lp-home-');
     const bin = tempDir('lp-bin-');
@@ -113,5 +113,50 @@ describe('installBridge', () => {
     expect(uninstall.status).toBe(0);
     expect(fs.existsSync(wrapper)).toBe(false);
     expect(fs.existsSync(manifest)).toBe(false);
+  });
+});
+
+describe.runIf(process.platform === 'win32')('installBridge on Windows', () => {
+  it('writes a .cmd wrapper and a manifest next to it, then uninstall removes both', () => {
+    const home = tempDir('lp-home-');
+    const bin = tempDir('lp-bin-');
+    for (const name of ['claude.exe', 'codex', 'codex.cmd', 'grok']) {
+      fs.writeFileSync(path.join(bin, name), '');
+    }
+
+    const result = installBridge({
+      home,
+      repoDir: 'C:\\repo',
+      nodePath: 'C:\\node\\node.exe',
+      pathEnv: `${bin};C:\\Windows`,
+      platform: 'win32',
+    });
+
+    expect(result.found).toEqual({
+      claude: path.join(bin, 'claude.exe'),
+      codex: path.join(bin, 'codex.cmd'),
+      grok: null,
+    });
+    const dir = path.join(home, 'AppData', 'Local', 'LocalPolish');
+    expect(result.wrapperPath).toBe(path.join(dir, 'localpolish-bridge.cmd'));
+    expect(fs.readFileSync(result.wrapperPath, 'utf8')).toBe(
+      [
+        '@echo off',
+        `set "PATH=C:\\node;${bin};%PATH%"`,
+        '"C:\\node\\node.exe" "C:\\repo\\bridge\\host.mjs"',
+        '',
+      ].join('\r\n'),
+    );
+    expect(result.manifestPath).toBe(path.join(dir, `${HOST_NAME}.json`));
+    expect(JSON.parse(fs.readFileSync(result.manifestPath, 'utf8'))).toEqual({
+      name: HOST_NAME,
+      description: 'LocalPolish bridge to local AI CLIs',
+      path: result.wrapperPath,
+      type: 'stdio',
+      allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
+    });
+
+    uninstallBridge({ home, platform: 'win32' });
+    expect(fs.existsSync(dir)).toBe(false);
   });
 });

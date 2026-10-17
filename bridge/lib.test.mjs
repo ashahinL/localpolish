@@ -1,5 +1,8 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildCommand, createDecoder, encodeMessage, parseLine } from './lib.mjs';
+import { buildCommand, createDecoder, encodeMessage, parseLine, resolveCommand } from './lib.mjs';
 
 describe('encodeMessage', () => {
   it('round-trips a message and prefixes the UTF-8 byte length', () => {
@@ -151,5 +154,45 @@ describe('parseLine', () => {
     ).toEqual({ error: 'usage limit reached' });
     expect(parseLine('codex', '{"type":"error","message":"nope"}')).toEqual({ error: 'nope' });
     expect(parseLine('codex', 'Reading additional input from stdin...')).toBeNull();
+  });
+});
+
+describe('resolveCommand', () => {
+  it('runs the script behind an npm .cmd shim with Node', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lp-shim-'));
+    const shim = path.join(dir, 'codex.cmd');
+    const npmShim = String.raw`@ECHO off
+GOTO start
+:find_dp0
+SET dp0=%~dp0
+EXIT /b
+:start
+SETLOCAL
+CALL :find_dp0
+
+IF EXIST "%dp0%\node.exe" (
+  SET "_prog=%dp0%\node.exe"
+) ELSE (
+  SET "_prog=node"
+)
+
+endLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & "%_prog%"  "%dp0%\node_modules\@openai\codex\bin\codex.js" %*
+`;
+    fs.writeFileSync(shim, npmShim.replace(/\n/g, '\r\n'));
+    try {
+      expect(resolveCommand(shim, 'node.exe')).toEqual({
+        cmd: 'node.exe',
+        args: [path.join(dir, 'node_modules', '@openai', 'codex', 'bin', 'codex.js')],
+      });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('runs any other file as it is', () => {
+    expect(resolveCommand('/usr/local/bin/claude')).toEqual({
+      cmd: '/usr/local/bin/claude',
+      args: [],
+    });
   });
 });

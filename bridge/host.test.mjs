@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDecoder, encodeMessage } from './lib.mjs';
 
+const windows = process.platform === 'win32';
 const hostPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'host.mjs');
 const dirs = [];
 /** @type {import('node:child_process').ChildProcess[]} */
@@ -43,6 +44,12 @@ function tempDir(prefix) {
  */
 function writeCli(binDir, name, body) {
   fs.writeFileSync(path.join(binDir, 'package.json'), JSON.stringify({ type: 'commonjs' }));
+  if (windows) {
+    fs.writeFileSync(path.join(binDir, `${name}.js`), body);
+    const shim = ['@ECHO off', 'SETLOCAL', 'SET dp0=%~dp0', `"node" "%dp0%\\${name}.js" %*`, ''];
+    fs.writeFileSync(path.join(binDir, `${name}.cmd`), shim.join('\r\n'));
+    return;
+  }
   const file = path.join(binDir, name);
   fs.writeFileSync(file, body);
   fs.chmodSync(file, 0o755);
@@ -52,12 +59,19 @@ function writeCli(binDir, name, body) {
  * @param {string} binDir
  * @param {number} closeMs
  */
-function startHost(binDir, closeMs = 5000, home = process.env.HOME) {
+function startHost(binDir, closeMs = 5000, home = os.homedir()) {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'PATH'),
+  );
+  const systemPath = windows
+    ? [path.join(process.env.SystemRoot ?? '', 'System32')]
+    : ['/usr/bin', '/bin'];
   const child = spawn(process.execPath, [hostPath], {
     env: {
-      ...process.env,
+      ...env,
       HOME: home,
-      PATH: `${binDir}:${path.dirname(process.execPath)}:/usr/bin:/bin`,
+      USERPROFILE: home,
+      PATH: [binDir, path.dirname(process.execPath), ...systemPath].join(path.delimiter),
     },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -168,21 +182,19 @@ process.stderr.write('not logged in\\n', () => process.exit(1));
     host.child.stdin.write(rewrite('codex', 'hello'));
     await host.closed;
     expect(host.messages).toHaveLength(1);
-    expect(/** @type {{ message: string }} */ (host.messages[0]).message).toContain(
-      'codex-home" codex login',
+    expect(/** @type {{ message: string }} */ (host.messages[0]).message).toMatch(
+      windows
+        ? /\$env:CODEX_HOME=".*codex-home"; codex login$/
+        : /CODEX_HOME=".*codex-home" codex login$/,
     );
   });
 
   it('runs codex with the LocalPolish codex home', async () => {
     const bin = tempDir('lp-bin-');
     const home = tempDir('lp-home-');
-    const codexHome = path.join(
-      home,
-      'Library',
-      'Application Support',
-      'LocalPolish',
-      'codex-home',
-    );
+    const codexHome = windows
+      ? path.join(home, 'AppData', 'Local', 'LocalPolish', 'codex-home')
+      : path.join(home, 'Library', 'Application Support', 'LocalPolish', 'codex-home');
     fs.mkdirSync(codexHome, { recursive: true });
     fs.writeFileSync(path.join(codexHome, 'auth.json'), '{}');
     writeCli(

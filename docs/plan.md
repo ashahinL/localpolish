@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: in progress (T0-T9 done)
+Status: in progress (T0-T9b done)
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -19,7 +19,7 @@ LocalPolish is a Chrome extension (Manifest V3) that fixes or rewrites text you 
 | Shortcut | `Ctrl+Shift+K` / `Cmd+Shift+K`. Works on blocklisted sites too. With no selection, it uses the whole focused field. |
 | Storage | Everything in `chrome.storage.local`. Nothing in sync storage. Keys never logged. |
 | Extension ID | Fixed with a manifest `key`: `ealpmjmaclnlpelpcacmbicmdipmbeei`. The bridge only accepts this ID. |
-| Platform | macOS only for the bridge installer (MVP). |
+| Platform | macOS and Windows for the bridge installer. Windows added on 2026-10-17 so T10 can run on a Windows PC. |
 | Package manager | npm. |
 | Repo | Private GitHub repo `localpolish`. One commit per task. |
 
@@ -106,6 +106,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - [x] **T7. Options page** (Claude Opus, art lane). All settings. Per-CLI model and effort are dropdowns with presets plus a custom value (Claude efforts low to max, Codex none to xhigh, Grok low to high). OpenAI-compatible gets base URL presets for xAI, OpenAI, OpenRouter, LM Studio and Ollama. bridge status from `ping`, Test connection, shortcut hint with a button to open `chrome://extensions/shortcuts`.
 - [x] **T8. End-to-end test** (Grok). Playwright loads the built extension, points it at a mock OpenAI-compatible server, and runs select → Fix → Accept on the fixture pages.
 - [x] **T9. README and manual checklist** (Grok). Setup, bridge install, CLI login, Ollama and `OLLAMA_ORIGINS`, loading unpacked, per-site limits, a manual checklist for Gmail, X, LinkedIn, GitHub and a plain textarea.
+- [x] **T9b. Windows bridge** (Claude). The installer writes `%LOCALAPPDATA%\LocalPolish\localpolish-bridge.cmd`, the host manifest next to it, and the registry key `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge`. `findOnPath` tries `.exe`, `.cmd`, `.bat`. npm `.cmd` shims run their script with Node (`resolveCommand`). Kill uses `taskkill /T /F`. The Codex home is `%LOCALAPPDATA%\LocalPolish\codex-home`.
 - [ ] **T10. Real-site testing** (Claude, via Claude in Chrome). Run the checklist on Gmail, X, LinkedIn, GitHub. Never press Send or Post. Fix what breaks, or fall back to Copy and note it in the README.
 
 ## Later (not MVP, keep the design open)
@@ -113,7 +114,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 - Passive underlines while typing.
 - Per-site default tone (add `siteTones: Record<host, Tone>` to settings).
 - History of the last 20 rewrites (store in `chrome.storage.local`).
-- Linux and Windows bridge installers.
+- Linux bridge installer.
 
 ## Handoff (2026-10-17, 12:15 Cairo)
 

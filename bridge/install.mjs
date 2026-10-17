@@ -1,26 +1,34 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { EXTENSION_ID, HOST_NAME } from './constants.mjs';
-import { codexHomeFor, findOnPath } from './lib.mjs';
+import { EXTENSION_ID, HOST_NAME, WINDOWS_REGISTRY_KEY } from './constants.mjs';
+import { codexHomeFor, codexLoginCommand, findOnPath, supportDir } from './lib.mjs';
 
 const CLI_NAMES = ['claude', 'codex', 'grok'];
 const SYSTEM_PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'];
 
 /**
- * @param {{ home: string, repoDir: string, nodePath: string, pathEnv: string }} opts
+ * @param {{
+ *   home: string,
+ *   repoDir: string,
+ *   nodePath: string,
+ *   pathEnv: string,
+ *   platform?: NodeJS.Platform,
+ * }} opts
  * @returns {{
  *   wrapperPath: string,
  *   manifestPath: string,
  *   found: Record<'claude' | 'codex' | 'grok', string | null>,
  * }}
  */
-export function installBridge({ home, repoDir, nodePath, pathEnv }) {
+export function installBridge({ home, repoDir, nodePath, pathEnv, platform = process.platform }) {
+  const windows = platform === 'win32';
   /** @type {Record<'claude' | 'codex' | 'grok', string | null>} */
   const found = { claude: null, codex: null, grok: null };
   for (const name of CLI_NAMES) {
-    found[name] = findOnPath(name, pathEnv);
+    found[name] = findOnPath(name, pathEnv, platform);
   }
 
   /** @type {string[]} */
@@ -33,28 +41,30 @@ export function installBridge({ home, repoDir, nodePath, pathEnv }) {
     const bin = found[name];
     if (bin) addDir(path.dirname(bin));
   }
-  for (const dir of SYSTEM_PATH) addDir(dir);
+  if (!windows) for (const dir of SYSTEM_PATH) addDir(dir);
 
-  const wrapperDir = path.join(home, 'Library', 'Application Support', 'LocalPolish');
+  const wrapperDir = supportDir(home, platform);
   fs.mkdirSync(wrapperDir, { recursive: true });
-  const wrapperPath = path.join(wrapperDir, 'localpolish-bridge');
-  const wrapper = [
-    '#!/bin/sh',
-    `export PATH="${dirs.join(':')}"`,
-    `exec "${nodePath}" "${path.join(repoDir, 'bridge', 'host.mjs')}"`,
-    '',
-  ].join('\n');
+  const hostPath = path.join(repoDir, 'bridge', 'host.mjs');
+  const wrapperPath = path.join(
+    wrapperDir,
+    windows ? 'localpolish-bridge.cmd' : 'localpolish-bridge',
+  );
+  // Chrome on Windows starts native hosts with the user's PATH, so the wrapper only adds to it.
+  const wrapper = windows
+    ? ['@echo off', `set "PATH=${dirs.join(';')};%PATH%"`, `"${nodePath}" "${hostPath}"`, ''].join(
+        '\r\n',
+      )
+    : ['#!/bin/sh', `export PATH="${dirs.join(':')}"`, `exec "${nodePath}" "${hostPath}"`, ''].join(
+        '\n',
+      );
   fs.writeFileSync(wrapperPath, wrapper, { mode: 0o755 });
   fs.chmodSync(wrapperPath, 0o755);
 
-  const manifestDir = path.join(
-    home,
-    'Library',
-    'Application Support',
-    'Google',
-    'Chrome',
-    'NativeMessagingHosts',
-  );
+  // Windows finds the manifest through a registry key, so it can live next to the wrapper.
+  const manifestDir = windows
+    ? wrapperDir
+    : path.join(home, 'Library', 'Application Support', 'Google', 'Chrome', 'NativeMessagingHosts');
   fs.mkdirSync(manifestDir, { recursive: true });
   const manifestPath = path.join(manifestDir, `${HOST_NAME}.json`);
   const manifest = {
@@ -70,8 +80,8 @@ export function installBridge({ home, repoDir, nodePath, pathEnv }) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.platform !== 'darwin') {
-    console.error('The LocalPolish bridge installer only supports macOS.');
+  if (process.platform !== 'darwin' && process.platform !== 'win32') {
+    console.error('The LocalPolish bridge installer only supports macOS and Windows.');
     process.exit(1);
   }
   const repoDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -83,6 +93,18 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     nodePath: findOnPath('node', pathEnv) ?? process.execPath,
     pathEnv,
   });
+  if (process.platform === 'win32') {
+    execFileSync('reg', [
+      'add',
+      WINDOWS_REGISTRY_KEY,
+      '/ve',
+      '/t',
+      'REG_SZ',
+      '/d',
+      result.manifestPath,
+      '/f',
+    ]);
+  }
   for (const name of CLI_NAMES) {
     console.log(`${name}: ${result.found[name] ?? 'not found'}`);
   }
@@ -91,6 +113,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const codexHome = codexHomeFor(os.homedir());
   fs.mkdirSync(codexHome, { recursive: true });
   if (result.found.codex && !fs.existsSync(path.join(codexHome, 'auth.json'))) {
-    console.log(`To use Codex, log in once for LocalPolish: CODEX_HOME="${codexHome}" codex login`);
+    console.log(`To use Codex, log in once for LocalPolish: ${codexLoginCommand(codexHome)}`);
   }
 }

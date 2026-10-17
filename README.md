@@ -4,7 +4,7 @@ LocalPolish is a Manifest V3 Chrome extension that fixes or rewrites text in any
 
 ## Setup
 
-You need macOS, Google Chrome, Node.js 20 or newer, and npm. You also need a logged-in `claude`, `codex`, or `grok` CLI, or an API key, or a local server.
+You need macOS or Windows, Google Chrome, Node.js 20 or newer, and npm. You also need a logged-in `claude`, `codex`, or `grok` CLI, or an API key, or a local server.
 
 1. Clone the repo and enter the folder.
 
@@ -62,6 +62,12 @@ Codex needs its own login for LocalPolish. Your normal Codex home loads `~/.code
 CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex login
 ```
 
+On Windows, run this in PowerShell instead.
+
+```powershell
+$env:CODEX_HOME="$env:LOCALAPPDATA\LocalPolish\codex-home"; codex login
+```
+
 7. Open the options page. Right-click the extension icon and choose **Options**. You can also open `chrome://extensions`, then open **LocalPolish**. Click **Details**, then **Extension options**. Pick a provider, then press **Test connection**.
 
 ## Using it
@@ -112,12 +118,20 @@ launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"
 
 ## The bridge
 
-The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with tools off. It streams the answer back. The installer is macOS only for now. [ADR 0001, CLI bridge over native messaging](docs/adr/0001-cli-bridge-over-native-messaging.md) explains why.
+The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with tools off. It streams the answer back. The installer supports macOS and Windows. [ADR 0001, CLI bridge over native messaging](docs/adr/0001-cli-bridge-over-native-messaging.md) explains why.
 
-`npm run bridge:install` writes two files.
+On macOS, `npm run bridge:install` writes two files.
 
 - The wrapper script is `~/Library/Application Support/LocalPolish/localpolish-bridge`. Chrome starts native hosts with a minimal PATH, so the wrapper sets a fixed PATH. The wrapper runs `bridge/host.mjs` from this repo. Keep this folder where it is.
 - The host manifest is `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.localpolish.bridge.json`. Chrome allows that host only for extension ID `ealpmjmaclnlpelpcacmbicmdipmbeei`.
+
+On Windows, it writes two files in `%LOCALAPPDATA%\LocalPolish` and one registry key.
+
+- The wrapper script is `localpolish-bridge.cmd`. It adds the Node and CLI folders to PATH and runs `bridge/host.mjs` from this repo.
+- The host manifest is `com.localpolish.bridge.json`, next to the wrapper.
+- The key `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.localpolish.bridge` points Chrome to the manifest.
+
+npm installs a CLI on Windows as a `.cmd` file. A `.cmd` file needs a shell, and a shell can break the prompt text, so the bridge runs the script inside it with Node.
 
 Run `npm run bridge:install` again after you install a new CLI, after you move this repo folder, or if Node moves.
 

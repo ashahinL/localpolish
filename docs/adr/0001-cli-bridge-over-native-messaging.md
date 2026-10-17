@@ -24,5 +24,5 @@ API-key providers (OpenAI-compatible and Anthropic) stay in the extension for an
 - One install step: `npm run bridge:install` writes the native host manifest. It must be re-run if the repo folder moves.
 - Chrome starts native hosts with a minimal PATH, so the installer writes a wrapper script with the CLI folders on PATH.
 - Each request starts a new CLI process. That costs a few seconds, which is acceptable for a rewrite.
-- macOS only for now. Linux and Windows need different manifest locations.
+- macOS and Windows (Windows added 2026-10-17). Windows finds the manifest through a registry key, and npm `.cmd` shims run through Node. Linux needs another manifest location.
 - The CLIs are agents with tools. We turn tools off where the CLI allows it (`claude --tools ""`, `grok --tools ""`) and run Codex in a read-only sandbox, always in an empty temp folder.
