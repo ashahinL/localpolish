@@ -133,7 +133,7 @@ Notes for the orchestrator:
 
 ## T10 progress (2026-10-17, Windows, Brave)
 
-Done in Brave with the Claude CLI: Accept, undo, line breaks and Esc on Gmail (body, subject), X (post composer), LinkedIn (post composer), GitHub (issue description) and the plain textarea. Results are in the README table.
+Done in Brave with the Claude CLI: Accept, undo, line breaks and Esc on Gmail (body, subject), X (post composer, reply box), LinkedIn (post composer, message box), GitHub (issue description) and the plain textarea. Results are in the README table.
 
 Fixed on the way:
 - The popup now mounts inside an open modal `<dialog>` (LinkedIn's composer made the page inert).
@@ -142,8 +142,7 @@ Fixed on the way:
 
 Left for T10:
 - Checks the Chrome tool cannot do: `Ctrl+Shift+K` (CDP key events do not fire extension commands) and the **Sites** list (the options page is a `chrome-extension://` page).
-- X reply box and LinkedIn message box.
-- LinkedIn multi-line re-check on the live site after reloading the extension (the fix is covered by a Playwright test on Brave).
+- LinkedIn message box: a selection set by script (`selectNodeContents` on the box, or text-node bounds over both paragraphs) makes Accept fall back to Copy with "The text in the field changed". A mouse selection over the same text works. The shortcut with no selection uses `selectNodeContents(root)`, so it may hit the same fallback there. Check with the real shortcut. If it fails, find what LinkedIn changes between capture and apply.
 - `npm run test:e2e` here: Playwright's own Chromium fails to start on this PC ("side-by-side configuration is incorrect"). The editable tests pass when pointed at Brave.
 
 Quality notes for later: Fix adds a final period to a fragment or a subject line ("I have an apple. and she...").
