@@ -1,11 +1,13 @@
 {
   "name": "localpolish",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "pack": "wxt zip",
+    "shots": "npm run build && node scripts/shots.mjs",
     "typecheck": "wxt prepare && tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",

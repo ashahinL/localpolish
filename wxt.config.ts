@@ -5,6 +5,10 @@ export default defineConfig({
   srcDir: 'src',
   outDir: 'dist',
   outDirTemplate: '.',
+  zip: {
+    // npm run pack writes the release asset dist/localpolish-X.Y.Z.zip: the built extension only.
+    artifactTemplate: '{{name}}-{{version}}.zip',
+  },
   vite: () => ({
     plugins: [preact()],
   }),

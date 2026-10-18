@@ -1,10 +1,104 @@
-# LocalPolish
+<p align="center">
+  <img src="public/icon/128.png" width="96" height="96" alt="LocalPolish icon" />
+</p>
 
-LocalPolish is a Manifest V3 Chrome extension that fixes or rewrites text in any web text field. It uses the AI subscriptions you already pay for, through their command-line tools, and it also supports providers that take an API key.
+<h1 align="center">LocalPolish</h1>
 
-## Setup
+<p align="center">
+  Fix and rewrite text in any web text field, with the AI subscriptions you already pay for.<br />
+  Claude Code, Codex and Grok CLI through a local bridge, or any OpenAI-compatible or Anthropic API.
+</p>
 
-You need macOS or Windows, Google Chrome, Node.js 22 or newer, and npm. You also need a logged-in `claude`, `codex`, or `grok` CLI, or an API key, or a local server.
+<p align="center">
+  <img src="https://img.shields.io/badge/Chrome-Manifest%20V3-2563eb" alt="Chrome, Manifest V3" />
+  <img src="https://img.shields.io/badge/bridge-macOS%20%7C%20Windows-2563eb" alt="Bridge for macOS and Windows" />
+  <img src="https://img.shields.io/badge/analytics-none-2ea043" alt="No analytics" />
+  <img src="https://img.shields.io/badge/licence-MIT-2563eb" alt="MIT licence" />
+</p>
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/screenshots/home.png" width="220" alt="Home tab" /><br /><sub>Home</sub></td>
+    <td align="center"><img src="docs/screenshots/provider.png" width="220" alt="Provider tab" /><br /><sub>Provider</sub></td>
+    <td align="center"><img src="docs/screenshots/sites.png" width="220" alt="Sites tab" /><br /><sub>Sites</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/about.png" width="220" alt="About tab" /><br /><sub>About</sub></td>
+    <td align="center"><img src="docs/screenshots/home-dark.png" width="220" alt="Home tab in dark mode" /><br /><sub>Dark mode</sub></td>
+    <td></td>
+  </tr>
+</table>
+
+<p align="center">The toolbar popup. <code>npm run shots</code> renders these from the built extension.</p>
+
+## What it does
+
+**Rewrite**
+
+- Select text in a text field and click the small round button under your selection, or press
+  <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> off
+  macOS). With nothing selected, the shortcut takes the whole focused field.
+- A popup next to the field has three tabs: **Fix**, **Rephrase** and **Shorter**. Fix runs when
+  it opens. Rephrase waits for a tone: **Keep tone**, **Polite**, **Formal**, **Casual** or
+  **Angry but civil**.
+- The answer streams in as a word diff: removed words in red, added words in green.
+- **Accept** puts the new text in the field, and the site's own Undo brings the old text back.
+  **Copy** and **Retry** are next to it. <kbd>Esc</kbd> closes the popup, and
+  <kbd>Cmd</kbd>+<kbd>Enter</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> accepts.
+- **Shorter** counts characters and warns when the result is over 280.
+- A warning lists any link, @mention, #hashtag, code or emoji the rewrite dropped, or says when
+  Arabic script came back in another script.
+- When a site ignores the new text, the popup copies it and asks you to paste.
+
+**Fix while I type**
+
+- On by default. When you stop typing for 3 seconds in a message box or rich editor, a Fix runs in
+  the background and a small marker counts the fixes. Click it to see the diff, then accept or
+  leave it.
+- It skips single-line inputs, search boxes, code editors, fields with spellcheck off, and text
+  under four words.
+
+**Toolbar popup**
+
+- Every setting in one place, with the pen nib icon. Two switches sit on top: **Fix while I
+  type**, and **Show on** the site you are on.
+- **Home**: the provider in use with its model and effort, a status pill, **Test connection**,
+  and the default mode (Fix, Rephrase or Shorter).
+- **Provider**: pick Claude Code, Codex or Grok CLI (your subscription, through the bridge), or
+  the OpenAI-compatible or Anthropic API. Model and thinking effort are presets plus **Custom**.
+  The bridge card lists each CLI's version.
+- **Sites**: the sites where the button and Fix while I type stay off, with an Add field and a
+  one-click **Hide on** for this tab. Subdomains are included. The shortcut still works there.
+- **About**: the shortcut, a button to change it, and a link to the full options page.
+- Hold the pointer on a label for 2 seconds to see what it does. Light and dark follow your
+  system.
+
+**Providers**
+
+- Claude Code, Codex and Grok CLI run on this computer through a native-messaging bridge, with
+  their tools turned off.
+- Any OpenAI-compatible server (OpenAI, xAI, OpenRouter, LM Studio, Ollama), with an optional
+  key, and the Anthropic API with a key.
+
+## Install
+
+You need macOS or Windows and Google Chrome. For a CLI provider you also need Node.js 22 or newer
+and a logged-in `claude`, `codex` or `grok` CLI. An API provider needs only a key, or a local
+server.
+
+**From the release:**
+
+1. Download `localpolish-1.0.0.zip` from the
+   [latest release](https://github.com/ashahinL/localpolish/releases/latest) and extract it.
+2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the
+   extracted folder.
+3. For a CLI provider, clone this repo and install the bridge (see Set up the bridge, below). The bridge needs
+   only Node, so `npm install` is not required for it.
+
+The extension ID is fixed (`ealpmjmaclnlpelpcacmbicmdipmbeei`), so the release and a build from
+source both work with the same bridge.
+
+**From source,** which can be newer than the release:
 
 1. Clone the repo and enter the folder.
 
@@ -30,7 +124,11 @@ npm run build
 
 4. Open `chrome://extensions`. Turn on **Developer mode**. Click **Load unpacked**, then pick the `dist/` folder.
 
-5. Install the bridge. The command prints which CLIs it found.
+### Set up the bridge
+
+Only the CLI providers need it.
+
+1. Install the bridge. The command prints which CLIs it found.
 
 ```bash
 npm run bridge:install
@@ -38,7 +136,7 @@ npm run bridge:install
 
 On Windows, run it in your own terminal, not from an app's built-in agent such as the Claude desktop app. Those apps can keep their registry writes private, so Chrome would not find the bridge.
 
-6. Log in to each CLI you want to use. Do this once, in a terminal.
+2. Log in to each CLI you want to use. Do this once, in a terminal.
 
 For Claude Code, run `claude` and log in.
 
@@ -70,17 +168,17 @@ On Windows, run this in PowerShell instead.
 $env:CODEX_HOME="$env:USERPROFILE\AppData\Local\LocalPolish\codex-home"; mkdir -Force $env:CODEX_HOME | Out-Null; codex login
 ```
 
-7. Click the LocalPolish icon in the toolbar (pin it from the puzzle-piece menu). The popup has every setting. Pick a provider on its **Provider** tab, then press **Test connection**. The gear opens the full options page.
+3. Click the LocalPolish icon in the toolbar (pin it from the puzzle-piece menu). The popup has every setting. Pick a provider on its **Provider** tab, then press **Test connection**. The gear opens the full options page.
 
 ## Using it
 
 Select text in a text field. A small round button appears under the spot where your selection ends. Click it.
 
-Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field.
+Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field. Change the key from the popup's **About** tab.
 
 **Fix while I type** is on by default. When you stop typing for 3 seconds in a message field, LocalPolish runs a Fix in the background, and a small marker shows how many fixes it found. Click the marker to see the diff. Turn it off with the **Fix while I type** switch in the toolbar popup.
 
-The popup has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green.
+The rewrite popup next to the field has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green.
 
 **Accept** puts the new text in the field. The site's own Undo still works. Press `Cmd+Z` to bring the old text back. **Copy** copies the new text. **Retry** asks again. Esc closes the popup. `Cmd+Enter` accepts the text. `Ctrl+Enter` does the same.
 
@@ -91,6 +189,18 @@ A warning lists any link, @mention, #hashtag, code, or emoji that the rewrite dr
 If the site does not accept the change, the popup copies the new text and asks you to paste it with `Cmd+V`. Off macOS, that note says `Ctrl+V`.
 
 To hide the button on the site you are on, turn off the **Show on** switch for it in the toolbar popup. This adds the exact hostname to **Sites**. The **Sites** tab, or the options page, edits the whole list. Subdomains of a listed host are included. The idle Fix is off on those sites too. The shortcut still works on them.
+
+## The toolbar popup
+
+Click the pen nib icon in the toolbar (pin it from the puzzle-piece menu). Every setting is here, and changes save as you make them. A short **Saved** note shows in the header. The gear opens the full options page, which has the same settings.
+
+- **Fix while I type** and **Show on** _this site_ sit above the tabs, so they are always one click away.
+- **Home** shows the provider, model and effort you use, with a status pill (Bridge ready, No bridge, Key saved, No API key or Local server). **Change** jumps to the Provider tab. **Test connection** sends a short sample and shows the answer and how long it took. The default mode is Fix, Rephrase or Shorter.
+- **Provider** has the five providers in two groups, _Your subscription · via the bridge_ and _API_. CLI providers have Model and Thinking effort pickers, and the Bridge card with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
+- **Sites** lists the hidden sites, with remove buttons and an Add field. The current host is tagged _This tab_, and **Hide on** _host_ adds it in one click.
+- **About** shows the shortcut, **Change shortcut** (opens `chrome://extensions/shortcuts`), **All options**, a short How it works, and the version.
+
+Hold the pointer on a label, or focus it with the keyboard, for 2 seconds to see a line of help.
 
 ## Providers
 
@@ -188,7 +298,21 @@ Match the message on screen, then do the fix that follows it.
 
 ## Privacy
 
-Your text goes only to the provider you chose. A CLI provider sends it to that CLI on this computer. An API provider sends it to the URL you set. Settings and API keys stay in `chrome.storage.local` on this browser. Chrome does not sync them. LocalPolish does not log them.
+- No account of its own, no server of ours, no analytics.
+- Your text goes only to the provider you chose: the CLI on this computer, which sends it on to its own service under your subscription, or the API URL you set.
+- Fix while I type sends a field's text after you pause, only in message fields and never on a site in **Sites**. Turn it off with its switch.
+- Settings and API keys stay in `chrome.storage.local` on this browser. Chrome does not sync them. LocalPolish does not log them.
+- The bridge runs the CLI in an empty temp folder that is deleted afterwards, with its tools off.
+
+The full policy is in [PRIVACY.md](PRIVACY.md). To report a security problem, see [SECURITY.md](SECURITY.md).
+
+### Permissions
+
+| Permission        | Why                                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `storage`         | Keep your settings, API keys and site list on this browser.                                                                 |
+| `nativeMessaging` | Talk to the bridge, `com.localpolish.bridge`, which runs the CLI you picked.                                                |
+| `<all_urls>`      | Show the button and Fix while I type in text fields on any site, and reach the API base URL you set, which can be any host. |
 
 ## Development
 
@@ -200,14 +324,20 @@ npm run dev
 
 Other scripts:
 
-- `npm run build` writes `dist/`.
-- `npm run lint` runs ESLint.
-- `npm run typecheck` runs the TypeScript check.
-- `npm run test` runs the Vitest unit tests.
-- `npm run test:e2e` builds, then runs Playwright. The suite has fixture-page tests. It also loads `dist/` into Chromium with a mock OpenAI server.
-- `npm run format` runs Prettier.
+```bash
+npm run build       # write dist/
+npm run lint        # ESLint
+npm run typecheck   # TypeScript check
+npm test            # Vitest unit tests, including the bridge
+npm run test:e2e    # build, then Playwright
+npm run format      # Prettier
+npm run pack        # build and write the release zip, dist/localpolish-X.Y.Z.zip
+npm run shots       # build and render docs/screenshots from the real popup
+```
 
-Install the Playwright Chromium once.
+A change counts as done when `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build` and `npm run test:e2e` all pass. GitHub Actions runs them on every push.
+
+The end-to-end suite has fixture-page tests. It also loads `dist/` into Chromium with a mock OpenAI server. Install the Playwright Chromium once.
 
 ```bash
 npx playwright install chromium
@@ -218,15 +348,19 @@ Some sandboxed shells cannot start Chromium. The error mentions Mach ports. Run 
 ```text
 src/core            settings, prompts, cleanup, diff, tokens
 src/background      providers, rewrite router
-src/content         field capture and replace, popup, button
-src/options
+src/content         field capture and replace, rewrite popup, button, Fix while I type
+src/popup           the toolbar popup: Home, Provider, Sites, About
+src/options         the full options page
 src/entrypoints
-bridge/             native messaging host
+public/icon         the pen nib icon (sources in docs/design/icon)
+bridge/             native messaging host and its installer
+scripts/            screenshots
 tests/e2e           Playwright tests
-docs/               plan, ADR, benchmark, briefs
+docs/               plan, ADR, benchmark, briefs, design, screenshots
+bench/              the Fix prompt benchmark
 ```
 
-The build plan is in [docs/plan.md](docs/plan.md).
+The build plan is in [docs/plan.md](docs/plan.md). Release notes are in [CHANGELOG.md](CHANGELOG.md). How a version ships is in [RELEASING.md](RELEASING.md).
 
 ## Not yet
 
@@ -234,3 +368,13 @@ The build plan is in [docs/plan.md](docs/plan.md).
 - A tone setting per site.
 - Rewrite history.
 - A Linux bridge installer.
+
+## Bugs and ideas
+
+[Open an issue](https://github.com/ashahinL/localpolish/issues). Security problems go through [SECURITY.md](SECURITY.md), not a public issue.
+
+## Licence
+
+[MIT](LICENSE). Do what you like with it; keep the copyright notice.
+
+LocalPolish is not affiliated with, endorsed by or sponsored by Anthropic, OpenAI or xAI. Claude, Codex and Grok are their owners' trademarks.
