@@ -650,6 +650,44 @@ test.describe('idle fix', () => {
     await expect.poll(draftText).toBe('أيوه عايزه، يعني منx');
   });
 
+  test('editing after Accept runs again (textarea)', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'I went home today.' }],
+      [{ type: 'done', text: 'I went home today again.' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await page.locator('.lp-mark').click();
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('.lp-popup')).toHaveCount(0);
+
+    await page.keyboard.press('End');
+    await page.keyboard.type(' agin');
+    await pause(page);
+    expect(await requests(page)).toBe(2);
+    await expect(page.locator('.lp-mark')).toHaveCount(1);
+  });
+
+  test('editing after Accept runs again (Draft.js)', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'I went home today.' }],
+      [{ type: 'done', text: 'I went home today again.' }],
+    ]);
+    await page.locator('#draft .public-DraftEditor-content').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await page.locator('.lp-mark').click();
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('.lp-popup')).toHaveCount(0);
+
+    await page.keyboard.press('End');
+    await page.keyboard.type(' agin');
+    await pause(page);
+    expect(await requests(page)).toBe(2);
+    await expect(page.locator('.lp-mark')).toHaveCount(1);
+  });
+
   test('an unchanged fix shows no marker', async ({ page }) => {
     const text = 'nothing needs a fix today';
     await startIdle(page, [[{ type: 'done', text }]]);
