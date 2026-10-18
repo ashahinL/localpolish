@@ -241,6 +241,12 @@ test('options page Test connection', async ({ page }) => {
   await expect(page.getByText('Works. Got')).toBeVisible();
 });
 
+test('toolbar popup Test connection', async ({ page }) => {
+  await page.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
+  await page.getByRole('button', { name: 'Test connection' }).click();
+  await expect(page.getByText('Works. Got')).toBeVisible();
+});
+
 test('Esc does not reach the page', async ({ page }) => {
   await page.evaluate(() => {
     const api = window as unknown as PageApi;

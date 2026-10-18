@@ -175,7 +175,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: the Sites tab lists the blocklist with a count, a "This tab" tag and a remove button per entry, and an add field. `addSite` takes a hostname or a URL, lowercases it, and rejects empty, spaced or duplicate entries. When this tab's site is shown, a "Hide on {host}" card adds it.
   - [x] **T14f.** About tab and README. Brief: [T14f](briefs/T14f-popup-about.md).
   - Built: the About tab with the Polish shortcut (read again on focus, Change shortcut opens chrome://extensions/shortcuts), an Open button for the options page, How it works, and the version footer. The README points setup, Sites, providers, keys and the bridge status at the toolbar popup, and has a paragraph on Fix while I type.
-  - [ ] **T14g.** e2e tests for the toolbar popup in a new `tests/e2e/action-popup.spec.ts` (`popup.spec.ts` already covers the in-page rewrite popup). Brief: [T14g](briefs/T14g-popup-e2e.md).
+  - [x] **T14g.** e2e tests for the toolbar popup in a new `tests/e2e/action-popup.spec.ts` (`popup.spec.ts` already covers the in-page rewrite popup). Brief: [T14g](briefs/T14g-popup-e2e.md).
+  - Built: 16 stubbed tests in `tests/e2e/action-popup.spec.ts` (switches, unsupported page, bridge hint and Provider dot, Test connection, provider fields, bridge rows, Sites add/duplicate/remove, Hide on this tab, default mode, About, arrow keys, 360 px width) and a real-extension "toolbar popup Test connection" test in `extension.spec.ts`.
 
 ## Later (not MVP, keep the design open)
 
