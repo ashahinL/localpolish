@@ -396,6 +396,23 @@ test.describe('idle fix', () => {
     await popup.getByRole('button', { name: 'Accept' }).click();
     await expect(page.locator('#ta')).toHaveValue('I went home today.');
     await expect(popup).toHaveCount(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+  });
+
+  test('closing the popup keeps the marker until the field holds the fix', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+
+    await page.locator('.lp-mark').click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.lp-mark')).toHaveText('3');
+
+    await page.locator('#ta').fill('I went home today.');
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
   test('fewer than 4 words sends nothing', async ({ page }) => {
@@ -466,6 +483,9 @@ test.describe('idle fix', () => {
     await popup.getByRole('button', { name: 'Accept' }).click();
     await expect(page.locator('#ta')).toHaveValue('I went home today now.');
     expect(await maxOpen(page)).toBe(1);
+    await pause(page);
+    expect(await requests(page)).toBe(2);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
   test('manual after a fresh idle answer reuses it', async ({ page }) => {
@@ -576,7 +596,7 @@ test.describe('idle fix', () => {
     await expect(mark).toHaveCount(1);
   });
 
-  test('other markers come back when the popup closes', async ({ page }) => {
+  test('markers come back when the popup closes', async ({ page }) => {
     await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
     for (const field of ['#ta', '#ce']) {
       await page.locator(field).click();
@@ -591,7 +611,7 @@ test.describe('idle fix', () => {
     await expect(marks).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(page.locator('.lp-popup')).toHaveCount(0);
-    await expect(marks).toHaveCount(1);
+    await expect(marks).toHaveCount(2);
   });
 
   test('the marker follows a field that moves without a scroll', async ({ page }) => {

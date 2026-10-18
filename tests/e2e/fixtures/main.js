@@ -55,6 +55,7 @@ const controller = createController({
   connect,
   getSettings: () => fake.settings,
   isMac: false,
+  onAccepted: (target) => idle?.accepted(target),
 });
 
 let idle;

@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: T0-T13c done.
+Status: T0-T13d done.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -151,6 +151,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: a 16 px yellow count badge ("9+" above 9) and a 12 px red "!" dot, with a theme ring, shadow, hover, focus ring and a pop-in that reduced motion turns off. The marker sits 14 px in from the corner, left of a visible scrollbar, on the bottom edge of fields under 32 px tall, hides when the corner is off screen or the field has no size, and follows a field that grows or moves (rechecked every 250 ms while shown).
   - [x] **T13c.** Marker stays while typing, and the manual flow reuses the idle Fix.
   - Built: typing keeps the count and dims the marker when the text changed; a click or the button/shortcut reuses a fresh answer or the in-flight request, and one field never runs two requests at once.
+  - [x] **T13d.** The marker stays until the issues are gone.
+  - Built: opening, closing or copying from the popup keeps the marker; it goes when the field holds the fix (Accept or a pasted copy). Any Accept settles that text, so it never starts another idle request.
 
 ## Later (not MVP, keep the design open)
 

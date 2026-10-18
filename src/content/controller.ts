@@ -30,6 +30,7 @@ export interface ControllerDeps {
   connect(): PortLike;
   getSettings(): Settings;
   isMac: boolean;
+  onAccepted?(target: Target): void;
 }
 
 type Outcome = { fixed: string } | { error: string };
@@ -217,6 +218,7 @@ export function createController(deps: ControllerDeps): Controller {
       const result = await applyReplacement(s.target, text);
       if (session !== s) return;
       if (result.ok) {
+        deps.onAccepted?.(s.target);
         close();
         return;
       }

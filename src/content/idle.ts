@@ -43,7 +43,12 @@ interface Slot {
   finish: ((outcome: Outcome | undefined) => void) | undefined;
 }
 
-export function createIdleFix(deps: IdleDeps): { open(target: Target): void } {
+export interface IdleFix {
+  open(target: Target): void;
+  accepted(target: Target): void;
+}
+
+export function createIdleFix(deps: IdleDeps): IdleFix {
   const slots = new WeakMap<HTMLElement, Slot>();
   const ids = new WeakMap<HTMLElement, number>();
   const marked = new Set<HTMLElement>();
@@ -103,7 +108,7 @@ export function createIdleFix(deps: IdleDeps): { open(target: Target): void } {
       return;
     }
     const full = fieldText(el);
-    if (full === slot.lastFull) return;
+    if (full.trim() === slot.lastFull?.trim()) return;
     if (wordCount(full) < MIN_WORDS) return;
     send(el, slot, full);
   }
@@ -220,13 +225,10 @@ export function createIdleFix(deps: IdleDeps): { open(target: Target): void } {
     if (!slot || !result) return;
     const current = fieldText(el);
     if ('error' in result) {
-      hide(el, slot);
       deps.openPopup(wholeFieldTarget(el), { error: result.error });
       return;
     }
     if (result.sent === current) {
-      hide(el, slot);
-      slot.lastFull = result.fixed;
       deps.openPopup(wholeFieldTarget(el), { fixed: result.fixed });
       return;
     }
@@ -248,7 +250,6 @@ export function createIdleFix(deps: IdleDeps): { open(target: Target): void } {
     if (deps.isFixDefault() && target.text === current) {
       const result = slot.result;
       if (result && 'fixed' in result && result.sent === current) {
-        slot.lastFull = result.fixed;
         deps.openPopup(target, { fixed: result.fixed });
         return;
       }
@@ -288,6 +289,13 @@ export function createIdleFix(deps: IdleDeps): { open(target: Target): void } {
         const slot = slots.get(el);
         if (slot && !el.isConnected) drop(el, slot);
         else marked.delete(el);
+        continue;
+      }
+      // Gone once the field holds the fix, by Accept or by pasting a copied fix.
+      if ('fixed' in result && fieldText(el).trim() === result.fixed.trim()) {
+        const slot = slots.get(el);
+        if (slot) slot.result = undefined;
+        marked.delete(el);
         continue;
       }
       const spot = markSpot(el);
@@ -351,7 +359,15 @@ export function createIdleFix(deps: IdleDeps): { open(target: Target): void } {
     return id;
   }
 
-  return { open };
+  // The accepted text is settled: no idle request for it, and no marker.
+  function accepted(target: Target): void {
+    const el = target.kind === 'field' ? target.el : target.root;
+    const slot = slotOf(el);
+    slot.lastFull = fieldText(el);
+    if (slot.result) hide(el, slot);
+  }
+
+  return { open, accepted };
 }
 
 function markSpot(el: HTMLElement): { top: number; left: number } | null {

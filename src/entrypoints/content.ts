@@ -71,6 +71,7 @@ function start(): void {
     connect,
     getSettings: () => settings ?? DEFAULT_SETTINGS,
     isMac,
+    onAccepted: (target) => idle.accepted(target),
   });
 
   const idle = createIdleFix({
