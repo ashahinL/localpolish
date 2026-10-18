@@ -1,16 +1,19 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, isBlocked, loadSettings, saveSettings, type Settings } from './settings';
 
 let memory: Map<string, unknown>;
+let delayedGet: boolean;
 
 beforeEach(() => {
   memory = new Map();
+  delayedGet = false;
   const chrome = {
     storage: {
       local: {
-        get: (key: string) => {
-          if (!memory.has(key)) return Promise.resolve({});
-          return Promise.resolve({ [key]: memory.get(key) });
+        get: async (key: string) => {
+          const stored = memory.has(key) ? { [key]: memory.get(key) } : {};
+          if (delayedGet) await new Promise((resolve) => setTimeout(resolve, 0));
+          return stored;
         },
         set: (items: Record<string, unknown>) => {
           for (const [key, value] of Object.entries(items)) memory.set(key, value);
@@ -21,6 +24,8 @@ beforeEach(() => {
   };
   (globalThis as unknown as { chrome: typeof chrome }).chrome = chrome;
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('loadSettings', () => {
   it('returns defaults when nothing is stored', async () => {
@@ -78,6 +83,57 @@ describe('loadSettings', () => {
     expect((await loadSettings()).defaultMode).toBe('shorter');
   });
 
+  it('drops damaged blocklist entries before matching sites', async () => {
+    memory.set('settings', { blocklist: [null, 'a.com', 5] });
+    const settings = await loadSettings();
+    expect(settings.blocklist).toEqual(['a.com']);
+    expect(isBlocked('a.com', settings.blocklist)).toBe(true);
+  });
+
+  it('keeps only known models and efforts with string values', async () => {
+    memory.set('settings', {
+      models: {
+        'codex-cli': null,
+        'claude-cli': 'opus',
+        'openai-compatible': 'my-model:7b',
+        bogus: 'x',
+      },
+      efforts: { 'codex-cli': null, 'claude-cli': 'high', 'anthropic-api': 'low', bogus: 'x' },
+    });
+    const settings = await loadSettings();
+    expect(settings.models).toEqual({
+      ...DEFAULT_SETTINGS.models,
+      'claude-cli': 'opus',
+      'openai-compatible': 'my-model:7b',
+    });
+    expect(settings.efforts).toEqual({ ...DEFAULT_SETTINGS.efforts, 'claude-cli': 'high' });
+  });
+
+  it('uses defaults for an invalid provider and drops unknown fields', async () => {
+    memory.set('settings', { provider: 'nope', unknownField: 'value' });
+    expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it.each([7, -1, NaN, Infinity, '0.5', null])(
+    'uses the default for invalid temperature %s',
+    async (temperature) => {
+      memory.set('settings', { temperature });
+      expect((await loadSettings()).temperature).toBe(0.3);
+    },
+  );
+
+  it('uses defaults for invalid string fields and records', async () => {
+    memory.set('settings', {
+      openaiBaseUrl: null,
+      openaiApiKey: 5,
+      anthropicApiKey: false,
+      models: [],
+      efforts: null,
+      blocklist: 'a.com',
+    });
+    expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
   it('keeps the other CLI efforts when one is saved', async () => {
     await saveSettings({ efforts: { 'codex-cli': 'xhigh' } as Settings['efforts'] });
 
@@ -110,6 +166,37 @@ describe('saveSettings', () => {
     expect(settings.openaiBaseUrl).toBe(DEFAULT_SETTINGS.openaiBaseUrl);
   });
 
+  it('keeps concurrent saves with the fallback queue', async () => {
+    vi.stubGlobal('navigator', { locks: undefined });
+    delayedGet = true;
+    await Promise.all([saveSettings({ idleFix: false }), saveSettings({ defaultMode: 'shorter' })]);
+    expect(memory.get('settings')).toEqual({
+      ...DEFAULT_SETTINGS,
+      idleFix: false,
+      defaultMode: 'shorter',
+    });
+  });
+
+  it.skipIf(!globalThis.navigator?.locks)(
+    'keeps concurrent saves from separate modules',
+    async () => {
+      vi.resetModules();
+      const first = await import('./settings');
+      vi.resetModules();
+      const second = await import('./settings');
+      delayedGet = true;
+      await Promise.all([
+        first.saveSettings({ idleFix: false }),
+        second.saveSettings({ defaultMode: 'shorter' }),
+      ]);
+      expect(memory.get('settings')).toEqual({
+        ...DEFAULT_SETTINGS,
+        idleFix: false,
+        defaultMode: 'shorter',
+      });
+    },
+  );
+
   it('saves idleFix off and keeps the other defaults', async () => {
     await saveSettings({ idleFix: false });
     expect(await loadSettings()).toEqual({ ...DEFAULT_SETTINGS, idleFix: false });
@@ -136,6 +223,21 @@ describe('isBlocked', () => {
   it('trims entries and ignores empty ones', () => {
     expect(isBlocked('example.com', ['  example.com  '])).toBe(true);
     expect(isBlocked('example.com', ['', '   '])).toBe(false);
+  });
+
+  it.each([
+    ['example.com', 'example.com:8080/path'],
+    ['example.com', 'https://Example.com/x'],
+    ['example.com', 'https://www.example.com/x'],
+    ['sub.example.com', '*.example.com'],
+    ['[::1]', '[::1]:5179'],
+    ['xn--bcher-kva.de', 'bücher.de'],
+  ])('blocks %s using the site entry %s', (host, entry) => {
+    expect(isBlocked(host, [entry])).toBe(true);
+  });
+
+  it('ignores text that is not a site', () => {
+    expect(isBlocked('example.com', ['not a site', 'https://', 'file:///x'])).toBe(false);
   });
 
   it('ignores a leading *. or www. on the entry', () => {

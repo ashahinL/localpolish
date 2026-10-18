@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: in progress. T15 is verified and committed. T16-T18 continue automatically.
+Status: in progress. T15 and T16a are verified and committed. Remaining ready tasks continue automatically.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -63,7 +63,7 @@ Changes to the plan, compared with Sol's draft:
 
 ## T16: settings
 
-- [ ] **T16a. Safe settings writes, checked settings reads, one site rule** (A09, A11, A15). Sol medium. Brief: [T16a-settings-store.md](../briefs/T16a-settings-store.md). Depends on: nothing. Run it after T15a if both are open, because both touch `isBlocked` callers.
+- [x] **T16a. Safe settings writes, checked settings reads, one site rule** (A09, A11, A15). Sol medium. Brief: [T16a-settings-store.md](../briefs/T16a-settings-store.md). Depends on: nothing. Run it after T15a if both are open, because both touch `isBlocked` callers.
 - [ ] **T16b. Failed saves stay pending; the idle switch on the options page** (A10, A18). Sol medium. Brief: [T16b-save-errors.md](../briefs/T16b-save-errors.md). Depends on: T16a.
 
 ## T17: docs, dependencies and CI
@@ -115,3 +115,5 @@ Changes to the plan, compared with Sol's draft:
 - T15d: all gates passed, with 236 unit tests passed, 1 Windows-only test skipped, and 107 browser tests passed. Filtered responses, exact loopback hosts, literal text tags, whole emoji, and inherited spellcheck have regressions. Reusable skill: none.
 
 - T15e: all gates passed, with 238 unit tests passed, 1 Windows-only test skipped, and 107 browser tests passed. Resistant descendants are killed and shell-special installation paths work. Windows is pending T17c. Reusable skill: none.
+
+- T16a: all gates passed, with 262 unit tests passed, 1 Windows-only test skipped, and 107 browser tests passed. Shared Web Locks, damaged storage, and canonical site entries have coverage. As scoped, concurrent edits of entire model records for different providers can still overwrite each other. Reusable skill: none.

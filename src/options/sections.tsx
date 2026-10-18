@@ -3,7 +3,7 @@ import { type BridgeStatus, type TestResult } from '../core/messages';
 import { type DefaultMode, type Settings } from '../core/settings';
 import { bridgeStatus, openShortcutsPage, polishShortcut, testConnection } from './chrome';
 import { CodeLine, Field, Note, TextInput } from './controls';
-import { formatSeconds, parseBlocklist, shortcutKeys } from './form';
+import { formatSeconds, invalidSiteEntries, parseBlocklist, shortcutKeys } from './form';
 import { useSettingsApi } from './useSettings';
 
 export const CLIS: Array<{ key: 'claude' | 'codex' | 'grok'; name: string }> = [
@@ -133,6 +133,7 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
 
 export function SitesSection({ settings }: { settings: Settings }) {
   const { change } = useSettingsApi();
+  const invalid = invalidSiteEntries(settings.blocklist);
   return (
     <section class="card">
       <h2>Sites</h2>
@@ -150,6 +151,7 @@ export function SitesSection({ settings }: { settings: Settings }) {
           onText={(text) => change({ blocklist: parseBlocklist(text) }, true)}
         />
       </Field>
+      {invalid.length > 0 && <Note tone="info">Not a site, ignored: {invalid.join(', ')}</Note>}
     </section>
   );
 }

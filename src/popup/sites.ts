@@ -1,10 +1,11 @@
-import { isBlocked } from '../core/settings';
+import { isBlocked, normalizeSiteEntry } from '../core/settings';
 
 export type SiteState =
   { kind: 'shown' } | { kind: 'hidden' } | { kind: 'hidden-by'; rule: string };
 
 function sameHost(entry: string, host: string): boolean {
-  return entry.trim().toLowerCase() === host.trim().toLowerCase();
+  const rule = normalizeSiteEntry(entry);
+  return rule !== null && rule === normalizeSiteEntry(host);
 }
 
 export function hostOf(url: string | undefined): string | null {
@@ -41,20 +42,8 @@ export function addSite(
   input: string,
   blocklist: string[],
 ): { list: string[] } | { error: string } {
-  const trimmed = input.trim().toLowerCase();
-  let host: string;
-  if (trimmed.includes('://')) {
-    try {
-      host = new URL(trimmed).hostname;
-    } catch {
-      // A scheme with no host, such as "https://", makes URL throw.
-      return { error: HOST_ERROR };
-    }
-  } else {
-    const slash = trimmed.indexOf('/');
-    host = slash === -1 ? trimmed : trimmed.slice(0, slash);
-  }
-  if (host === '' || /\s/.test(host)) return { error: HOST_ERROR };
+  const host = normalizeSiteEntry(input);
+  if (host === null) return { error: HOST_ERROR };
   if (blocklist.some((entry) => sameHost(entry, host))) return { error: 'Already in the list' };
   return { list: [...blocklist, host] };
 }

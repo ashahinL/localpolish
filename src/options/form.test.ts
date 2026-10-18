@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import {
   baseUrlPatch,
   formatSeconds,
+  invalidSiteEntries,
   mergeExternal,
   parseBlocklist,
   parseTemperature,
@@ -16,6 +17,20 @@ describe('parseBlocklist', () => {
       'mail.google.com',
       'example.com',
     ]);
+  });
+});
+
+describe('invalidSiteEntries', () => {
+  it('lists invalid lines and leaves accepted entries as typed', () => {
+    const entries = parseBlocklist(
+      'https://Example.com/x\nnot a site\nexample.com:8080/path\nhttps://\n*.example.com\n[::1]:5179\nbücher.de\n',
+    );
+    expect(invalidSiteEntries(entries)).toEqual(['not a site', 'https://']);
+    expect(entries[0]).toBe('https://Example.com/x');
+  });
+
+  it('returns no bad lines for an empty list', () => {
+    expect(invalidSiteEntries([])).toEqual([]);
   });
 });
 

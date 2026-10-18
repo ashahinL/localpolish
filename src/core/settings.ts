@@ -69,16 +69,46 @@ function isDefaultMode(value: unknown): value is DefaultMode {
 
 function storedPatch(value: unknown): Partial<Settings> {
   if (!isRecord(value)) return {};
-  const { models, efforts, defaultMode, idleFix, ...rest } = value;
-  const patch = { ...rest } as Partial<Settings> & { defaultTone?: unknown };
-  // Older versions stored a default tone and allowed 'tone' as the default mode.
-  delete patch.defaultTone;
-  if (isRecord(models)) patch.models = models as Settings['models'];
-  if (isRecord(efforts)) patch.efforts = efforts as Settings['efforts'];
-  if (defaultMode !== undefined) {
-    patch.defaultMode = isDefaultMode(defaultMode) ? defaultMode : 'fix';
+  const patch: Partial<Settings> = {};
+  if (
+    typeof value.provider === 'string' &&
+    Object.hasOwn(DEFAULT_SETTINGS.models, value.provider)
+  ) {
+    patch.provider = value.provider as ProviderId;
   }
-  if (typeof idleFix === 'boolean') patch.idleFix = idleFix;
+  if (isRecord(value.models)) {
+    patch.models = Object.fromEntries(
+      Object.entries(value.models).filter(
+        ([key, model]) => Object.hasOwn(DEFAULT_SETTINGS.models, key) && typeof model === 'string',
+      ),
+    ) as Settings['models'];
+  }
+  if (isRecord(value.efforts)) {
+    patch.efforts = Object.fromEntries(
+      Object.entries(value.efforts).filter(
+        ([key, effort]) =>
+          Object.hasOwn(DEFAULT_SETTINGS.efforts, key) && typeof effort === 'string',
+      ),
+    ) as Settings['efforts'];
+  }
+  for (const key of ['openaiBaseUrl', 'openaiApiKey', 'anthropicApiKey'] as const) {
+    if (typeof value[key] === 'string') patch[key] = value[key];
+  }
+  if (
+    typeof value.temperature === 'number' &&
+    Number.isFinite(value.temperature) &&
+    value.temperature >= 0 &&
+    value.temperature <= 1
+  ) {
+    patch.temperature = value.temperature;
+  }
+  if (value.defaultMode !== undefined) {
+    patch.defaultMode = isDefaultMode(value.defaultMode) ? value.defaultMode : 'fix';
+  }
+  if (typeof value.idleFix === 'boolean') patch.idleFix = value.idleFix;
+  if (Array.isArray(value.blocklist)) {
+    patch.blocklist = value.blocklist.filter((entry): entry is string => typeof entry === 'string');
+  }
   return patch;
 }
 
@@ -105,38 +135,59 @@ export async function loadSettings(): Promise<Settings> {
   return mergeSettings(storedPatch(stored[STORAGE_KEY]));
 }
 
+let settingsQueue: Promise<void> = Promise.resolve();
+
+function withSettingsLock<T>(work: () => Promise<T>): Promise<T> {
+  if (globalThis.navigator?.locks) {
+    return navigator.locks.request('localpolish-settings', work);
+  }
+  const result = settingsQueue.then(work);
+  settingsQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
 export async function saveSettings(patch: Partial<Settings>): Promise<void> {
-  const current = await loadSettings();
-  const next = mergeSettings({
-    ...current,
-    ...patch,
-    models: {
-      ...current.models,
-      ...patch.models,
-    },
-    efforts: {
-      ...current.efforts,
-      ...patch.efforts,
-    },
+  return withSettingsLock(async () => {
+    const current = await loadSettings();
+    const next = mergeSettings({
+      ...current,
+      ...patch,
+      models: {
+        ...current.models,
+        ...patch.models,
+      },
+      efforts: {
+        ...current.efforts,
+        ...patch.efforts,
+      },
+    });
+    await storageLocal().set({ [STORAGE_KEY]: next });
   });
-  await storageLocal().set({ [STORAGE_KEY]: next });
 }
 
 export function isBlocked(hostname: string, blocklist: string[]): boolean {
   const host = hostname.toLowerCase();
   for (const entry of blocklist) {
-    const rule = normalizeBlockEntry(entry);
+    const rule = normalizeSiteEntry(entry);
     if (rule === null) continue;
     if (host === rule || host.endsWith(`.${rule}`)) return true;
   }
   return false;
 }
 
-function normalizeBlockEntry(entry: string): string | null {
-  let rule = entry.trim().toLowerCase();
-  while (rule.startsWith('*.') || rule.startsWith('www.')) {
-    rule = rule.startsWith('*.') ? rule.slice(2) : rule.slice(4);
+/** The hostname rule for a site entry, or null when it is not a site. */
+export function normalizeSiteEntry(entry: string): string | null {
+  const trimmed = entry.trim();
+  try {
+    let rule = new URL(trimmed.includes('://') ? trimmed : `http://${trimmed}`).hostname;
+    while (rule.startsWith('*.') || rule.startsWith('www.')) {
+      rule = rule.startsWith('*.') ? rule.slice(2) : rule.slice(4);
+    }
+    return rule === '' ? null : rule;
+  } catch {
+    return null;
   }
-  rule = rule.trim();
-  return rule === '' ? null : rule;
 }

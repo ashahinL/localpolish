@@ -28,6 +28,10 @@ finished but not released yet waits under Unreleased. How a version ships:
 - Output cleanup keeps text tags that the input already has (A13).
 - Missing-emoji warnings cover flags, skin tones, families, and keycaps as whole sequences (A14).
 
+- Concurrent settings writes from extension pages preserve independent changes (A09).
+- Damaged stored settings use checked defaults rather than crashing (A11).
+- Site entries share one hostname normalizer, and options identifies invalid entries (A15).
+
 **For contributors**
 
 - Audit of 1.0.0 with confirmed findings and evidence, a review of it, and the next-release plan with one brief per task. No runtime changes.

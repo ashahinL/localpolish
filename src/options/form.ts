@@ -1,4 +1,4 @@
-import { type Settings } from '../core/settings';
+import { normalizeSiteEntry, type Settings } from '../core/settings';
 
 export type SettingsKey = keyof Settings;
 
@@ -7,6 +7,10 @@ export function parseBlocklist(text: string): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line !== '');
+}
+
+export function invalidSiteEntries(entries: string[]): string[] {
+  return entries.filter((entry) => normalizeSiteEntry(entry) === null);
 }
 
 export function parseTemperature(text: string): number | null {

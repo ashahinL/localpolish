@@ -37,6 +37,12 @@ describe('siteState', () => {
     });
   });
 
+  it('matches normalized entries and removes them when shown', () => {
+    const entries = ['https://www.Example.com:8080/path', 'other.com'];
+    expect(siteState('example.com', entries)).toEqual({ kind: 'hidden' });
+    expect(showSite('example.com', entries)).toEqual(['other.com']);
+  });
+
   it('is shown when no entry matches', () => {
     expect(siteState('mail.google.com', [])).toEqual({ kind: 'shown' });
   });
@@ -84,6 +90,19 @@ describe('addSite', () => {
 
   it('drops a path when the input has no scheme', () => {
     expect(addSite('news.site.org/path', [])).toEqual({ list: ['news.site.org'] });
+  });
+
+  it('drops the port and path from a bare site entry', () => {
+    expect(addSite('example.com:8080/path', [])).toEqual({ list: ['example.com'] });
+  });
+
+  it('rejects a duplicate written as a URL', () => {
+    expect(addSite('https://Example.com', ['example.com'])).toEqual({
+      error: 'Already in the list',
+    });
+    expect(addSite('example.com', ['https://www.Example.com:8080/path'])).toEqual({
+      error: 'Already in the list',
+    });
   });
 
   it('rejects an empty value and a value with a space', () => {
