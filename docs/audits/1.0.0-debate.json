@@ -1,0 +1,141 @@
+{
+  "head": "71d5cbf4fca3ff05dfc81c36b2f831b5a51ddef4",
+  "scope": "First release compared with the initial plan-only commit. Read-only local review. No comments published.",
+  "note": "Reviewer conclusions and priorities are preserved as returned. The audit adds its own probes, including a later real-browser DOM reproduction of the selection race the debate withdrew.",
+  "main": {
+    "schema": "debate-review.findings.v1",
+    "head": "71d5cbf4fca3ff05dfc81c36b2f831b5a51ddef4",
+    "verdict": "needs-attention",
+    "summary": "First-release audit of LocalPolish 1.0.0. No spec or standards file was found, so the Spec and Standards axes were skipped. I read the bridge (host.mjs, lib.mjs, install/uninstall, constants), the background (rewrite, sse, the cli/openai/anthropic providers, the background entrypoint), the content side (content entrypoint, controller, editable, idle, cleanup, prompts), the toolbar popup sites logic, wxt.config.ts and PRIVACY.md. Process cleanup looks sound: the CLI runs in its own process group with SIGTERM then SIGKILL, taskkill /T on Windows, the temp dir is removed on close, and disconnects and timeouts kill the run. Streaming handles CRLF, split frames, surrogate pairs and truncation (max_tokens/length). Text replacement checks the field is unchanged before writing and falls back to the clipboard, so I found no text-loss path. The one material issue is privacy: the Sites blocklist checks the frame's own location.hostname, so about:blank and srcdoc editor frames (where the content script is injected on purpose) are never blocked, and Fix while I type sends their text even on a hidden site. A smaller drift: the spellcheck-off skip promised in PRIVACY.md only reads the field's own attribute. Not checked: running the unit or e2e suites, or real CLIs. Reusable skill: 'mv3-native-messaging-release-audit', a checklist for auditing Chrome extensions that use a native-messaging bridge (frame and hostname gating with allFrames/matchAboutBlank, process-group cleanup, frame size limits, privacy-policy claims compared with the code). Worth writing only if more extensions like this are planned; otherwise none.",
+    "findings": [
+      {
+        "id": "F1",
+        "file": "src/entrypoints/content.ts",
+        "line_start": 67,
+        "line_end": 70,
+        "severity": "blocking",
+        "axis": "security",
+        "claim": "The Sites blocklist is checked against the frame's own location.hostname, so editors in about:blank or srcdoc iframes on a hidden site still run Fix while I type and send their text.",
+        "evidence": "The content script uses `allFrames: true, matchAboutBlank: true, matchOriginAsFallback: true`, so it runs inside about:blank and about:srcdoc frames, where `location.hostname` is the empty string. `isBlocked(location.hostname, settings.blocklist)` with '' never matches an entry, so `isIdleEnabled()` returns true. Trigger: the user adds a site to Sites, and that site uses an iframe-based rich editor (TinyMCE or CKEditor in iframe mode, for example) whose body is contentEditable. After a 3 second pause, idle.ts tryRun sends the whole field to the provider. PRIVACY.md says Fix while I type skips 'every site on the **Sites** list'.",
+        "recommendation": "Decide blocking on the top-level site. When location.hostname is empty or the frame is not the top frame, use the origin of `location.ancestorOrigins` (last entry), or fall back to `document.referrer`'s hostname, and apply the same host to both isEnabled and isIdleEnabled.",
+        "confidence": 0.75
+      },
+      {
+        "id": "F2",
+        "file": "src/content/editable.ts",
+        "line_start": 53,
+        "line_end": 53,
+        "severity": "non-blocking",
+        "axis": "correctness",
+        "claim": "The idle-field filter skips spellcheck-off fields only when the field itself has spellcheck=\"false\". It does not honour the value inherited from an ancestor, but PRIVACY.md promises that such fields are skipped.",
+        "evidence": "`if (el.getAttribute('spellcheck') === 'false') return false;` reads only the element's own attribute. Trigger: a page sets `spellcheck=\"false\"` on a wrapper (a form or container) around a textarea or contentEditable. That is the usual way to mark a whole area as code or secret input. The field inherits spellcheck off, but isIdleField returns true, so its text goes out after the idle pause. PRIVACY.md line 49: 'It skips ... fields with spellcheck off'.",
+        "recommendation": "Use the computed property, which follows inheritance: `if (!el.spellcheck) return false;`.",
+        "confidence": 0.6
+      }
+    ]
+  },
+  "challenge": {
+    "schema": "debate-review.debate.v1",
+    "head": "71d5cbf4fca3ff05dfc81c36b2f831b5a51ddef4",
+    "verdicts": [
+      {
+        "id": "F1",
+        "verdict": "confirm",
+        "reason": "Injected about:blank and srcdoc frames bypass the hostname blocklist and can send the focused editor's text through idle Fix.",
+        "evidence": "src/entrypoints/content.ts:28-30 enables frame injection; :67-70 checks only location.hostname. src/content/idle.ts:105-117 passes eligible fields to send(), and :183 posts their full text. A Node check importing the actual isBlocked returned blocked:true for https://hidden.example/editor and blocked:false for both about:blank and about:srcdoc with blocklist ['hidden.example']."
+      },
+      {
+        "id": "F2",
+        "verdict": "confirm",
+        "reason": "An inherited spellcheck=false value does not satisfy the own-attribute check, so the documented exclusion is incomplete.",
+        "evidence": "src/content/editable.ts:53 reads el.getAttribute('spellcheck') rather than the inherited property; :149-152 otherwise accepts an enabled textarea. A Node check calling the actual isIdleField with a mocked textarea having spellcheck:false and getAttribute() returning null printed 'inherited-spellcheck-off accepted: true'. PRIVACY.md:48-50 promises to skip fields with spellcheck off."
+      }
+    ],
+    "new_findings": [
+      {
+        "id": "D1",
+        "file": "src/content/editable.ts",
+        "line_start": 223,
+        "line_end": 226,
+        "severity": "blocking",
+        "axis": "correctness",
+        "claim": "Accept can overwrite newer rich-editor text because the paste path waits after validating the selection and never validates it again.",
+        "evidence": "src/content/editable.ts:216-219 checks the selected text and records the field before :225 awaits a 50 ms timer defined at :286-289. paste() then uses the current global selection at :247-252 without checking its text or containment in root. Trigger: a Draft.js or Lexical editor receives a draft update, or the user changes the selection, during that wait. The paste can replace newer text or affect another editor before the post-write check runs. A Node harness importing the actual applyReplacement with a mocked DOM changed the selected draft during the wait; output was 'text at paste: my newer unsaved draft', followed by 'apply result: { ok: true } final text: Old draft text.'. This reproduces the missing check with mocks; a real-browser reproduction remains unverified.",
+        "recommendation": "Immediately before dispatching paste, verify that the current selection belongs to the target editor and still contains the captured text, and that the target content has not changed during the wait; otherwise return changed without writing.",
+        "confidence": 0.87
+      },
+      {
+        "id": "D2",
+        "file": "bridge/host.mjs",
+        "line_start": 243,
+        "line_end": 247,
+        "severity": "blocking",
+        "axis": "correctness",
+        "claim": "The bridge cancels process-group kill escalation when the CLI leader exits, allowing surviving descendants to outlive cancellation or timeout.",
+        "evidence": "bridge/host.mjs:173-174 sends SIGTERM to the group and schedules SIGKILL after two seconds, but :243-244 clears that timer when the direct child closes; finish() also clears it at :185-188 and exits the host. Trigger: on macOS, a CLI has a descendant with independent stdio that ignores SIGTERM while the CLI itself terminates. An in-memory VM harness evaluated the actual host.mjs, mocked filesystem operations and CLI lookup, and launched harmless Node processes. After disconnect and 2.3 seconds it printed {\"hostExited\":true,\"cliTerminated\":\"SIGTERM\",\"descendantAliveAfterKillDeadline\":true}. The surviving test process was then killed.",
+        "recommendation": "Complete process-group cleanup before exiting the host. Do not cancel escalation solely because the group leader closed; kill or verify the remaining group, and add coverage for a descendant that ignores SIGTERM.",
+        "confidence": 0.96
+      }
+    ],
+    "summary": "Reusable skill: mv3-native-messaging-release-audit, covering frame privacy gates, editor replacement races and process-group shutdown. These checks recur in native-messaging extensions; worth writing if more such audits are planned. Next: No input needed; nothing remains running. Result: Reviewed source, tests, setup scripts and privacy/release docs. Both prior findings stand, with two new blocking defects. No files changed or paid providers called. Full unit, build and browser suites, Windows execution and real CLIs remain unverified."
+  },
+  "final": {
+    "schema": "debate-review.final.v1",
+    "head": "71d5cbf4fca3ff05dfc81c36b2f831b5a51ddef4",
+    "summary": "Not ready to ship. One privacy issue still blocks release: about:blank and srcdoc editor frames skip the Sites blocklist, so Fix while I type still sends their text on a site the user has hidden. Two non-blocking issues remain. The spellcheck-off skip ignores spellcheck set on a parent element. The bridge can leave a CLI descendant running if it ignores SIGTERM after the CLI itself exits. The paste-race claim for rich editors was dropped: it needs the editor to change within 50 ms of the Accept click, and it was only shown with mocks. Not run: unit, e2e, Windows or real CLIs. Reusable skill: mv3-native-messaging-release-audit (frame and hostname gating, process-group shutdown, privacy claims checked against code). Worth writing only if more native-messaging extensions are planned.",
+    "findings": [
+      {
+        "id": "F1",
+        "status": "agreed",
+        "severity": "blocking",
+        "file": "src/entrypoints/content.ts",
+        "line_start": 67,
+        "line_end": 70,
+        "claim": "The Sites blocklist is checked against the frame's own location.hostname. So editors inside about:blank or srcdoc iframes on a hidden site still run Fix while I type and send their text.",
+        "evidence": "The content script is declared with `allFrames: true, matchAboutBlank: true, matchOriginAsFallback: true` (lines 28-30), so it runs inside about:blank and srcdoc frames, where `location.hostname` is ''. isBlocked in src/core/settings.ts:125-133 compares the host with each entry by equality or `.rule` suffix, so '' never matches and isIdleEnabled returns true. Trigger: the user adds a site to Sites, and that site uses an iframe-mode rich editor (TinyMCE or CKEditor, for example). After the idle pause, the field text goes to the provider. PRIVACY.md:48-50 promises to skip every site on the Sites list.",
+        "recommendation": "Decide blocking by the top-level site. When location.hostname is empty or the frame is not the top frame, use the last entry of `location.ancestorOrigins` (or the hostname from document.referrer as a fallback). Use the same host for both isEnabled and isIdleEnabled.",
+        "debate_note": "The challenge confirmed this by calling the real isBlocked, which returns false for about:blank and about:srcdoc, so the finding stands.",
+        "axis": "security"
+      },
+      {
+        "id": "F2",
+        "status": "agreed",
+        "severity": "non-blocking",
+        "file": "src/content/editable.ts",
+        "line_start": 53,
+        "line_end": 53,
+        "claim": "The idle-field filter only skips a field when the field itself has spellcheck=\"false\". It ignores spellcheck turned off on a parent element, but PRIVACY.md says fields with spellcheck off are skipped.",
+        "evidence": "`if (el.getAttribute('spellcheck') === 'false') return false;` reads only the element's own attribute. Trigger: a page sets spellcheck=\"false\" on a form or container around a textarea or contentEditable, a common way to mark code or secret input. The field inherits spellcheck off, but isIdleField returns true and its text is sent after the idle pause. PRIVACY.md:49 lists 'fields with spellcheck off' as skipped.",
+        "recommendation": "Use the computed property, which follows inheritance: `if (!el.spellcheck) return false;`.",
+        "debate_note": "The challenge confirmed this with the real isIdleField and an inherited spellcheck=false field, so the finding stands as non-blocking.",
+        "axis": "correctness"
+      },
+      {
+        "id": "D1",
+        "status": "withdrawn",
+        "severity": "non-blocking",
+        "file": "src/content/editable.ts",
+        "line_start": 223,
+        "line_end": 226,
+        "claim": "Accept in Lexical or Draft.js editors waits 50 ms after checking the selection, then pastes without checking it again, so it could overwrite newer text.",
+        "evidence": "applyRich checks the selection at lines 216-218, awaits waitForRender (50 ms, lines 286-290), then paste() dispatches into the current selection at lines 247-258.",
+        "recommendation": "Check the selection and root content again before dispatching the paste.",
+        "debate_note": "Dropped because the trigger needs the editor content or selection to change within 50 ms of the user's own Accept click, right after the code focused the editor and set the selection. No real source of such a change was shown for the Lexical or Draft.js composers this path targets, and the only reproduction forced the change in a mocked DOM.",
+        "axis": "correctness"
+      },
+      {
+        "id": "D2",
+        "status": "agreed",
+        "severity": "non-blocking",
+        "file": "bridge/host.mjs",
+        "line_start": 243,
+        "line_end": 247,
+        "claim": "When the CLI process exits, the bridge cancels the SIGKILL follow-up for its process group. A descendant that ignores SIGTERM can then outlive a cancel or timeout.",
+        "evidence": "killChild sends SIGTERM to the group and schedules SIGKILL after 2 s (lines 173-174). But the child 'close' handler clears killTimer at line 244, and finish's done() clears it again at line 186 before the host exits. Trigger on macOS or Linux: the CLI starts a descendant with its own stdio that ignores SIGTERM, and the CLI exits on SIGTERM. A harness running the real host.mjs showed the host exited and the descendant was still alive after the kill deadline.",
+        "recommendation": "Do not cancel the SIGKILL just because the group leader closed. Send SIGKILL to the group (or check it is empty) before the host exits, and add a test with a descendant that ignores SIGTERM.",
+        "debate_note": "The challenge marked this blocking. The code path holds, but the trigger needs a CLI descendant that ignores SIGTERM and does not share the CLI's stdout, so it stays as a non-blocking cleanup gap.",
+        "axis": "correctness"
+      }
+    ]
+  }
+}

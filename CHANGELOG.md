@@ -6,6 +6,10 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+**For contributors**
+
+- Audit of 1.0.0 with confirmed findings, evidence, and a draft plan for the next release. No runtime changes.
+
 ## 1.0.0 — 2026-10-18
 
 The first release, as a zip on GitHub to load unpacked in Chrome.

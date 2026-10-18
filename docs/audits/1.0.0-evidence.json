@@ -1,0 +1,217 @@
+{
+  "audit": "LocalPolish 1.0.0",
+  "recordedAtCairo": "2026-10-18 21:03:48 EEST",
+  "timezone": "Africa/Cairo",
+  "release": {
+    "tag": "v1.0.0",
+    "commit": "71d5cbf4fca3ff05dfc81c36b2f831b5a51ddef4",
+    "url": "https://github.com/ashahinL/localpolish/releases/tag/v1.0.0",
+    "asset": "localpolish-1.0.0.zip",
+    "sha256": "c097e5bb315feb06ce97d92d6b11054b89471a3b805fec47b7cc4a40cd7326d7",
+    "zipBytes": 58035,
+    "expandedBytes": 147897,
+    "fileCount": 15,
+    "allFilesEqualFreshBuild": true
+  },
+  "environment": {
+    "os": "macOS",
+    "node": "26.10.0",
+    "npm": "11.19.1",
+    "claude": "2.1.300",
+    "codex": "0.162.1",
+    "grok": "1.0.62"
+  },
+  "checks": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "unit": {
+      "filesPassed": 20,
+      "testsPassed": 212,
+      "testsSkipped": 1,
+      "skippedGroup": "Windows installer, on macOS"
+    },
+    "prettierBeforeDocs": "passed",
+    "build": "passed",
+    "browser": {
+      "passed": 91
+    },
+    "npmAudit": {
+      "highPackageEntries": 2,
+      "scope": "development fixture dependencies",
+      "chain": "draft-js@0.11.7 -> immutable@3.7.6"
+    },
+    "npmAuditProduction": {
+      "vulnerabilities": 0
+    }
+  },
+  "github": {
+    "mainBranchProtection": "Branch not protected",
+    "mainBranchRules": [],
+    "repositoryRulesets": [],
+    "privateVulnerabilityReportingEnabled": true,
+    "releaseCommitActionsConclusions": ["success", "success"],
+    "workflow": {
+      "path": ".github/workflows/test.yml",
+      "event": "push",
+      "runner": "ubuntu-latest",
+      "node": 24
+    }
+  },
+  "probeConditions": {
+    "network": "fake keys and locally controlled provider responses only",
+    "browser": "released extension loaded from extracted zip in a fresh Chromium profile",
+    "module": "actual source functions loaded through Vite; Chrome storage and fetch mocked at their boundaries",
+    "editor": "actual source functions and real Chromium DOM; selection-race fixture uses a data-lexical-editor attribute to select the delayed-paste path and a paste handler on the other editor, not a live third-party composer",
+    "process": "actual bridge and harmless fake CLI descendants, all test processes cleaned up",
+    "installer": "temporary home directory and a harmless command-substitution marker, no live bridge registration changed",
+    "settingsUi": "released options page with a rejected Chrome storage boundary"
+  },
+  "probes": {
+    "module-probes": [
+      {
+        "probe": "remote-http-key",
+        "captured": {
+          "url": "http://127.audit.invalid/v1/chat/completions",
+          "authorization": "Bearer fake-audit-key"
+        }
+      },
+      {
+        "probe": "content-filtered-answer-accepted",
+        "events": [
+          {
+            "type": "chunk",
+            "text": "partial answer"
+          },
+          {
+            "type": "done",
+            "text": "partial answer"
+          }
+        ]
+      },
+      {
+        "probe": "concurrent-settings",
+        "actual": {
+          "idleFix": true,
+          "defaultMode": "shorter"
+        },
+        "expected": {
+          "idleFix": false,
+          "defaultMode": "shorter"
+        }
+      },
+      {
+        "probe": "invalid-storage",
+        "model": null,
+        "blocklistError": "Cannot read properties of null (reading 'trim')"
+      },
+      {
+        "probe": "literal-text-tags",
+        "input": "<text>hello</text>",
+        "actual": "hello"
+      },
+      {
+        "probe": "emoji-loss",
+        "input": "hi 👍🏽 🇪🇬",
+        "output": "hi 👍",
+        "missing": []
+      }
+    ],
+    "browser-probes": [
+      {
+        "probe": "block-existing-marker",
+        "markerStillVisible": true,
+        "newRequestsAfterBlock": 1
+      },
+      {
+        "probe": "block-parent-cross-origin-frame",
+        "blockedParent": "localhost",
+        "childHost": "127.0.0.1",
+        "newRequests": 1
+      },
+      {
+        "probe": "shortcut-with-focused-frame",
+        "topFrameToast": ["Click into a text field first."],
+        "childPopupCount": 1
+      },
+      {
+        "probe": "close-popup-pending-idle",
+        "popupClosed": true,
+        "requestCancelled": false
+      }
+    ],
+    "editor-probes": [
+      {
+        "probe": "inherited-spellcheck-off",
+        "browserSpellcheck": false,
+        "idleAllowed": true
+      },
+      {
+        "probe": "rich-stale-line-breaks",
+        "captured": "hello world\nline two",
+        "beforeAccept": "hello\n\nworld line two",
+        "applied": {
+          "ok": true
+        },
+        "afterAccept": "Hello world\n\nline two"
+      },
+      {
+        "probe": "rejected-line-break-only",
+        "result": {
+          "ok": true
+        },
+        "actual": "hello\nworld",
+        "expected": "hello\nworld"
+      },
+      {
+        "probe": "selection-moved-during-accept",
+        "applyResult": {
+          "ok": false,
+          "reason": "rejected"
+        },
+        "targetEditor": "old draft text",
+        "otherEditor": "Old draft text",
+        "otherEditorExpected": "newer unsaved draft"
+      }
+    ],
+    "bridge-probes": [
+      {
+        "probe": "descendant-ignores-term",
+        "bridgeExited": true,
+        "descendantAliveAfterEscalationDeadline": true
+      }
+    ],
+    "install-probes": [
+      {
+        "probe": "mac-wrapper-path-expansion",
+        "folderName": "repo-$(touch expanded)",
+        "commandSubstitutionRan": true,
+        "wrapperExit": 1
+      }
+    ],
+    "settings-ui-probes": [
+      {
+        "probe": "test-after-failed-save",
+        "displayedModel": "gpt-6.1-sol",
+        "backgroundTestsSent": 1,
+        "saveError": "Could not save: audit storage failure"
+      },
+      {
+        "probe": "options-idle-setting",
+        "idleToggleCount": 0,
+        "mentionsIdleSetting": 0
+      }
+    ],
+    "site-entry-probe": {
+      "input": "example.com:8080/path",
+      "stored": ["example.com:8080"],
+      "blocksHostname": false
+    }
+  },
+  "notVerified": [
+    "fresh Windows execution",
+    "real paid provider rewrites",
+    "fresh signed-in site testing",
+    "full accessibility or visual audit"
+  ],
+  "reproductionNotes": "The Markdown audit gives inputs, triggers, source anchors, and acceptance checks. Probe harnesses ran in temporary directories; no runtime source was modified. Outputs describe the controlled fixtures, not a claim of exploitation on a live site."
+}
