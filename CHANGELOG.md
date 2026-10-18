@@ -6,6 +6,10 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+**New**
+
+- The rewrite popup has a **Changes | Final** switch. Final shows only the new text, and the popup switches to it when Accept and Copy both fail (F02).
+
 **Safer**
 
 - Content scripts cannot read local storage and receive only site, idle Fix, and default mode settings, keeping API keys in trusted extension contexts (F03).

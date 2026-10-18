@@ -10,12 +10,18 @@ import {
   type Note,
   type PopupState,
   type Tab,
+  type View,
 } from '../popupState';
 
 const TABS: Array<[Tab, string]> = [
   ['fix', 'Fix'],
   ['rephrase', 'Rephrase'],
   ['shorter', 'Shorter'],
+];
+
+const VIEWS: Array<[View, string]> = [
+  ['changes', 'Changes'],
+  ['final', 'Final'],
 ];
 
 const CHIPS: Array<[Choice, string]> = [
@@ -38,6 +44,7 @@ export interface PopupProps {
   isMac: boolean;
   onTab(tab: Tab): void;
   onChoice(choice: Choice): void;
+  onView(view: View): void;
   onClose(): void;
   onAccept(): void;
   onCopy(): void;
@@ -74,6 +81,7 @@ export function Popup(props: PopupProps) {
   const notes = popupNotes(state, isMac);
   // No pressed tab or chip names the shown answer, so the body says which one it is.
   const showCaption = tabOf(state.choice) !== state.tab;
+  const showViews = state.phase === 'done' && !isUnchanged(state);
 
   return (
     <div class="lp-popup" ref={ref} role="dialog" aria-label="LocalPolish" tabIndex={-1}>
@@ -110,6 +118,21 @@ export function Popup(props: PopupProps) {
               class="lp-chip"
               aria-pressed={state.choice === choice}
               onClick={() => props.onChoice(choice)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {showViews && (
+        <div class="lp-views" role="group" aria-label="View">
+          {VIEWS.map(([view, label]) => (
+            <button
+              key={view}
+              type="button"
+              class="lp-view"
+              aria-pressed={state.view === view}
+              onClick={() => props.onView(view)}
             >
               {label}
             </button>
@@ -168,6 +191,7 @@ function Body({ state }: { state: PopupState }) {
     );
   }
   if (isUnchanged(state)) return <p class="lp-muted">No changes needed.</p>;
+  if (state.view === 'final') return <div class="lp-text lp-final">{state.result}</div>;
   return (
     <div class="lp-text lp-diff">
       {wordDiff(state.input, state.result).map((part, index) => {

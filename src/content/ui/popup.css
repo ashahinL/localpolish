@@ -135,6 +135,7 @@ button:focus-visible {
 
 .lp-tab,
 .lp-chip,
+.lp-view,
 .lp-close,
 .lp-button {
   border-radius: 6px;
@@ -156,16 +157,35 @@ button:focus-visible {
 
 .lp-tab:hover,
 .lp-chip:hover,
+.lp-view:hover,
 .lp-close:hover {
   background: var(--lp-hover);
 }
 
 .lp-tab[aria-pressed='true'],
-.lp-chip[aria-pressed='true'] {
+.lp-chip[aria-pressed='true'],
+.lp-view[aria-pressed='true'] {
   background: var(--lp-accent-soft);
   color: var(--lp-accent-text);
   border-color: transparent;
   font-weight: 500;
+}
+
+/* The popup is a flex column, so the switch sits at the right above the body. */
+.lp-views {
+  display: flex;
+  align-self: flex-end;
+  gap: 2px;
+  margin: 6px 10px 0;
+  padding: 2px;
+  border: 1px solid var(--lp-border);
+  border-radius: 8px;
+}
+
+.lp-view {
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--lp-muted);
 }
 
 .lp-close {

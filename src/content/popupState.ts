@@ -5,6 +5,8 @@ export type Phase = 'streaming' | 'done' | 'error';
 export type AcceptFailure = 'changed' | 'rejected';
 export type Tab = 'fix' | 'rephrase' | 'shorter';
 export type Choice = 'fix' | 'shorter' | 'rephrase:keep' | `rephrase:${Tone}`;
+/** How a changed answer is shown: as a word diff, or as the plain new text. */
+export type View = 'changes' | 'final';
 
 export interface PopupState {
   input: string;
@@ -19,10 +21,12 @@ export interface PopupState {
   acceptFailure: AcceptFailure | null;
   acceptCopied: boolean;
   copy: 'idle' | 'copied' | 'failed';
+  view: View;
 }
 
 export type PopupAction =
   | { type: 'tab'; tab: Tab }
+  | { type: 'view'; view: View }
   | { type: 'start'; choice: Choice }
   | { type: 'retry' }
   | { type: 'restore'; choice: Choice }
@@ -56,6 +60,7 @@ export function initialState(input: string, choice: Choice): PopupState {
     acceptFailure: null,
     acceptCopied: false,
     copy: 'idle',
+    view: 'changes',
   };
 }
 
@@ -63,16 +68,20 @@ export function popupReducer(state: PopupState, action: PopupAction): PopupState
   switch (action.type) {
     case 'tab':
       return { ...state, tab: action.tab };
+    case 'view':
+      return { ...state, view: action.view };
     case 'start':
       return {
         ...initialState(state.input, action.choice),
         cache: without(state.cache, action.choice),
+        view: state.view,
       };
     case 'retry':
       return {
         ...initialState(state.input, state.choice),
         tab: state.tab,
         cache: without(state.cache, state.choice),
+        view: state.view,
       };
     case 'restore': {
       const result = state.cache[action.choice];
@@ -80,6 +89,7 @@ export function popupReducer(state: PopupState, action: PopupAction): PopupState
       return {
         ...initialState(state.input, action.choice),
         cache: state.cache,
+        view: state.view,
         phase: 'done',
         result,
       };
@@ -100,7 +110,13 @@ export function popupReducer(state: PopupState, action: PopupAction): PopupState
       return { ...state, phase: 'error', error: action.message };
     case 'accept-failed':
       if (state.phase !== 'done') return state;
-      return { ...state, acceptFailure: action.reason, acceptCopied: action.copied };
+      // Without a copy the user must select the new text, so show it without the deleted words.
+      return {
+        ...state,
+        acceptFailure: action.reason,
+        acceptCopied: action.copied,
+        view: action.copied ? state.view : 'final',
+      };
     case 'copy':
       return { ...state, copy: action.copy };
   }

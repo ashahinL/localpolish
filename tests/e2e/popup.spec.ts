@@ -155,6 +155,71 @@ test('accept on changed text keeps the popup open with a note', async ({ page })
   await expect(page.locator('#ta')).toHaveValue('something else');
 });
 
+test('Final shows only the new text', async ({ page }) => {
+  await typeAndSelectAll(page, 'i has went home');
+  await openPopup(page, [SUCCESS]);
+  const popup = page.locator('.lp-popup');
+  const changes = popup.getByRole('button', { name: 'Changes', exact: true });
+  const final = popup.getByRole('button', { name: 'Final', exact: true });
+  await expect(changes).toHaveAttribute('aria-pressed', 'true');
+  await expect(popup.locator('del').first()).toBeVisible();
+
+  await final.click();
+  await expect(final).toHaveAttribute('aria-pressed', 'true');
+  await expect(changes).toHaveAttribute('aria-pressed', 'false');
+  await expect(popup.locator('.lp-body')).toHaveText('I went home.');
+  await expect(popup.locator('del')).toHaveCount(0);
+  await expect(popup.locator('ins')).toHaveCount(0);
+});
+
+test('the view stays when the answer changes', async ({ page }) => {
+  await typeAndSelectAll(page, 'i has went home');
+  await openPopup(page, [SUCCESS, [{ type: 'done', text: 'Home.' }]]);
+  const popup = page.locator('.lp-popup');
+  const final = popup.getByRole('button', { name: 'Final', exact: true });
+  await final.click();
+  await expect(popup.locator('.lp-body')).toHaveText('I went home.');
+
+  await popup.getByRole('button', { name: 'Shorter' }).click();
+  await expect(popup.locator('.lp-body')).toHaveText('Home.');
+  await expect(final).toHaveAttribute('aria-pressed', 'true');
+  await expect(popup.locator('del')).toHaveCount(0);
+});
+
+test('a failed accept and copy switches to Final', async ({ page }) => {
+  await typeAndSelectAll(page, 'i has went home');
+  await openPopup(page, [SUCCESS]);
+  const popup = page.locator('.lp-popup');
+  const accept = popup.getByRole('button', { name: 'Accept' });
+  await expect(accept).toBeEnabled();
+  await expect(popup.getByRole('button', { name: 'Changes', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error('blocked')) },
+    });
+    const execCommand = document.execCommand.bind(document);
+    document.execCommand = (command, ...rest) =>
+      command === 'copy' ? false : execCommand(command, ...rest);
+  });
+  await page.locator('#ta').evaluate((el) => {
+    if (!(el instanceof HTMLTextAreaElement)) throw new Error('expected textarea');
+    el.value = 'something else';
+  });
+
+  await accept.click();
+  await expect(popup.locator('.lp-notes')).toContainText('Copying failed too.');
+  await expect(popup.getByRole('button', { name: 'Final', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(popup.locator('.lp-body')).toHaveText('I went home.');
+  await expect(popup.locator('del')).toHaveCount(0);
+});
+
 test('Shorter mode flags a result over 280 characters', async ({ page }) => {
   await typeAndSelectAll(page, 'make this shorter please');
   await openPopup(page, [[{ type: 'done', text: 'a'.repeat(300) }]], { defaultMode: 'shorter' });

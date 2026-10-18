@@ -15,6 +15,7 @@ import {
   type PopupAction,
   type PopupState,
   type Tab,
+  type View,
 } from './popupState';
 import { Popup } from './ui/Popup';
 import { isInsideUi, layer } from './ui/root';
@@ -148,6 +149,7 @@ export function createController(deps: ControllerDeps): Controller {
           else choose(s, tab);
         }),
         onChoice: guarded((choice: Choice) => choose(s, choice)),
+        onView: guarded((view: View) => dispatch(s, { type: 'view', view })),
         onClose: guarded(close),
         onAccept: () => settle(accept(s)),
         onCopy: () => settle(copy(s)),

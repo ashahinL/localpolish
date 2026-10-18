@@ -49,7 +49,7 @@ describe('popupReducer', () => {
     expect(run(done, { type: 'chunk', text: 'x' }, { type: 'error', message: 'gone' })).toBe(done);
   });
 
-  it('resets the output but keeps the saved answers when a new choice starts', () => {
+  it('resets the output but keeps the saved answers and the view when a new choice starts', () => {
     const failedAccept = run(
       fresh,
       { type: 'done', text: 'I went home.' },
@@ -60,6 +60,7 @@ describe('popupReducer', () => {
     expect(restarted).toEqual({
       ...initialState('i has went home', 'rephrase:formal'),
       cache: { fix: 'I went home.' },
+      view: 'final',
     });
   });
 
@@ -80,6 +81,25 @@ describe('popupReducer', () => {
       copied: true,
     });
     expect(copied.acceptCopied).toBe(true);
+  });
+
+  it('shows the changes by default and switches to the final text', () => {
+    const done = run(fresh, { type: 'done', text: 'I went home.' });
+    expect(done.view).toBe('changes');
+    const final = popupReducer(done, { type: 'view', view: 'final' });
+    expect(final.view).toBe('final');
+    expect(final.result).toBe('I went home.');
+    expect(popupReducer(final, { type: 'view', view: 'changes' }).view).toBe('changes');
+  });
+
+  it('switches to the final text only when an accept failed and copying failed too', () => {
+    const done = run(fresh, { type: 'done', text: 'I went home.' });
+    expect(
+      popupReducer(done, { type: 'accept-failed', reason: 'rejected', copied: true }).view,
+    ).toBe('changes');
+    expect(
+      popupReducer(done, { type: 'accept-failed', reason: 'rejected', copied: false }).view,
+    ).toBe('final');
   });
 
   it('stores the copy button state', () => {
@@ -159,6 +179,18 @@ describe('choosing a tab or chip', () => {
     expect(retrying.cache).toEqual({});
     const redone = popupReducer(retrying, { type: 'done', text: 'I went home!' });
     expect(redone.cache).toEqual({ fix: 'I went home!' });
+  });
+
+  it('keeps the view across a new, retried or saved answer', () => {
+    const final = popupReducer(fixed, { type: 'view', view: 'final' });
+    const shorter = run(
+      final,
+      { type: 'start', choice: 'shorter' },
+      { type: 'done', text: 'Home.' },
+    );
+    expect(shorter.view).toBe('final');
+    expect(popupReducer(shorter, { type: 'retry' }).view).toBe('final');
+    expect(click(shorter, 'fix')[1].view).toBe('final');
   });
 
   it('does not save an answer that ended in an error', () => {

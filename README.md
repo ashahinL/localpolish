@@ -178,7 +178,7 @@ Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS.
 
 **Fix while I type** is on by default. When you stop typing for 3 seconds in a message field, LocalPolish runs a Fix in the background, and a small marker shows how many fixes it found. Click the marker to see the diff. Turn it off with the **Fix while I type** switch in the toolbar popup.
 
-The rewrite popup next to the field has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green.
+The rewrite popup next to the field has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green. Click **Final** above the diff to see only the new text, ready to select. **Changes** brings the diff back. The view you pick stays while the popup is open.
 
 **Accept** puts the new text in the field. The site's own Undo still works. Press `Cmd+Z` to bring the old text back. **Copy** copies the new text. **Retry** asks again. Esc closes the popup. `Cmd+Enter` accepts the text. `Ctrl+Enter` does the same.
 
@@ -186,7 +186,7 @@ The rewrite popup next to the field has three tabs: **Fix**, **Rephrase**, and *
 
 A warning lists any link, @mention, #hashtag, code, or emoji that the rewrite dropped. Another warning shows if the rewrite changes Arabic script into another script.
 
-If the site does not accept the change, the popup copies the new text and asks you to paste it with `Cmd+V`. Off macOS, that note says `Ctrl+V`.
+If the site does not accept the change, the popup copies the new text and asks you to paste it with `Cmd+V`. Off macOS, that note says `Ctrl+V`. If copying fails too, the popup switches to **Final** so you can select the new text and copy it yourself.
 
 To hide LocalPolish on the site you are on, turn off the **Show on** switch for it in the toolbar popup. This adds the exact hostname to **Sites**. The **Sites** tab, or the options page, edits the whole list. Subdomains of a listed host are included. The button and Fix while I type stay off on those sites, including inside frames. The shortcut still works on them.
 

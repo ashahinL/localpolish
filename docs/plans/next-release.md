@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: in progress. T15-T17 are verified and committed. T18c is verified and committed. T18a and T18b continue automatically.
+Status: in progress. T15-T17 are verified and committed. T18c is verified and committed. T18a is verified and committed. T18b continues automatically.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -75,7 +75,7 @@ Changes to the plan, compared with Sol's draft:
 
 ## T18: product additions (after T15-T17)
 
-- [ ] **T18a. Final-text view in the rewrite popup** (F02). Art lane (Claude Opus). Brief: [T18a-final-view.md](../briefs/T18a-final-view.md). Depends on: T15c.
+- [x] **T18a. Final-text view in the rewrite popup** (F02). Art lane (Claude Opus). Brief: [T18a-final-view.md](../briefs/T18a-final-view.md). Depends on: T15c.
 - [ ] **T18b. First-run setup** (F01). Art lane (Claude Opus). Brief: [T18b-first-run.md](../briefs/T18b-first-run.md). Fix while I type stays on by default (owner, 18 October 2026). Depends on: T16b.
 - [x] **T18c. Keep API keys out of content scripts** (F03). Sol high. Brief: [T18c-key-isolation.md](../briefs/T18c-key-isolation.md). Depends on: T15a, T15b, T16a.
 
@@ -131,3 +131,5 @@ Changes to the plan, compared with Sol's draft:
 - T17a: updated privacy claims, Sites labels, release steps, and dated benchmark notes. Lint and typecheck passed; 64 targeted unit tests passed across 4 files. Changed-file formatting passed. All gates passed: 262 unit tests, 2 platform-specific skips, and 111 browser tests. Version and benchmark numbers are unchanged. Reusable skill: none.
 
 - T18c: the orchestrator's Chromium preflight confirmed that restricting local storage to trusted contexts rejects content-world reads and suppresses storage change events. The background now applies that restriction at every worker start and sends only blocklist, idle Fix, and default mode settings to content scripts, with change notices to all tabs. Lint and typecheck passed; 14 targeted unit tests passed in 1 file. Added 1 browser regression using the extension's actual CDP execution context and a bearer-key assertion against the mock server. All gates passed: 269 unit tests, 2 platform-specific skips, and 112 browser tests. The real content-world storage and live-settings regression passed. Version unchanged. Reusable skill: none.
+
+- T18a: all gates passed, with 272 unit tests, 2 platform-specific skips, and 115 browser tests. Changes and Final were checked in light and dark mode, including a 320-pixel viewport. The view persists across answers and opens automatically after failed Accept and Copy. Reusable skill: none.
