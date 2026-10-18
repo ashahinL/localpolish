@@ -688,6 +688,17 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-mark')).toHaveCount(1);
   });
 
+  test('a grey spinner shows while the request runs', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    await expect(page.getByRole('button', { name: 'LocalPolish: checking' })).toBeVisible();
+    await page.clock.fastForward(FAKE_REPLY_MS);
+    await expect(page.getByRole('button', { name: 'LocalPolish: 3 fixes' })).toBeVisible();
+    await expect(page.locator('.lp-mark-busy')).toHaveCount(0);
+  });
+
   test('an unchanged fix shows no marker', async ({ page }) => {
     const text = 'nothing needs a fix today';
     await startIdle(page, [[{ type: 'done', text }]]);

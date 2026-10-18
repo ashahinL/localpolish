@@ -153,6 +153,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: typing keeps the count and dims the marker when the text changed; a click or the button/shortcut reuses a fresh answer or the in-flight request, and one field never runs two requests at once.
   - [x] **T13d.** The marker stays until the issues are gone.
   - Built: opening, closing or copying from the popup keeps the marker; it goes when the field holds the fix (Accept or a pasted copy). Any Accept settles that text, so it never starts another idle request.
+  - Built later: a grey spinning ring sits at the marker spot while a request runs; clicking it waits on that request.
 
 ## Later (not MVP, keep the design open)
 

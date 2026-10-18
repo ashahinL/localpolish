@@ -1,7 +1,7 @@
 interface IdleMarkProps {
   top: number;
   left: number;
-  error: boolean;
+  tone: 'fixes' | 'error' | 'busy';
   stale: boolean;
   text: string;
   title?: string;
@@ -12,18 +12,17 @@ interface IdleMarkProps {
 export function IdleMark({
   top,
   left,
-  error,
+  tone,
   stale,
   text,
   title,
   ariaLabel,
   onActivate,
 }: IdleMarkProps) {
-  const tone = error ? 'lp-mark-error' : 'lp-mark-fixes';
   return (
     <button
       type="button"
-      class={stale ? `lp-mark ${tone} lp-mark-stale` : `lp-mark ${tone}`}
+      class={stale ? `lp-mark lp-mark-${tone} lp-mark-stale` : `lp-mark lp-mark-${tone}`}
       style={{ top: `${top}px`, left: `${left}px` }}
       title={title}
       aria-label={ariaLabel}

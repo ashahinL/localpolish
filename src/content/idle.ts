@@ -125,6 +125,8 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     }
     slot.lastFull = full;
     slot.runningText = full;
+    marked.add(el);
+    renderMarks();
     let resolveOutcome: (outcome: Outcome) => void = () => {};
     const promise = new Promise<Outcome>((resolve) => {
       resolveOutcome = resolve;
@@ -147,6 +149,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       if (!outcome) {
         // Cancelled: do not record an error marker or start the queued run.
         slot.pending = false;
+        renderMarks();
         return;
       }
       if (!el.isConnected) {
@@ -222,13 +225,13 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   function activate(el: HTMLElement): void {
     const slot = slots.get(el);
     const result = slot?.result;
-    if (!slot || !result) return;
+    if (!slot || (!result && !slot.running)) return;
     const current = fieldText(el);
-    if ('error' in result) {
+    if (result && 'error' in result) {
       deps.openPopup(wholeFieldTarget(el), { error: result.error });
       return;
     }
-    if (result.sent === current) {
+    if (result && !slot.running && result.sent === current) {
       deps.openPopup(wholeFieldTarget(el), { fixed: result.fixed });
       return;
     }
@@ -284,17 +287,22 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     }
     const items = [];
     for (const el of marked) {
-      const result = slots.get(el)?.result;
-      if (!el.isConnected || !result) {
-        const slot = slots.get(el);
+      const slot = slots.get(el);
+      const result = slot?.result;
+      if (!el.isConnected || !slot || (!result && !slot.running)) {
         if (slot && !el.isConnected) drop(el, slot);
         else marked.delete(el);
         continue;
       }
+      if (slot.running) {
+        const spot = markSpot(el);
+        if (spot) items.push({ el, result: undefined, ...spot });
+        continue;
+      }
+      if (!result) continue;
       // Gone once the field holds the fix, by Accept or by pasting a copied fix.
       if ('fixed' in result && fieldText(el).trim() === result.fixed.trim()) {
-        const slot = slots.get(el);
-        if (slot) slot.result = undefined;
+        slot.result = undefined;
         marked.delete(el);
         continue;
       }
@@ -313,13 +321,25 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         null,
         items.map((item) => {
           const mark = item.result;
+          if (!mark) {
+            return h(IdleMark, {
+              key: idOf(item.el),
+              top: item.top,
+              left: item.left,
+              tone: 'busy',
+              stale: false,
+              text: '',
+              ariaLabel: 'LocalPolish: checking',
+              onActivate: guarded(() => activate(item.el)),
+            });
+          }
           const stale = fieldText(item.el) !== mark.sent;
           if ('error' in mark) {
             return h(IdleMark, {
               key: idOf(item.el),
               top: item.top,
               left: item.left,
-              error: true,
+              tone: 'error',
               stale,
               text: '!',
               title: mark.error,
@@ -331,7 +351,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
             key: idOf(item.el),
             top: item.top,
             left: item.left,
-            error: false,
+            tone: 'fixes',
             stale,
             text: mark.count > 9 ? '9+' : String(mark.count),
             ariaLabel: `LocalPolish: ${mark.count} ${mark.count === 1 ? 'fix' : 'fixes'}`,
