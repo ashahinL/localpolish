@@ -1,18 +1,13 @@
 export function LogoIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m12 3 1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z" />
-      <path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" />
+    <svg viewBox="0 0 128 128" width="28" height="28" aria-hidden="true">
+      <rect x="2" y="2" width="124" height="124" rx="28" fill="#2563EB" />
+      <path
+        fill="#fff"
+        d="M42 16Q64 11 86 16L80 36Q93 51 97 68Q83 92 64 118Q45 92 31 68Q35 51 48 36Z"
+      />
+      <rect x="59" y="42" width="10" height="70" rx="4" fill="#2563EB" />
+      <circle cx="64" cy="66" r="10" fill="#2563EB" />
     </svg>
   );
 }

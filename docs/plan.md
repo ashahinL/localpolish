@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: T0-T13d done. T14 (toolbar popup) in progress.
+Status: T0-T14 done.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -156,7 +156,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: opening, closing or copying from the popup keeps the marker; it goes when the field holds the fix (Accept or a pasted copy). Any Accept settles that text, so it never starts another idle request.
   - Built later: a grey spinning ring sits at the marker spot while a request runs; clicking it waits on that request.
 
-- [ ] **T14. Toolbar popup** (Grok, feature lane: grok-4.7 at high effort, one subtask after another). Decided with the user on 2026-10-18: the toolbar (browser action) popup holds every option from the options page, with layout Option A (tabs). The design is in [docs/design/popup/](design/popup/): `popup.html` is a clickable mockup, `notes.md` has the layout and the assumptions, and the PNGs show each tab and state.
+- [x] **T14. Toolbar popup** (Grok, feature lane: grok-4.7 at high effort, one subtask after another). Decided with the user on 2026-10-18: the toolbar (browser action) popup holds every option from the options page, with layout Option A (tabs). The design is in [docs/design/popup/](design/popup/): `popup.html` is a clickable mockup, `notes.md` has the layout and the assumptions, and the PNGs show each tab and state.
   - Size 360 × 600. Always visible: a header (name, a "Saved" note, a gear that opens the full options page), two switches (**Fix while I type**, **Show on <this site>**), and the tabs **Home · Provider · Sites · About**.
   - Home: the provider, model and effort at a glance with a status pill, Test connection, the bridge error with `npm run bridge:install` when it is missing, and the default mode. Provider: a compact provider picker and every provider form (the options page components, shared). Sites: the blocklist. About: the shortcut, Change shortcut, a link to all options.
   - Same tokens, type and spacing as the options page, light and dark (`prefers-color-scheme`). The options page stays and is linked from the gear and About.
@@ -179,7 +179,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: 16 stubbed tests in `tests/e2e/action-popup.spec.ts` (switches, unsupported page, bridge hint and Provider dot, Test connection, provider fields, bridge rows, Sites add/duplicate/remove, Hide on this tab, default mode, About, arrow keys, 360 px width) and a real-extension "toolbar popup Test connection" test in `extension.spec.ts`.
   - [x] **T14i.** Hover help instead of subtitles (asked for on 2026-10-18, runs before T14h). The header tagline and the plain-text descriptions under the two switches become a small custom tooltip on their labels. It shows after the pointer rests for 2 s (one named constant, `HOVER_DELAY_MS`), at once on keyboard focus, and closes on Escape. It stays the `aria-describedby` text. The "Hidden by {rule}. Edit in Sites" line stays visible because it holds a button. Brief: [T14i](briefs/T14i-popup-hover-help.md).
   - Built: `src/popup/Tooltip.tsx` (`HOVER_DELAY_MS = 2000`) on the header title (now a tab stop), the Fix while I type label and the site label. The tooltip stays in the DOM as the switch's `aria-describedby` text, opens at once when its switch gets keyboard focus, and closes on Escape or pointer leave. e2e: the 2 s hover test uses `page.clock`; the old subtitle checks now read the accessible description.
-  - [ ] **T14h.** Extension icon: the white nib on a royal-blue tile, picked by the user on 2026-10-18. The PNGs are in `public/icon/` and the SVG sources in [docs/design/icon/](design/icon/). Wire `icons` and `action.default_icon` in the manifest, replace the placeholder sparkle in the popup header with the nib, and fix the tab hover style. Brief: [T14h](briefs/T14h-extension-icon.md).
+  - [x] **T14h.** Extension icon: the white nib on a royal-blue tile, picked by the user on 2026-10-18. The PNGs are in `public/icon/` and the SVG sources in [docs/design/icon/](design/icon/). Wire `icons` and `action.default_icon` in the manifest, replace the placeholder sparkle in the popup header with the nib, and fix the tab hover style. Brief: [T14h](briefs/T14h-extension-icon.md).
+  - Built: `icons` (16, 32, 48, 128) and `action.default_icon` (16, 32) in `wxt.config.ts`; the popup header shows the nib icon as an inline SVG. A hovered tab keeps its underline, and the selected tab keeps its accent.
 
 ## Later (not MVP, keep the design open)
 

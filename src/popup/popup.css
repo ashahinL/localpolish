@@ -183,9 +183,6 @@ select:focus-visible {
 .logo {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #fff;
   display: grid;
   place-items: center;
   flex: none;
@@ -417,10 +414,18 @@ span.tip.on {
 
 .tab:hover:not(:disabled) {
   color: var(--text);
+  border-color: transparent;
+  border-bottom-color: transparent;
 }
 
 .tab[aria-selected='true'] {
   color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab[aria-selected='true']:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: transparent;
   border-bottom-color: var(--accent);
 }
 
