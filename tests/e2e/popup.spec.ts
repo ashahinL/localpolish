@@ -699,6 +699,25 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-mark-busy')).toHaveCount(0);
   });
 
+  test('deleting letters in Draft.js after Accept runs again', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'I went home today.' }],
+      [{ type: 'done', text: 'I went home today.' }],
+    ]);
+    await page.locator('#draft .public-DraftEditor-content').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await page.locator('.lp-mark').click();
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('.lp-popup')).toHaveCount(0);
+
+    await page.keyboard.press('End');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
+    await pause(page);
+    expect(await requests(page)).toBe(2);
+  });
+
   test('an unchanged fix shows no marker', async ({ page }) => {
     const text = 'nothing needs a fix today';
     await startIdle(page, [[{ type: 'done', text }]]);

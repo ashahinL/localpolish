@@ -55,7 +55,10 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   let nextId = 1;
   let follow: ReturnType<typeof setInterval> | undefined;
 
-  document.addEventListener('input', guarded(onInput), true);
+  // Draft.js (X) handles Backspace, Delete and paste itself, so those edits fire no input event.
+  for (const type of ['input', 'keyup', 'paste', 'cut', 'drop']) {
+    document.addEventListener(type, guarded(onInput), true);
+  }
   document.addEventListener('focusin', guarded(reposition), true);
   window.addEventListener('scroll', guarded(reposition), { capture: true, passive: true });
   window.addEventListener('resize', guarded(reposition));
