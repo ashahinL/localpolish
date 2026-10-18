@@ -158,9 +158,10 @@ test('the site switch hides and shows mail.google.com', async ({ page }) => {
 
   await toggle.click();
   await expect.poll(async () => (await stored(page))?.blocklist).toEqual(['mail.google.com']);
+  await expect(toggle).toHaveAccessibleDescription('Hidden here. The shortcut still works');
   await expect(
     page.getByText('Hidden here. The shortcut still works', { exact: true }),
-  ).toBeVisible();
+  ).toBeHidden();
 
   await toggle.click();
   await expect.poll(async () => (await stored(page))?.blocklist).toEqual([]);
@@ -180,9 +181,10 @@ test('a browser page disables the site switch', async ({ page }) => {
   await openPopup(page, { tabUrl: 'chrome://extensions/' });
   const toggle = page.getByRole('switch', { name: 'This page' });
   await expect(toggle).toBeDisabled();
+  await expect(toggle).toHaveAccessibleDescription('LocalPolish does not run on this page');
   await expect(
     page.getByText('LocalPolish does not run on this page', { exact: true }),
-  ).toBeVisible();
+  ).toBeHidden();
 });
 
 test('a missing bridge shows the install hint and marks Provider', async ({ page }) => {
@@ -304,4 +306,41 @@ test('arrow keys move between tabs', async ({ page }) => {
 test('the popup body is 360 px wide', async ({ page }) => {
   await openPopup(page);
   expect(await page.evaluate(() => document.body.getBoundingClientRect().width)).toBe(360);
+});
+
+test('hover help shows after 2 seconds', async ({ page }) => {
+  await page.clock.install();
+  try {
+    await openPopup(page);
+    // Real time must not cross the rest of the delay while the assertion runs.
+    await page.clock.pauseAt(Date.now() + 10_000);
+
+    const label = page.getByText('Fix while I type', { exact: true });
+    const tip = page.locator('#idle-desc');
+    await label.hover();
+    await page.clock.runFor(1900);
+    await expect(tip).toBeHidden();
+    await page.clock.runFor(100);
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveText('Fixes a field after a 3 s pause');
+
+    await page.mouse.move(0, 0);
+    await expect(tip).toBeHidden();
+
+    const toggle = page.getByRole('switch', { name: 'Fix while I type' });
+    for (
+      let step = 0;
+      step < 8 && !(await toggle.evaluate((el) => el === document.activeElement));
+      step++
+    ) {
+      await page.keyboard.press('Tab');
+    }
+    await expect(toggle).toBeFocused();
+    await expect(tip).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(tip).toBeHidden();
+  } finally {
+    await page.clock.resume();
+  }
 });

@@ -1,9 +1,9 @@
-import { type ComponentChildren } from 'preact';
 import { type Settings } from '../core/settings';
 import { useSettingsApi } from '../options/useSettings';
 import { BoltIcon } from './icons';
 import { hideSite, showSite, siteState, type SiteState } from './sites';
 import { Switch } from './Switch';
+import { Tooltip } from './Tooltip';
 
 interface QuickTogglesProps {
   settings: Settings;
@@ -20,12 +20,16 @@ export function QuickToggles({ settings, host, onOpenSites }: QuickTogglesProps)
           <BoltIcon />
         </span>
         <div class="qtxt">
-          <b id="idle-title">Fix while I type</b>
-          <span id="idle-desc">
-            {settings.idleFix
-              ? 'Fixes a field after a 3 s pause'
-              : 'Off. The button and the shortcut still work'}
-          </span>
+          <Tooltip
+            id="idle-desc"
+            text={
+              settings.idleFix
+                ? 'Fixes a field after a 3 s pause'
+                : 'Off. The button and the shortcut still work'
+            }
+          >
+            <b id="idle-title">Fix while I type</b>
+          </Tooltip>
         </div>
         <Switch
           checked={settings.idleFix}
@@ -48,6 +52,7 @@ function SiteRow({ settings, host, onOpenSites }: QuickTogglesProps) {
   const { change } = useSettingsApi();
   const state = typeof host === 'string' ? siteState(host, settings.blocklist) : null;
   const title = host === undefined ? 'This site' : host === null ? 'This page' : `Show on ${host}`;
+  const help = siteHelp(host, state);
 
   const toggle = () => {
     if (typeof host !== 'string' || state === null || state.kind === 'hidden-by') return;
@@ -64,8 +69,21 @@ function SiteRow({ settings, host, onOpenSites }: QuickTogglesProps) {
         {typeof host === 'string' ? siteLetter(host) : ''}
       </span>
       <div class="qtxt">
-        <b id="site-title">{title}</b>
-        <SiteDescription host={host} state={state} onOpenSites={onOpenSites} />
+        {help === null ? (
+          <b id="site-title">{title}</b>
+        ) : (
+          <Tooltip id="site-desc" text={help}>
+            <b id="site-title">{title}</b>
+          </Tooltip>
+        )}
+        {state?.kind === 'hidden-by' && (
+          <span id="site-desc">
+            Hidden by {state.rule}.{' '}
+            <button type="button" class="link" onClick={onOpenSites}>
+              Edit in Sites
+            </button>
+          </span>
+        )}
       </div>
       <Switch
         checked={state?.kind === 'shown'}
@@ -78,31 +96,9 @@ function SiteRow({ settings, host, onOpenSites }: QuickTogglesProps) {
   );
 }
 
-function SiteDescription({
-  host,
-  state,
-  onOpenSites,
-}: {
-  host: string | null | undefined;
-  state: SiteState | null;
-  onOpenSites(): void;
-}): ComponentChildren {
-  if (host === undefined) return null;
-  if (host === null) {
-    return <span id="site-desc">LocalPolish does not run on this page</span>;
-  }
-  if (state === null || state.kind === 'shown') {
-    return <span id="site-desc">The button and the idle Fix run here</span>;
-  }
-  if (state.kind === 'hidden') {
-    return <span id="site-desc">Hidden here. The shortcut still works</span>;
-  }
-  return (
-    <span id="site-desc">
-      Hidden by {state.rule}.{' '}
-      <button type="button" class="link" onClick={onOpenSites}>
-        Edit in Sites
-      </button>
-    </span>
-  );
+function siteHelp(host: string | null | undefined, state: SiteState | null): string | null {
+  if (host === undefined || state?.kind === 'hidden-by') return null;
+  if (host === null) return 'LocalPolish does not run on this page';
+  if (state === null || state.kind === 'shown') return 'The button and the idle Fix run here';
+  return 'Hidden here. The shortcut still works';
 }

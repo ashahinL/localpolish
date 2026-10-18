@@ -202,11 +202,6 @@ select:focus-visible {
   font-size: 15px;
 }
 
-.brand span {
-  font-size: 12px;
-  color: var(--muted);
-}
-
 .saved {
   font-size: 12px;
   color: var(--ok);
@@ -295,6 +290,7 @@ select:focus-visible {
   display: block;
   font-weight: 600;
   font-size: 13.5px;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -313,6 +309,45 @@ select:focus-visible {
 .qrow.hidden-here .qicon.site {
   background: var(--warn-soft);
   color: var(--warn);
+}
+
+/* Tooltip */
+
+span.tip-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+span.tip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 12px;
+  white-space: normal;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+  visibility: hidden;
+  opacity: 0;
+}
+
+span.tip.on {
+  visibility: visible;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  span.tip {
+    transition: opacity 120ms;
+  }
 }
 
 /* Switch */

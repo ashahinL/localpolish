@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { useSettingsApi } from '../options/useSettings';
 import { openOptionsPage } from './chrome';
 import { CheckIcon, GearIcon, LogoIcon } from './icons';
+import { Tooltip } from './Tooltip';
 
 const SAVED_VISIBLE_MS = 1500;
 
@@ -25,8 +26,11 @@ export function Header() {
           <LogoIcon />
         </div>
         <div class="brand">
-          <b>LocalPolish</b>
-          <span>Fix and rewrite text in any field</span>
+          <Tooltip id="brand-tip" text="Fix and rewrite text in any field">
+            <b tabIndex={0} aria-describedby="brand-tip">
+              LocalPolish
+            </b>
+          </Tooltip>
         </div>
         <span class={savedOn ? 'saved on' : 'saved'} role="status">
           <CheckIcon />
