@@ -6,7 +6,7 @@ import { CodeLine, Field, Note, TextInput } from './controls';
 import { formatSeconds, parseBlocklist, shortcutKeys } from './form';
 import { useSettingsApi } from './useSettings';
 
-const CLIS: Array<{ key: 'claude' | 'codex' | 'grok'; name: string }> = [
+export const CLIS: Array<{ key: 'claude' | 'codex' | 'grok'; name: string }> = [
   { key: 'claude', name: 'Claude Code' },
   { key: 'codex', name: 'Codex' },
   { key: 'grok', name: 'Grok CLI' },

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'preact/hooks';
+import { isCli } from '../options/ProviderSection';
 import { SettingsContext, useSettings, useSettingsApi } from '../options/useSettings';
 import { activeTabUrl } from './chrome';
 import { Header } from './Header';
 import { HomeTab } from './HomeTab';
+import { ProviderTab } from './ProviderTab';
 import { hostOf } from './sites';
 import { QuickToggles } from './QuickToggles';
 import { Tabs, type TabId } from './Tabs';
@@ -46,7 +48,11 @@ function PopupApp() {
       {settings && (
         <>
           <QuickToggles settings={settings} host={host} onOpenSites={() => setTab('sites')} />
-          <Tabs active={tab} onChange={setTab} />
+          <Tabs
+            active={tab}
+            onChange={setTab}
+            alert={isCli(settings.provider) && bridge.status?.ok === false ? 'provider' : undefined}
+          />
         </>
       )}
       <main
@@ -66,6 +72,9 @@ function PopupApp() {
             test={test}
             onOpenProvider={() => setTab('provider')}
           />
+        )}
+        {settings && tab === 'provider' && (
+          <ProviderTab settings={settings} bridge={bridge} test={test} />
         )}
       </main>
     </div>

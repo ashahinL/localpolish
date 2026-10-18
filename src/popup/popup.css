@@ -567,6 +567,7 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -607,6 +608,7 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   padding: 3px 3px 3px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -675,4 +677,167 @@ button.copy {
 .seg label:has(input:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* Provider picker */
+
+.pgroup-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 5px;
+}
+
+.chips + .pgroup-label {
+  margin-top: 10px;
+}
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.chips.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.chip {
+  position: relative;
+  min-width: 0;
+  height: 34px;
+  padding: 0 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chip input:focus-visible {
+  outline: none;
+}
+
+.chip:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.psub {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* Fields */
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field label {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.inline {
+  display: flex;
+  gap: 6px;
+}
+
+.inline > input,
+.inline > select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.inline > button {
+  flex: none;
+}
+
+.inline:has(> select + input) {
+  flex-direction: column;
+}
+
+/* flex-basis 0 is the height in a column, so the controls would collapse. */
+.inline:has(> select + input) > select,
+.inline:has(> select + input) > input {
+  flex: none;
+  width: 100%;
+}
+
+/* Bridge list */
+
+.clis {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.clis li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.clis li:first-child {
+  border-top: none;
+}
+
+.clis .n {
+  min-width: 100px;
+  font-weight: 500;
+}
+
+.clis .dot.on {
+  color: var(--ok);
+}
+
+.clis .dot.off {
+  color: var(--off);
 }

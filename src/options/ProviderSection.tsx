@@ -72,7 +72,13 @@ function useModelChange(provider: ProviderId) {
     change((current) => ({ models: { ...current.models, [provider]: value } }), typing);
 }
 
-function CliDetails({ provider, settings }: { provider: CliProviderId; settings: Settings }) {
+export function CliDetails({
+  provider,
+  settings,
+}: {
+  provider: CliProviderId;
+  settings: Settings;
+}) {
   const { change } = useSettingsApi();
   const onModel = useModelChange(provider);
   return (
@@ -108,7 +114,7 @@ function CliDetails({ provider, settings }: { provider: CliProviderId; settings:
   );
 }
 
-function OpenAiDetails({ settings }: { settings: Settings }) {
+export function OpenAiDetails({ settings }: { settings: Settings }) {
   const { change } = useSettingsApi();
   const onModel = useModelChange('openai-compatible');
   const preset = baseUrlPreset(settings.openaiBaseUrl);
@@ -149,7 +155,7 @@ function OpenAiDetails({ settings }: { settings: Settings }) {
   );
 }
 
-function AnthropicDetails({ settings }: { settings: Settings }) {
+export function AnthropicDetails({ settings }: { settings: Settings }) {
   const { change } = useSettingsApi();
   const onModel = useModelChange('anthropic-api');
   return (

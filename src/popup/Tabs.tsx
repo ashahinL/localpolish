@@ -10,9 +10,10 @@ const TABS: { id: TabId; label: string }[] = [
 interface TabsProps {
   active: TabId;
   onChange(tab: TabId): void;
+  alert?: TabId;
 }
 
-export function Tabs({ active, onChange }: TabsProps) {
+export function Tabs({ active, onChange, alert }: TabsProps) {
   const onKeyDown = (event: KeyboardEvent) => {
     const index = TABS.findIndex((tab) => tab.id === active);
     let next = -1;
@@ -42,6 +43,12 @@ export function Tabs({ active, onChange }: TabsProps) {
           onClick={() => onChange(tab.id)}
         >
           {tab.label}
+          {alert === tab.id && (
+            <>
+              <span class="bad" aria-hidden="true" />
+              <span class="sr">, needs attention</span>
+            </>
+          )}
         </button>
       ))}
     </nav>
