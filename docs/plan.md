@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: done (T0-T12). Closing review and comment pass done 2026-10-18. Ideas for later are under Later.
+Status: T0-T12 done (closing review and comment pass 2026-10-18). T13 designed, not started.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -131,12 +131,26 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - No new keyboard keys.
   - Built: the default mode setting keeps Fix, Rephrase (keep tone) and Shorter. A stored 'tone' default loads as Fix. The wire format did not change: Keep tone sends `mode: 'rephrase'`, a tone chip sends `mode: 'tone'`. Rephrase open with another answer shown adds a small "Showing: Fix" caption.
 
+- [ ] **T13. Idle Fix with a badge** (not started). Decided with the user on 2026-10-18:
+  - No dictionary of our own. The browser's spellcheck already underlines typos; our value is grammar.
+  - When the user stops typing for 5 seconds and the field still has focus, run one Fix in the background. Send nothing if the text did not change since the last idle Fix.
+  - On everywhere, with a block list (the Sites list, or its own list; decide at build time).
+  - Only multi-line message fields: `<textarea>` and contenteditable. Never single-line `<input>` (search, login, email, URL, name). Also skip `role="searchbox"` or `role="combobox"`, `spellcheck="false"` and code editors (CodeMirror, Monaco). Skip text under 5 words.
+  - Send the whole field up to about 3,000 characters. Above that, send only the paragraph being written.
+  - One idle request per field; different fields and tabs run in parallel. A new pause in the same field waits for that field's request.
+  - Typing on while a request runs does not cancel it. The answer applies to the part that was sent. Track that part as it moves: offsets in a textarea, a live Range in a rich editor.
+  - Accept always overwrites the tracked part, even if the user edited it. The popup's diff compares the part's current text with the fix, so it shows exactly what Accept replaces. Accept never touches text outside the part.
+  - Result, shown on the floating button near the end of the text:
+    - Fixes found: a small yellow circle with the number of changes (from the word diff). Click opens the normal popup with the diff ready, no new request.
+    - No fixes: nothing.
+    - Request failed (bridge down, timeout, quota): a small red dot at the field's corner (like Grammarly; bottom right unless the user says otherwise). Click opens a popup with the error and how to fix it.
+  - The manual flow (select, then button or shortcut) always works, whether or not the idle Fix ran.
+
 ## Later (not MVP, keep the design open)
 
-- Passive underlines while typing.
-- Per-site default tone (add `siteTones: Record<host, Tone>` to settings).
-- History of the last 20 rewrites (store in `chrome.storage.local`).
-- Linux bridge installer.
+- Underlines on the fixed words, after the T13 badge (start with plain textareas).
+- Linux bridge installer (nice to have, low priority).
+- Dropped on 2026-10-18: per-site default tone (Keep tone is the default; the user picks a chip) and a rewrite history (not a polishing feature).
 
 ## Handoff (2026-10-17, 12:15 Cairo, now done: see T10 progress below)
 
@@ -168,7 +182,7 @@ Fixed on the way:
 Shortcut and **Sites** list checked by hand by the user.
 
 Still open:
-- Selecting only part of a multi-line message in the LinkedIn message box can still fall back to Copy (the saved range collapses when LinkedIn swaps its paragraphs on focus).
+- Selecting only part of a multi-line message in the LinkedIn message box can still fall back to Copy (the saved range collapses when LinkedIn swaps its paragraphs on focus). Not a priority (user, 2026-10-18).
 - `npm run test:e2e` on Windows: Playwright's own Chromium fails to start on that PC ("side-by-side configuration is incorrect"). On the Mac (2026-10-17, 19:30 Cairo) the full suite passes: 41 e2e.
 
-Quality notes for later: Fix adds a final period to a fragment or a subject line ("I have an apple. and she...").
+Fixed: Fix no longer adds a final period to a fragment (Fix prompt v2, T11e). Checked by the user with Luna low on 2026-10-18.
