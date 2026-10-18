@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hideSite, hostOf, showSite, siteState } from './sites';
+import { addSite, hideSite, hostOf, showSite, siteState } from './sites';
 
 describe('hostOf', () => {
   it('returns the hostname of an https or http url', () => {
@@ -64,5 +64,38 @@ describe('showSite', () => {
     expect(showSite('mail.google.com', ['  Mail.Google.com ', 'google.com'])).toEqual([
       'google.com',
     ]);
+  });
+});
+
+describe('addSite', () => {
+  it('trims and lowercases a bare hostname', () => {
+    const original = ['docs.google.com'];
+    expect(addSite('Example.com ', original)).toEqual({
+      list: ['docs.google.com', 'example.com'],
+    });
+    expect(original).toEqual(['docs.google.com']);
+  });
+
+  it('takes the hostname out of a url', () => {
+    expect(addSite('https://mail.google.com/mail/u/0', ['docs.google.com'])).toEqual({
+      list: ['docs.google.com', 'mail.google.com'],
+    });
+  });
+
+  it('drops a path when the input has no scheme', () => {
+    expect(addSite('news.site.org/path', [])).toEqual({ list: ['news.site.org'] });
+  });
+
+  it('rejects an empty value and a value with a space', () => {
+    expect(addSite('', [])).toEqual({ error: 'Enter a hostname such as example.com' });
+    expect(addSite('a b', [])).toEqual({ error: 'Enter a hostname such as example.com' });
+  });
+
+  it('rejects a host already listed with different capitals', () => {
+    expect(addSite('example.com', ['  Example.COM  '])).toEqual({ error: 'Already in the list' });
+  });
+
+  it('rejects a scheme with no host', () => {
+    expect(addSite('https://', [])).toEqual({ error: 'Enter a hostname such as example.com' });
   });
 });

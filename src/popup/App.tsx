@@ -6,6 +6,7 @@ import { Header } from './Header';
 import { HomeTab } from './HomeTab';
 import { ProviderTab } from './ProviderTab';
 import { hostOf } from './sites';
+import { SitesTab } from './SitesTab';
 import { QuickToggles } from './QuickToggles';
 import { Tabs, type TabId } from './Tabs';
 import { useBridge } from './useBridge';
@@ -76,6 +77,7 @@ function PopupApp() {
         {settings && tab === 'provider' && (
           <ProviderTab settings={settings} bridge={bridge} test={test} />
         )}
+        {settings && tab === 'sites' && <SitesTab settings={settings} host={host} />}
       </main>
     </div>
   );

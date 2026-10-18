@@ -34,3 +34,27 @@ export function hideSite(host: string, blocklist: string[]): string[] {
 export function showSite(host: string, blocklist: string[]): string[] {
   return blocklist.filter((entry) => !sameHost(entry, host));
 }
+
+const HOST_ERROR = 'Enter a hostname such as example.com';
+
+export function addSite(
+  input: string,
+  blocklist: string[],
+): { list: string[] } | { error: string } {
+  const trimmed = input.trim().toLowerCase();
+  let host: string;
+  if (trimmed.includes('://')) {
+    try {
+      host = new URL(trimmed).hostname;
+    } catch {
+      // A scheme with no host, such as "https://", makes URL throw.
+      return { error: HOST_ERROR };
+    }
+  } else {
+    const slash = trimmed.indexOf('/');
+    host = slash === -1 ? trimmed : trimmed.slice(0, slash);
+  }
+  if (host === '' || /\s/.test(host)) return { error: HOST_ERROR };
+  if (blocklist.some((entry) => sameHost(entry, host))) return { error: 'Already in the list' };
+  return { list: [...blocklist, host] };
+}

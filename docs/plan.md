@@ -171,7 +171,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: the Home tab with the status card (connection pill, provider line from `summary.ts`, the bridge error note for a CLI provider, Test connection) and the Default mode segmented control. `useBridge` and `useTest` live in `App`, so a tab switch keeps the bridge check and the test result; a provider change clears the result and drops a late answer. `PROVIDERS` and `isCli` are exported from the options page. No usage card.
   - [x] **T14d.** Provider tab with all five provider forms. Brief: [T14d](briefs/T14d-popup-provider.md).
   - Built: the Provider tab with the radio-chip picker (bridge and API groups), the options page's `CliDetails`, `OpenAiDetails` and `AnthropicDetails` (now exported, as is `CLIS`), a Bridge card with Check again for CLI providers, and Test connection. The Provider tab shows a red dot, with ", needs attention" for screen readers, when a CLI provider is picked and the bridge is down.
-  - [ ] **T14e.** Sites tab. Brief: [T14e](briefs/T14e-popup-sites.md).
+  - [x] **T14e.** Sites tab. Brief: [T14e](briefs/T14e-popup-sites.md).
+  - Built: the Sites tab lists the blocklist with a count, a "This tab" tag and a remove button per entry, and an add field. `addSite` takes a hostname or a URL, lowercases it, and rejects empty, spaced or duplicate entries. When this tab's site is shown, a "Hide on {host}" card adds it.
   - [ ] **T14f.** About tab and README. Brief: [T14f](briefs/T14f-popup-about.md).
   - [ ] **T14g.** e2e tests for the toolbar popup in a new `tests/e2e/action-popup.spec.ts` (`popup.spec.ts` already covers the in-page rewrite popup). Brief: [T14g](briefs/T14g-popup-e2e.md).
 
