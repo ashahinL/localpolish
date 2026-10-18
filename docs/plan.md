@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: T0-T13d done.
+Status: T0-T13d done. T14 (toolbar popup) in progress.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -155,12 +155,27 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: opening, closing or copying from the popup keeps the marker; it goes when the field holds the fix (Accept or a pasted copy). Any Accept settles that text, so it never starts another idle request.
   - Built later: a grey spinning ring sits at the marker spot while a request runs; clicking it waits on that request.
 
+- [ ] **T14. Toolbar popup** (Grok, feature lane: grok-4.7 at high effort, one subtask after another). Decided with the user on 2026-10-18: the toolbar (browser action) popup holds every option from the options page, with layout Option A (tabs). The design is in [docs/design/popup/](design/popup/): `popup.html` is a clickable mockup, `notes.md` has the layout and the assumptions, and the PNGs show each tab and state.
+  - Size 360 × 600. Always visible: a header (name, a "Saved" note, a gear that opens the full options page), two switches (**Fix while I type**, **Show on <this site>**), and the tabs **Home · Provider · Sites · About**.
+  - Home: the provider, model and effort at a glance with a status pill, Test connection, the bridge error with `npm run bridge:install` when it is missing, and the default mode. Provider: a compact provider picker and every provider form (the options page components, shared). Sites: the blocklist. About: the shortcut, Change shortcut, a link to all options.
+  - Same tokens, type and spacing as the options page, light and dark (`prefers-color-scheme`). The options page stays and is linked from the gear and About.
+  - New setting `idleFix` (default on). A blocklisted site turns off the button and the idle Fix; the shortcut still works there.
+  - The this-site switch adds or removes the exact hostname of the active tab in the blocklist. When a broader entry (such as `google.com` for `mail.google.com`) hides the site, the switch is disabled and says which entry, with a link to Sites.
+  - Usage stats stay out of scope. The mockup's "Usage today" card with example data is **left out** of the build (fake numbers should not ship); it stays in Later.
+  - [ ] **T14a.** `idleFix` setting and the content script reads it. Brief: [T14a](briefs/T14a-idle-setting.md).
+  - [ ] **T14b.** Popup entrypoint, shared tokens, header, the two switches, tabs. Brief: [T14b](briefs/T14b-popup-shell.md).
+  - [ ] **T14c.** Home tab. Brief: [T14c](briefs/T14c-popup-home.md).
+  - [ ] **T14d.** Provider tab with all five provider forms. Brief: [T14d](briefs/T14d-popup-provider.md).
+  - [ ] **T14e.** Sites tab. Brief: [T14e](briefs/T14e-popup-sites.md).
+  - [ ] **T14f.** About tab and README. Brief: [T14f](briefs/T14f-popup-about.md).
+  - [ ] **T14g.** e2e tests for the toolbar popup in a new `tests/e2e/action-popup.spec.ts` (`popup.spec.ts` already covers the in-page rewrite popup). Brief: [T14g](briefs/T14g-popup-e2e.md).
+
 ## Later (not MVP, keep the design open)
 
 - Underlines on the fixed words (low priority; start with plain textareas).
-- An on/off switch for the idle Fix. It belongs in a new extension UI (popup), not the options page; build that UI first.
+- An on/off switch for the idle Fix. It belongs in a new extension UI (popup), not the options page; build that UI first. Planned as T14.
 - Linux bridge installer (nice to have, low priority).
-- Usage stats in the extension UI: how many requests ran today with each model, and their average speed.
+- Usage stats in the extension UI: how many requests ran today with each model, and their average speed. The T14 popup leaves room for a card on Home.
 - Dropped on 2026-10-18: per-site default tone (Keep tone is the default; the user picks a chip) and a rewrite history (not a polishing feature).
 
 ## Handoff (2026-10-17, 12:15 Cairo, now done: see T10 progress below)

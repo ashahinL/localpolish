@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=360">
+<title>LocalPolish popup · Option A (final mockup)</title>
+<style>
+/* ===== Tokens: same values as src/options/options.css, plus popup-only extras ===== */
+:root{
+  color-scheme:light dark;
+  --bg:#f6f7f9;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+  --control:#fff;--control-border:#d1d5db;--code:#f3f4f6;
+  --accent:#2563eb;--accent-text:#fff;--accent-soft:#eff6ff;
+  --ok:#16a34a;--ok-soft:#f0fdf4;--ok-border:#bbf7d0;
+  --error:#dc2626;--error-soft:#fef2f2;--error-border:#fecaca;
+  --info-soft:#f9fafb;--off:#9ca3af;
+  /* popup-only */
+  --warn:#b45309;--warn-soft:#fffbeb;--warn-border:#fde68a;
+  --seg:#eef0f3;--seg-on:#fff;--shadow:0 1px 2px rgb(0 0 0/.08);
+  --later-bg:#fef3c7;--later-fg:#92400e;
+}
+/* Dark: follow the OS unless the mockup toggle forces light */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){
+    --bg:#0f1115;--card:#181b21;--text:#e5e7eb;--muted:#9ca3af;--border:#2a2f38;
+    --control:#111317;--control-border:#3a404b;--code:#0f1115;
+    --accent:#3b82f6;--accent-soft:rgba(59,130,246,.14);
+    --ok:#22c55e;--ok-soft:rgba(34,197,94,.1);--ok-border:rgba(34,197,94,.35);
+    --error:#f87171;--error-soft:rgba(248,113,113,.1);--error-border:rgba(248,113,113,.35);
+    --info-soft:#1e222a;--off:#6b7280;
+    --warn:#fbbf24;--warn-soft:rgba(251,191,36,.1);--warn-border:rgba(251,191,36,.35);
+    --seg:#0f1115;--seg-on:#262b34;--shadow:0 1px 2px rgb(0 0 0/.4);
+    --later-bg:rgba(251,191,36,.15);--later-fg:#fcd34d;
+  }
+}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#0f1115;--card:#181b21;--text:#e5e7eb;--muted:#9ca3af;--border:#2a2f38;
+  --control:#111317;--control-border:#3a404b;--code:#0f1115;
+  --accent:#3b82f6;--accent-soft:rgba(59,130,246,.14);
+  --ok:#22c55e;--ok-soft:rgba(34,197,94,.1);--ok-border:rgba(34,197,94,.35);
+  --error:#f87171;--error-soft:rgba(248,113,113,.1);--error-border:rgba(248,113,113,.35);
+  --info-soft:#1e222a;--off:#6b7280;
+  --warn:#fbbf24;--warn-soft:rgba(251,191,36,.1);--warn-border:rgba(251,191,36,.35);
+  --seg:#0f1115;--seg-on:#262b34;--shadow:0 1px 2px rgb(0 0 0/.4);
+  --later-bg:rgba(251,191,36,.15);--later-fg:#fcd34d;
+}
+:root[data-theme=light]{color-scheme:light}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5}
+p{margin:0}h1,h2,h3{margin:0;font-size:inherit}
+button,input,select{font:inherit;color:inherit}
+
+/* ===== Popup frame: 360 x 600 (Chrome caps popups at 800 x 600) ===== */
+.popup{width:360px;height:600px;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;position:relative}
+
+/* ===== Controls (from options.css, tightened for the popup) ===== */
+input,select{width:100%;height:32px;padding:5px 9px;border:1px solid var(--control-border);border-radius:6px;background:var(--control)}
+select{padding-right:4px}
+input::placeholder{color:var(--muted);opacity:.8}
+button{height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--control-border);background:var(--control);cursor:pointer;white-space:nowrap}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.6;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text);font-weight:500}
+button.primary:hover:not(:disabled){filter:brightness(1.08);border-color:var(--accent)}
+button.link{height:auto;border:none;background:none;color:var(--accent);padding:2px 4px;font-size:13px;font-weight:500}
+button.link:hover{text-decoration:underline}
+button.sm{height:26px;padding:0 10px;font-size:12.5px}
+:is(input,select,button,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input:focus-visible,select:focus-visible{border-color:var(--accent)}
+.muted{color:var(--muted)}
+.help{color:var(--muted);font-size:12.5px;line-height:1.45}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ===== Header ===== */
+.head{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;background:var(--card);border-bottom:1px solid var(--border)}
+.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;display:grid;place-items:center;flex:none}
+.brand{flex:1;min-width:0;line-height:1.2}
+.brand b{display:block;font-size:15px}
+.brand span{font-size:12px;color:var(--muted)}
+.saved{font-size:12px;color:var(--ok);display:inline-flex;align-items:center;gap:4px;opacity:0;transition:opacity .3s}
+.saved.on{opacity:1}
+.icon-btn{width:32px;height:32px;padding:0;display:grid;place-items:center;border-radius:8px;border-color:transparent;background:transparent;color:var(--muted)}
+.icon-btn:hover:not(:disabled){background:var(--code);border-color:transparent;color:var(--text)}
+
+/* ===== Quick toggles strip ===== */
+.quick{background:var(--card);border-bottom:1px solid var(--border);padding:4px 14px}
+.qrow{display:flex;align-items:center;gap:10px;min-height:40px}
+.qrow + .qrow{border-top:1px solid var(--border)}
+.qicon{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.qicon.site{background:var(--code);color:var(--muted);font-size:11px;font-weight:700}
+.qtxt{flex:1;min-width:0;line-height:1.25}
+.qtxt b{display:block;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qtxt span{display:block;font-size:12px;color:var(--muted)}
+.qrow.hidden-here .qtxt span{color:var(--warn)}
+.qrow.hidden-here .qicon.site{background:var(--warn-soft);color:var(--warn)}
+
+/* Switch = <button role="switch"> */
+.switch{position:relative;width:36px;height:20px;padding:0;border-radius:999px;border:none;background:var(--off);flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgb(0 0 0/.3);transition:left .15s}
+.switch[aria-checked=true]{background:var(--accent)}
+.switch[aria-checked=true]::after{left:18px}
+.switch:focus-visible{outline-offset:2px}
+
+/* ===== Tabs ===== */
+.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--border);padding:0 6px}
+.tab{flex:1;height:38px;border:none;border-radius:0;background:none;color:var(--muted);font-weight:500;font-size:13px;border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 4px}
+.tab:hover:not(:disabled){color:var(--text)}
+.tab[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline-offset:-2px}
+.tab .bad{width:6px;height:6px;border-radius:50%;background:var(--error)}
+.panel{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:auto}
+.panel::-webkit-scrollbar{width:8px}.panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ===== Cards ===== */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.card.stack{display:flex;flex-direction:column;gap:10px}
+.ctitle{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px}
+.ctitle h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+
+/* Status card */
+.prov-line{display:flex;align-items:center;gap:10px}
+.pmark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none;background:var(--accent-soft);color:var(--accent)}
+.prov-line .t{flex:1;min-width:0;line-height:1.3}
+.prov-line .t b{display:block;font-size:14.5px}
+.prov-line .t span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--info-soft);color:var(--muted);white-space:nowrap}
+.pill.ok{border-color:var(--ok-border);background:var(--ok-soft);color:var(--ok)}
+.pill.err{border-color:var(--error-border);background:var(--error-soft);color:var(--error)}
+.dot{width:7px;height:7px;border-radius:50%;flex:none;background:currentColor}
+.test-row{display:flex;align-items:center;gap:10px}
+.testing{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.4s}}
+
+/* Notes */
+.note{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--info-soft);font-size:12.5px;overflow-wrap:anywhere}
+.note-ok{border-color:var(--ok-border);background:var(--ok-soft);color:var(--ok)}
+.note-error{border-color:var(--error-border);background:var(--error-soft);color:var(--error)}
+.note-error p + p{color:var(--text)}
+.note .nhead{display:flex;gap:6px;align-items:flex-start;font-weight:500}
+.note .nhead svg{flex:none;margin-top:2px}
+.code-line{display:flex;align-items:center;gap:6px;padding:3px 3px 3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--code);color:var(--text)}
+.code-line code{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.code-line button{min-width:60px}
+
+/* Segmented control (radiogroup) */
+.seg{display:flex;padding:3px;background:var(--seg);border:1px solid var(--border);border-radius:8px;gap:2px}
+.seg button{flex:1;height:28px;border:none;border-radius:6px;background:none;color:var(--muted);font-size:13px;padding:0 6px}
+.seg button[aria-checked=true]{background:var(--seg-on);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
+
+/* Provider picker: two groups of chips (radiogroup) */
+.pgroup-label{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 5px}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.chips.two{grid-template-columns:repeat(2,1fr)}
+.chip{min-width:0;height:34px;padding:0 4px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px}
+.chip[aria-checked=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip .ck{display:none}
+.chip[aria-checked=true] .ck{display:none}
+.psub{font-size:12.5px;color:var(--muted);margin-top:8px}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field > label,.field > .lbl{font-weight:500;font-size:13px}
+.row2{display:grid;grid-template-columns:1.45fr 1fr;gap:10px;align-items:start}
+.preset{display:flex;flex-direction:column;gap:6px}
+.inline{display:flex;gap:6px}
+.inline > input,.inline > select{flex:1 1 0;min-width:0}
+.inline > button{flex:none}
+.range-row{display:flex;align-items:center;gap:10px}
+.range-row input[type=range]{flex:1;height:20px;padding:0;border:none;background:none;accent-color:var(--accent)}
+.range-row input[type=number]{width:64px;flex:none}
+
+/* Bridge list */
+.clis{list-style:none;margin:0;padding:0}
+.clis li{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border);font-size:13px}
+.clis li:first-child{border-top:none}
+.clis .n{min-width:100px;font-weight:500}
+.clis .dot.on{color:var(--ok)}.clis .dot.off{color:var(--off)}
+
+/* Sites */
+.sites{list-style:none;margin:0;padding:0}
+.sites li{display:flex;align-items:center;gap:8px;min-height:36px;border-top:1px solid var(--border);font-size:13px}
+.sites li:first-child{border-top:none}
+.sites .host{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.tag{font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-border)}
+.x{width:28px;height:28px;padding:0;border:none;background:transparent;color:var(--muted);border-radius:6px;display:grid;place-items:center}
+.x:hover:not(:disabled){background:var(--error-soft);color:var(--error)}
+.empty{padding:14px 4px;text-align:center;color:var(--muted);font-size:13px}
+
+/* Shortcut */
+.keys{display:inline-flex;gap:4px}
+kbd{min-width:26px;padding:1px 7px;border:1px solid var(--control-border);border-bottom-width:2px;border-radius:6px;background:var(--control);font-family:inherit;font-size:12.5px;text-align:center}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.srow .t{flex:1;min-width:0;line-height:1.35}
+.srow .t b{display:block;font-weight:600}
+.srow .t span{display:block;font-size:12.5px;color:var(--muted)}
+
+/* Usage (later) */
+.card.later{border-style:dashed}
+.badge-later{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:4px;background:var(--later-bg);color:var(--later-fg)}
+.usage{width:100%;border-collapse:collapse;font-size:12.5px;opacity:.8}
+.usage td{padding:3px 0}
+.usage td+td{text-align:right;color:var(--muted)}
+.bar{height:4px;border-radius:2px;background:var(--accent);opacity:.5}
+.foot{text-align:center;font-size:12px;color:var(--muted);padding:2px 0 4px}
+
+/* ===== Mockup-only controls (outside the 360px popup, not part of the design) ===== */
+.mock{position:fixed;left:384px;top:0;width:250px;padding:14px;font-size:12.5px;display:flex;flex-direction:column;gap:8px;color:var(--text)}
+.mock h3{font-size:13px}
+.mock label{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mock select{width:140px;height:28px;font-size:12.5px}
+@media (max-width:370px){.mock{display:none}}
+</style>
+</head>
+<body>
+<div id="app" class="popup" data-component="PopupApp"></div>
+
+<aside class="mock" aria-label="Mockup state controls (not part of the design)">
+  <h3>Mockup controls</h3>
+  <label>Theme <select data-mock="theme"><option value="auto">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+  <label>Tab <select data-mock="tab"><option>home</option><option>provider</option><option>sites</option><option>about</option></select></label>
+  <label>Provider <select data-mock="provider"><option>claude-cli</option><option>codex-cli</option><option>grok-cli</option><option>openai-compatible</option><option>anthropic-api</option></select></label>
+  <label>Bridge <select data-mock="bridge"><option value="ok">Installed</option><option value="error">Not installed</option></select></label>
+  <label>Test <select data-mock="test"><option value="idle">Not run</option><option value="running">Running</option><option value="ok">Success</option><option value="fail">Failure</option></select></label>
+  <label>This site <select data-mock="site"><option value="on">Shown</option><option value="off">Hidden</option></select></label>
+  <p class="help">Same state is readable from the URL hash, e.g. <code>#tab=provider&amp;provider=grok-cli&amp;theme=dark</code></p>
+</aside>
+
+<script>
+/* =====================================================================
+   Mockup data. Values mirror DEFAULT_SETTINGS (src/core/settings.ts) and
+   presets (src/options/presets.ts). Marked SAMPLE where invented.
+   ===================================================================== */
+const CUSTOM = '__custom__';
+const PROVIDERS = {
+  'claude-cli':        { title:'Claude Code', short:'CC', sub:'Your Claude subscription, via the bridge', cli:'claude' },
+  'codex-cli':         { title:'Codex', short:'Cx', sub:'Your ChatGPT subscription, via the bridge', cli:'codex' },
+  'grok-cli':          { title:'Grok CLI', short:'Gk', sub:'Your SuperGrok subscription, via the bridge', cli:'grok' },
+  'openai-compatible': { title:'OpenAI-compatible', short:'AI', sub:'OpenAI, xAI, OpenRouter, LM Studio, Ollama' },
+  'anthropic-api':     { title:'Anthropic API', short:'An', sub:'Claude with an API key' },
+};
+const CLI_MODELS = {
+  'claude-cli':[['haiku','Haiku'],['sonnet','Sonnet'],['opus','Opus']],
+  'codex-cli':[['gpt-6-luna','GPT-6 Luna'],['gpt-6.1-sol','GPT-6.1 Sol']],
+  'grok-cli':[['','CLI default (grok-4.7)'],['grok-4.7','Grok 4.7'],['grok-4.6','Grok 4.6']],
+};
+const EL = {none:'None',low:'Low',medium:'Medium',high:'High',xhigh:'Extra high',max:'Max'};
+const CLI_EFFORTS = {
+  'claude-cli':['low','medium','high','xhigh','max'],
+  'codex-cli':['none','low','medium','high','xhigh'],
+  'grok-cli':['low','medium','high'],
+};
+const ANTHROPIC_MODELS = [['claude-haiku-5-5','Claude Haiku 5.5'],['claude-sonnet-5-5','Claude Sonnet 5.5'],['claude-opus-5-5','Claude Opus 5.5']];
+const OPENAI_BASE_URLS = [
+  ['http://localhost:11434/v1','Ollama','llama3.2'],
+  ['http://localhost:1234/v1','LM Studio','local-model'],
+  ['https://api.openai.com/v1','OpenAI','gpt-6-luna'],
+  ['https://api.x.ai/v1','xAI','grok-4.7'],
+  ['https://openrouter.ai/api/v1','OpenRouter','anthropic/claude-haiku-5.5'],
+];
+const CODEX_LOGIN = 'mkdir -p "$HOME/Library/Application Support/LocalPolish/codex-home" && CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex login';
+const BRIDGE_CLIS = { claude:['Claude Code','2.3.4'], codex:['Codex','0.98.0'], grok:['Grok CLI',null] }; // SAMPLE versions
+const HOST = 'mail.google.com'; // SAMPLE current tab
+
+const S = {
+  tab:'home', theme:'auto', bridge:'ok', test:'idle', site:'on', scroll:'',
+  // settings (DEFAULT_SETTINGS + new idleFix key)
+  idleFix:true,
+  provider:'codex-cli',
+  models:{'claude-cli':'haiku','codex-cli':'gpt-6-luna','grok-cli':'','openai-compatible':'','anthropic-api':'claude-haiku-5-5'},
+  efforts:{'claude-cli':'low','codex-cli':'none','grok-cli':'low'},
+  openaiBaseUrl:'http://localhost:11434/v1', openaiApiKey:'',
+  anthropicApiKey:'sk-ant-api03-mockup-not-a-real-key', // SAMPLE so show/hide has something to reveal
+  temperature:0.3, defaultMode:'fix',
+  blocklist:['docs.google.com','notion.so'], // SAMPLE (default is [])
+  customChosen:{}, shown:{},
+};
+
+/* ===== tiny helpers ===== */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isCli = p => p in CLI_MODELS;
+const ICON = {
+  logo:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>',
+  gear:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.6a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.6a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+  bolt:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  check:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+  x:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  alert:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
+  ext:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+};
+
+/* ===== Components (each maps to a Preact component) ===== */
+
+function Header(){
+  return `<header class="head" data-component="Header">
+    <div class="logo" aria-hidden="true">${ICON.logo}</div>
+    <div class="brand"><b>LocalPolish</b><span>Fix and rewrite text in any field</span></div>
+    <span class="saved" id="saved" role="status">${ICON.check}Saved</span>
+    <button class="icon-btn" data-act="options" aria-label="Open the full options page" title="All options">${ICON.gear}</button>
+  </header>`;
+}
+
+function QuickToggles(){
+  const hidden = S.blocklist.includes(HOST);
+  return `<section class="quick" aria-label="Quick switches" data-component="QuickToggles">
+    <div class="qrow">
+      <span class="qicon" aria-hidden="true">${ICON.bolt}</span>
+      <div class="qtxt" id="idle-l"><b>Fix while I type</b><span id="idle-d">${S.idleFix ? 'Fixes a field after a 3 s pause' : 'Off. Use the button or shortcut'}</span></div>
+      <button class="switch" role="switch" aria-checked="${S.idleFix}" aria-labelledby="idle-l" aria-describedby="idle-d" data-act="idle"></button>
+    </div>
+    <div class="qrow${hidden ? ' hidden-here' : ''}">
+      <span class="qicon site" aria-hidden="true">M</span>
+      <div class="qtxt" id="site-l"><b>Show on ${HOST}</b><span id="site-d">${hidden ? 'Hidden here. The shortcut still works' : 'Button and idle Fix on this site'}</span></div>
+      <button class="switch" role="switch" aria-checked="${!hidden}" aria-labelledby="site-l" aria-describedby="site-d" data-act="site"></button>
+    </div>
+  </section>`;
+}
+
+function Tabs(){
+  const bad = S.bridge === 'error' && isCli(S.provider);
+  const t = (id, label, extra='') => `<button class="tab" role="tab" id="tab-${id}" aria-controls="panel" aria-selected="${S.tab===id}" tabindex="${S.tab===id?0:-1}" data-tab="${id}">${label}${extra}</button>`;
+  return `<nav class="tabs" role="tablist" aria-label="Popup sections" data-component="Tabs">
+    ${t('home','Home')}${t('provider','Provider', bad ? '<span class="bad" aria-label="needs attention"></span>' : '')}${t('sites','Sites')}${t('about','About')}
+  </nav>`;
+}
+
+function CodeLine(text){
+  return `<div class="code-line"><code title="${esc(text)}">${esc(text)}</code><button class="sm" data-act="copy">Copy</button></div>`;
+}
+
+function BridgeErrorNote(){
+  return `<div class="note note-error" role="alert" data-component="BridgeErrorNote">
+    <p class="nhead">${ICON.alert}<span>The LocalPolish bridge is not installed.</span></p>
+    <p>Claude Code, Codex and Grok CLI need it. In the LocalPolish folder run:</p>
+    ${CodeLine('npm run bridge:install')}
+  </div>`;
+}
+
+function TestResult(){
+  if (S.test === 'running') return `<span class="testing" role="status"><span class="spinner" aria-hidden="true"></span>Testing…</span>`;
+  return '';
+}
+function TestNote(){
+  if (S.test === 'ok') return `<div class="note note-ok" role="status">Works. Got “They’re going to the store.” in 1.4 s</div>`;
+  if (S.test === 'fail') {
+    const msg = isCli(S.provider) && S.bridge === 'error'
+      ? 'The LocalPolish bridge is not installed. In the LocalPolish folder run: npm run bridge:install'
+      : 'Timed out after 45 seconds.';
+    return `<div class="note note-error" role="alert"><p class="nhead">${ICON.alert}<span>Test failed</span></p><p>${esc(msg)}</p></div>`;
+  }
+  return '';
+}
+function TestControl(full){
+  return `<div class="test-row" data-component="TestConnection">
+      <button class="primary" data-act="test" ${S.test==='running'?'disabled':''} ${full?'style="flex:1"':''}>Test connection</button>${TestResult()}
+    </div>${TestNote()}`;
+}
+
+function providerDetailLine(){
+  const p = S.provider;
+  if (isCli(p)) {
+    const m = CLI_MODELS[p].find(([v]) => v === S.models[p]);
+    return `${esc(m ? m[1] : (S.models[p] || 'CLI default'))} · Effort: ${EL[S.efforts[p]] ?? esc(S.efforts[p])}`;
+  }
+  if (p === 'openai-compatible') {
+    const b = OPENAI_BASE_URLS.find(([v]) => v === S.openaiBaseUrl);
+    return `${esc(S.models[p] || 'no model set')} · ${b ? b[1] : esc(new URL(S.openaiBaseUrl).host)}`;
+  }
+  const m = ANTHROPIC_MODELS.find(([v]) => v === S.models[p]);
+  return `${esc(m ? m[1] : S.models[p])} · temp ${S.temperature}`;
+}
+function ConnPill(){
+  const p = S.provider;
+  if (isCli(p)) return S.bridge === 'ok'
+    ? `<span class="pill ok"><span class="dot"></span>Bridge ready</span>`
+    : `<span class="pill err"><span class="dot"></span>No bridge</span>`;
+  if (p === 'anthropic-api') return S.anthropicApiKey ? `<span class="pill ok"><span class="dot"></span>Key saved</span>` : `<span class="pill err"><span class="dot"></span>No API key</span>`;
+  const local = /localhost|127\.0\.0\.1/.test(S.openaiBaseUrl);
+  return local || S.openaiApiKey ? `<span class="pill">Local server</span>` : `<span class="pill err"><span class="dot"></span>No API key</span>`;
+}
+
+function HomeTab(){
+  const P = PROVIDERS[S.provider];
+  return `
+  <section class="card stack" aria-labelledby="status-h" data-component="StatusCard">
+    <div class="ctitle"><h2 id="status-h">Using</h2>${ConnPill()}</div>
+    <div class="prov-line">
+      <span class="pmark" aria-hidden="true">${P.short}</span>
+      <div class="t"><b>${P.title}</b><span>${providerDetailLine()}</span></div>
+      <button class="link" data-tab="provider">Change</button>
+    </div>
+    ${isCli(S.provider) && S.bridge === 'error' ? BridgeErrorNote() : ''}
+    ${TestControl(false)}
+  </section>
+  <section class="card stack" aria-labelledby="mode-h" data-component="DefaultModeCard">
+    <div class="ctitle"><h2 id="mode-h">Default mode</h2></div>
+    <div class="seg" role="radiogroup" aria-labelledby="mode-h">
+      ${[['fix','Fix'],['rephrase','Rephrase'],['shorter','Shorter']].map(([v,l]) =>
+        `<button role="radio" aria-checked="${S.defaultMode===v}" tabindex="${S.defaultMode===v?0:-1}" data-mode="${v}"${v==='rephrase'?' title="Rephrase (keep tone)"':''}>${l}</button>`).join('')}
+    </div>
+    <p class="help">${{fix:'Corrects spelling and grammar, keeps your words.',rephrase:'Rewrites for clarity and keeps your tone.',shorter:'Trims the text and keeps the meaning.'}[S.defaultMode]}</p>
+  </section>
+  ${UsageCard()}`;
+}
+
+function UsageCard(){
+  return `<section class="card later stack" aria-labelledby="usage-h" data-component="UsageCard">
+    <div class="ctitle"><h2 id="usage-h">Usage today</h2><span class="badge-later">Later · example data</span></div>
+    <table class="usage" aria-describedby="usage-h">
+      <tr><td>GPT-6 Luna</td><td>42 requests</td><td>1.3 s avg</td></tr>
+      <tr><td>Haiku</td><td>7 requests</td><td>2.1 s avg</td></tr>
+    </table>
+  </section>`;
+}
+
+/* --- Provider tab --- */
+function ProviderPicker(){
+  const chip = id => `<button class="chip" role="radio" aria-checked="${S.provider===id}" tabindex="${S.provider===id?0:-1}" data-provider="${id}"><span class="ck">${ICON.check}</span>${PROVIDERS[id].title}</button>`;
+  return `<section class="card" aria-labelledby="pp-h" data-component="ProviderPicker">
+    <h2 id="pp-h" class="sr">AI provider</h2>
+    <div role="radiogroup" aria-labelledby="pp-h">
+      <p class="pgroup-label" id="g1">Your subscription · via the bridge</p>
+      <div class="chips">${chip('claude-cli')}${chip('codex-cli')}${chip('grok-cli')}</div>
+      <p class="pgroup-label" id="g2" style="margin-top:10px">API</p>
+      <div class="chips two">${chip('openai-compatible')}${chip('anthropic-api')}</div>
+    </div>
+    <p class="psub">${PROVIDERS[S.provider].sub}</p>
+  </section>`;
+}
+
+function PresetPicker(id, label, presets, value, key){
+  const chosen = S.customChosen[key] || !presets.some(([v]) => v === value);
+  return `<div class="field"><label for="${id}">${label}</label>
+    <div class="preset">
+      <select id="${id}" data-preset="${key}">
+        ${presets.map(([v,l]) => `<option value="${esc(v)}" ${!chosen && v===value ? 'selected':''}>${esc(l)}</option>`).join('')}
+        <option value="${CUSTOM}" ${chosen?'selected':''}>Custom…</option>
+      </select>
+      ${chosen ? `<input id="${id}-custom" aria-label="Custom ${label.toLowerCase()}" value="${esc(value)}" data-text="${key}" spellcheck="false">` : ''}
+    </div></div>`;
+}
+
+function SecretInput(id, key, help){
+  const shown = !!S.shown[key];
+  return `<div class="field"><label for="${id}">API key</label>
+    <div class="inline">
+      <input id="${id}" type="${shown?'text':'password'}" value="${esc(S[key])}" placeholder="${key==='openaiApiKey'?'Optional for local servers':'sk-ant-…'}" data-text="${key}" spellcheck="false" autocomplete="off">
+      <button type="button" aria-pressed="${shown}" data-show="${key}" aria-label="${shown?'Hide':'Show'} API key">${shown?'Hide':'Show'}</button>
+    </div>${help ? `<p class="help">${help}</p>` : ''}</div>`;
+}
+
+function TemperatureField(){
+  return `<div class="field"><label for="temp">Temperature</label>
+    <div class="range-row">
+      <input type="range" min="0" max="1" step="0.1" value="${S.temperature}" aria-label="Temperature slider" data-temp>
+      <input id="temp" type="number" min="0" max="1" step="0.1" value="${S.temperature}" data-temp>
+    </div><p class="help">From 0 to 1. Lower keeps your wording closer.</p></div>`;
+}
+
+function ProviderDetails(){
+  const p = S.provider, P = PROVIDERS[p];
+  let body = '';
+  if (isCli(p)) {
+    body = `<div class="row2">
+        ${PresetPicker('model','Model',CLI_MODELS[p],S.models[p],'model:'+p)}
+        ${PresetPicker('effort','Thinking effort',CLI_EFFORTS[p].map(e=>[e,EL[e]]),S.efforts[p],'effort:'+p)}
+      </div>
+      <p class="help">Lower effort is faster and cheaper. Low is enough for fixing text.</p>
+      ${p==='codex-cli' ? `<div class="note"><p>Codex needs its own login for LocalPolish, once. Run this in a terminal.</p>${CodeLine(CODEX_LOGIN)}</div>` : ''}`;
+  } else if (p === 'openai-compatible') {
+    const preset = OPENAI_BASE_URLS.find(([v]) => v === S.openaiBaseUrl);
+    const ollama = S.openaiBaseUrl === 'http://localhost:11434/v1' || /:11434(\/|$)/.test(S.openaiBaseUrl);
+    body = `${PresetPicker('base-url','Base URL',OPENAI_BASE_URLS.map(([v,l])=>[v,`${l} (${v})`]),S.openaiBaseUrl,'openaiBaseUrl')}
+      ${ollama ? `<div class="note"><p>Ollama must allow the extension: start it with</p>${CodeLine('OLLAMA_ORIGINS=chrome-extension://* ollama serve')}</div>` : ''}
+      <div class="field"><label for="openai-model">Model</label>
+        <input id="openai-model" value="${esc(S.models[p])}" placeholder="${preset ? preset[2] : 'model name'}" data-text="model:openai-compatible" spellcheck="false"></div>
+      ${SecretInput('openai-key','openaiApiKey','Leave empty for Ollama and LM Studio.')}
+      ${TemperatureField()}`;
+  } else {
+    body = `${PresetPicker('a-model','Model',ANTHROPIC_MODELS,S.models[p],'model:anthropic-api')}
+      ${SecretInput('anthropic-key','anthropicApiKey','Stored only in this browser.')}
+      ${TemperatureField()}`;
+  }
+  return `<section class="card stack" id="details" aria-labelledby="pd-h" data-component="ProviderDetails">
+    <div class="ctitle"><h2 id="pd-h">${P.title} settings</h2></div>${body}</section>`;
+}
+
+function BridgeCard(){
+  if (!isCli(S.provider)) return '';
+  return `<section class="card stack" id="bridge" aria-labelledby="br-h" data-component="BridgeCard">
+    <div class="ctitle"><h2 id="br-h">Bridge</h2><button class="link" data-act="bridge">Check again</button></div>
+    ${S.bridge === 'error' ? BridgeErrorNote() : `<ul class="clis">${Object.values(BRIDGE_CLIS).map(([n,v]) =>
+      `<li><span class="dot ${v?'on':'off'}" aria-hidden="true"></span><span class="n">${n}</span><span class="muted">${v ?? 'not found'}</span></li>`).join('')}</ul>`}
+  </section>`;
+}
+
+function ProviderTab(){
+  return `${ProviderPicker()}${ProviderDetails()}${BridgeCard()}
+  <section class="card stack" id="test" aria-labelledby="tc-h"><div class="ctitle"><h2 id="tc-h">Test connection</h2></div>
+    <p class="help" style="margin-top:-6px">Runs a tiny Fix with ${PROVIDERS[S.provider].title}.</p>${TestControl(true)}</section>`;
+}
+
+/* --- Sites tab --- */
+function SitesTab(){
+  const list = S.blocklist;
+  return `<section class="card stack" aria-labelledby="sites-h" data-component="SitesCard">
+    <div class="ctitle"><h2 id="sites-h">Button hidden on</h2><span class="muted" style="font-size:12px">${list.length} site${list.length===1?'':'s'}</span></div>
+    ${list.length ? `<ul class="sites">${list.map(h => `<li><span class="host">${esc(h)}</span>${h===HOST?'<span class="tag">This tab</span>':''}<button class="x" data-remove="${esc(h)}" aria-label="Remove ${esc(h)}">${ICON.x}</button></li>`).join('')}</ul>`
+      : `<p class="empty">No sites yet. The button shows everywhere.</p>`}
+    <form class="inline" data-act="add" onsubmit="return false">
+      <label for="add-site" class="sr">Add a site</label>
+      <input id="add-site" placeholder="example.com" spellcheck="false" autocomplete="off">
+      <button type="submit">Add</button>
+    </form>
+    <p class="help">One hostname per entry. Subdomains are included. The shortcut still works on these sites.</p>
+  </section>
+  ${list.includes(HOST) ? '' : `<button class="card" style="height:auto;text-align:left;display:flex;align-items:center;gap:10px" data-act="site">
+      <span class="qicon site" aria-hidden="true">M</span><span style="flex:1;line-height:1.3"><b style="display:block;font-weight:600">Hide on ${HOST}</b><span class="help">Adds this tab's site to the list</span></span></button>`}`;
+}
+
+/* --- About tab --- */
+function AboutTab(){
+  return `<section class="card stack" aria-labelledby="sc-h" data-component="ShortcutCard">
+    <div class="srow"><div class="t"><b id="sc-h">Polish shortcut</b><span>Select text in a field, then press</span></div>
+      <span class="keys" aria-label="Current shortcut: Control Shift K"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>K</kbd></span></div>
+    <button data-act="shortcuts" style="display:flex;align-items:center;justify-content:center;gap:6px">Change shortcut ${ICON.ext}</button>
+    <p class="help" style="text-align:center;margin-top:-4px">Opens chrome://extensions/shortcuts</p>
+  </section>
+  <section class="card" data-component="OptionsLinkCard">
+    <div class="srow"><div class="t"><b>All options</b><span>The full options page, same settings</span></div>
+      <button data-act="options" style="display:flex;align-items:center;gap:6px">Open ${ICON.ext}</button></div>
+  </section>
+  <section class="card stack" data-component="HowItWorksCard">
+    <div class="ctitle"><h2>How it works</h2></div>
+    <p class="help" style="color:var(--text)">Select text and press the shortcut, or click the LocalPolish button next to a field. With <b>Fix while I type</b> on, a field is fixed after a 3 s pause and you accept or undo the change.</p>
+  </section>
+  <p class="foot">LocalPolish 0.0.0 · Fix and rewrite text with the AI you already pay for</p>`;
+}
+
+/* ===== Render ===== */
+function render(){
+  document.documentElement.dataset.theme = S.theme === 'auto' ? '' : S.theme;
+  if (S.theme === 'auto') delete document.documentElement.dataset.theme;
+  const panel = {home:HomeTab,provider:ProviderTab,sites:SitesTab,about:AboutTab}[S.tab]();
+  document.getElementById('app').innerHTML = Header() + QuickToggles() + Tabs() +
+    `<main class="panel" id="panel" role="tabpanel" aria-labelledby="tab-${S.tab}" data-component="${S.tab[0].toUpperCase()+S.tab.slice(1)}Tab">${panel}</main>`;
+  document.querySelectorAll('[data-mock]').forEach(el => el.value = S[el.dataset.mock]);
+  if (S.scroll) { const t = document.getElementById(S.scroll); if (t) { const pn = document.getElementById('panel'); pn.scrollTop = t.offsetTop - pn.offsetTop - 12; } }
+}
+function flashSaved(){ const s = document.getElementById('saved'); if (!s) return; s.classList.add('on'); clearTimeout(flashSaved.t); flashSaved.t = setTimeout(() => s.classList.remove('on'), 1500); }
+function set(patch, saved=true){ Object.assign(S, patch); S.scroll=''; render(); if (saved) flashSaved(); }
+
+/* ===== Events (delegated) ===== */
+document.addEventListener('click', e => {
+  const el = e.target.closest('button'); if (!el) return;
+  const d = el.dataset;
+  if (d.tab) return set({tab:d.tab}, false);
+  if (d.mode) return set({defaultMode:d.mode});
+  if (d.provider) return set({provider:d.provider, test:'idle'});
+  if (d.remove) return set({blocklist:S.blocklist.filter(h => h !== d.remove), site: d.remove===HOST?'on':S.site});
+  if (d.show) return set({shown:{...S.shown,[d.show]:!S.shown[d.show]}}, false);
+  switch (d.act) {
+    case 'idle': return set({idleFix:!S.idleFix});
+    case 'site': {
+      const hidden = S.blocklist.includes(HOST);
+      return set({blocklist: hidden ? S.blocklist.filter(h => h!==HOST) : [...S.blocklist, HOST], site: hidden?'on':'off'});
+    }
+    case 'test':
+      set({test:'running'}, false);
+      setTimeout(() => set({test: isCli(S.provider) && S.bridge==='error' ? 'fail' : 'ok'}, false), 1400);
+      return;
+    case 'bridge': return set({bridge:'ok'}, false);
+    case 'copy': el.textContent = 'Copied'; setTimeout(() => el.textContent = 'Copy', 1500); return;
+    case 'options': case 'shortcuts': el.blur(); return; // chrome.runtime.openOptionsPage() / chrome.tabs.create({url:'chrome://extensions/shortcuts'})
+  }
+});
+document.addEventListener('submit', e => {
+  const input = document.getElementById('add-site'); const h = input.value.trim().toLowerCase();
+  if (h && !S.blocklist.includes(h)) set({blocklist:[...S.blocklist, h], site: h===HOST?'off':S.site});
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.mock) { applyMock(el.dataset.mock, el.value); return; }
+  if (el.dataset.preset) {
+    const key = el.dataset.preset, v = el.value;
+    if (v === CUSTOM) return set({customChosen:{...S.customChosen,[key]:true}}, false);
+    const cc = {...S.customChosen, [key]:false};
+    if (key === 'openaiBaseUrl') return set({openaiBaseUrl:v, customChosen:cc});
+    const [kind, p] = key.split(':');
+    if (kind === 'model') return set({models:{...S.models,[p]:v}, customChosen:cc});
+    if (kind === 'effort') return set({efforts:{...S.efforts,[p]:v}, customChosen:cc});
+  }
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.text) { // no re-render while typing, keeps focus
+    const key = el.dataset.text;
+    if (key.startsWith('model:')) S.models[key.slice(6)] = el.value;
+    else if (key.startsWith('effort:')) S.efforts[key.slice(7)] = el.value;
+    else S[key] = el.value;
+    flashSaved();
+  }
+  if (el.dataset.temp !== undefined) {
+    const v = Number(el.value); if (Number.isFinite(v) && v >= 0 && v <= 1) { S.temperature = v; document.querySelectorAll('[data-temp]').forEach(o => { if (o!==el) o.value = v; }); flashSaved(); }
+  }
+});
+/* Arrow keys for tabs and radiogroups (roving tabindex) */
+document.addEventListener('keydown', e => {
+  if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+  const group = e.target.closest('[role=tablist],[role=radiogroup]'); if (!group) return;
+  const items = [...group.querySelectorAll('[role=tab],[role=radio]')];
+  const i = items.indexOf(e.target); if (i < 0) return;
+  e.preventDefault();
+  const next = items[(i + (e.key==='ArrowLeft'||e.key==='ArrowUp' ? -1 : 1) + items.length) % items.length];
+  next.click(); const sel = next.dataset.tab ? `[data-tab="${next.dataset.tab}"].tab` : next.dataset.mode ? `[data-mode="${next.dataset.mode}"]` : `[data-provider="${next.dataset.provider}"]`;
+  document.querySelector(sel)?.focus();
+});
+
+/* ===== Mockup state from controls / URL hash ===== */
+function applyMock(k, v){
+  if (k === 'site') {
+    const has = S.blocklist.includes(HOST);
+    if (v === 'off' && !has) S.blocklist = [...S.blocklist, HOST];
+    if (v === 'on' && has) S.blocklist = S.blocklist.filter(h => h !== HOST);
+  }
+  S[k] = v; render();
+}
+function fromHash(){
+  const q = new URLSearchParams(location.hash.slice(1));
+  for (const [k,v] of q) { if (k === 'shown') S.shown[v] = true; else if (k.startsWith('model.')) S.models[k.slice(6)] = v; else if (k === 'idle') S.idleFix = v !== 'off'; else if (k === 'mode') S.defaultMode = v; else if (k === 'site') applyMock('site', v); else S[k] = v; }
+  render();
+}
+window.addEventListener('hashchange', fromHash);
+fromHash();
+</script>
+</body>
+</html>
