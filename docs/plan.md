@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: done (T0-T12). Ideas for later are under Later.
+Status: done (T0-T12). Closing review and comment pass done 2026-10-18. Ideas for later are under Later.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 

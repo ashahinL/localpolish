@@ -14,7 +14,6 @@ function rewrite(goal: string, result: string): string {
 }
 
 export const MODE_PROMPTS: Record<Exclude<Mode, 'tone'>, string> = {
-  // Benchmarked in bench/README.md (2026-10-17): Luna 19/21, up from 12/21; Haiku unchanged.
   fix: 'Fix the grammar, spelling, punctuation and capitalization of the text inside the <text> tags. Capitalize greetings and names. Keep nouns singular or plural as written. Keep each part in its own language and script: Arabic stays Arabic, Franco-Arabic stays Franco-Arabic. Do not translate or transliterate. If the text ends without punctuation, do not add any. Return only the corrected text.',
   rephrase: rewrite(
     'Rewrite the text inside the <text> tags so it reads clear and natural, with the same meaning, tone and length.',

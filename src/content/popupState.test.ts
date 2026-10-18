@@ -97,7 +97,6 @@ describe('popupReducer', () => {
 });
 
 describe('choosing a tab or chip', () => {
-  // Plays a click the way the controller does: decide with pickAction, then reduce.
   function click(state: PopupState, choice: Choice): [PopupAction, PopupState] {
     const action = pickAction(state, choice);
     return [action, popupReducer(state, action)];

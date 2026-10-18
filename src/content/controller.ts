@@ -114,7 +114,6 @@ export function createController(deps: ControllerDeps): Controller {
         state: s.state,
         anchor: s.anchor,
         isMac: deps.isMac,
-        // Rephrase only opens its chips; the chip click is what sends.
         onTab: guarded((tab: Tab) => {
           if (tab === 'rephrase') dispatch(s, { type: 'tab', tab });
           else choose(s, tab);
@@ -135,7 +134,6 @@ export function createController(deps: ControllerDeps): Controller {
       request(s, action);
       return;
     }
-    // A streaming choice we leave is cancelled; its partial answer is never saved.
     if (action.type === 'restore') stopPort(s);
     dispatch(s, action);
   }

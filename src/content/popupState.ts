@@ -15,7 +15,6 @@ export interface PopupState {
   streamed: string;
   result: string;
   error: string;
-  /** Finished answers for the life of the popup. */
   cache: Partial<Record<Choice, string>>;
   acceptFailure: AcceptFailure | null;
   acceptCopied: boolean;
@@ -70,7 +69,6 @@ export function popupReducer(state: PopupState, action: PopupAction): PopupState
         cache: without(state.cache, action.choice),
       };
     case 'retry':
-      // Keeps the open tab: Retry while Rephrase is open and Fix is shown stays on Rephrase.
       return {
         ...initialState(state.input, state.choice),
         tab: state.tab,
@@ -114,7 +112,6 @@ function without(cache: PopupState['cache'], choice: Choice): PopupState['cache'
   return next;
 }
 
-/** What a click on a tab or chip should do: nothing new, show a saved answer, or send. */
 export function pickAction(state: PopupState, choice: Choice): PopupAction {
   if (choice === state.choice && state.phase !== 'error')
     return { type: 'tab', tab: tabOf(choice) };
