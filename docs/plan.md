@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: T0-T12 done (closing review and comment pass 2026-10-18). T13 in progress.
+Status: T0-T13 done.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -131,7 +131,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - No new keyboard keys.
   - Built: the default mode setting keeps Fix, Rephrase (keep tone) and Shorter. A stored 'tone' default loads as Fix. The wire format did not change: Keep tone sends `mode: 'rephrase'`, a tone chip sends `mode: 'tone'`. Rephrase open with another answer shown adds a small "Showing: Fix" caption.
 
-- [~] **T13. Idle Fix with a badge**. T13a logic and a plain marker (Grok, feature lane); T13b marker look and placement (Claude Opus, art lane). Decided with the user on 2026-10-18:
+- [x] **T13. Idle Fix with a badge**. T13a logic and a plain marker (Grok, feature lane); T13b marker look and placement (Claude Opus, art lane). Decided with the user on 2026-10-18:
   - No dictionary of our own. The browser's spellcheck already underlines typos; our value is grammar.
   - When the user stops typing for 5 seconds and the field still has focus, run one Fix in the background. Send nothing if the text did not change since the last idle Fix.
   - On everywhere, with a block list (the Sites list, or its own list; decide at build time).
@@ -147,6 +147,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - The manual flow (select, then button or shortcut) always works, whether or not the idle Fix ran.
   - [x] **T13a.** Logic and a plain marker.
   - Built: a 5 second pause in a message field runs one Fix, and a corner marker opens the popup with that diff or the error.
+  - [x] **T13b.** Marker look and placement.
+  - Built: an 18 px yellow count badge ("9+" above 9) and a 14 px red "!" dot, with a theme ring, shadow, hover, focus ring and a pop-in that reduced motion turns off. The marker sits 14 px in from the corner, left of a visible scrollbar, centered in fields under 32 px tall, hides when the corner is off screen or the field has no size, and follows a field that grows while typing.
 
 ## Later (not MVP, keep the design open)
 

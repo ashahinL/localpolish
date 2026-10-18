@@ -25,8 +25,8 @@ export interface IdleDeps {
 const IDLE_MS = 5000;
 const WHOLE_LIMIT = 3000;
 const MIN_WORDS = 5;
-const MARK_SIZE = 20;
-const MARK_INSET = 12;
+const MARK_INSET = 14;
+const SMALL_FIELD = 32;
 const STOPPED = 'LocalPolish stopped before the new text was ready. Try again.';
 
 interface Sent {
@@ -77,6 +77,8 @@ export function createIdleFix(deps: IdleDeps): void {
     if (!(event.target instanceof Node)) return;
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;
+    // A field that grows while typing moves its corner.
+    reposition();
     const slot = slotOf(host);
     clearTimeout(slot.timer);
     slot.timer = setTimeout(
@@ -253,13 +255,8 @@ export function createIdleFix(deps: IdleDeps): void {
         else marked.delete(el);
         continue;
       }
-      const rect = el.getBoundingClientRect();
-      items.push({
-        el,
-        result,
-        top: rect.bottom - MARK_INSET - MARK_SIZE / 2,
-        left: rect.right - MARK_INSET - MARK_SIZE / 2,
-      });
+      const spot = markSpot(el);
+      if (spot) items.push({ el, result, ...spot });
     }
     if (items.length === 0) {
       if (shown) render(null, layer('marks'));
@@ -290,7 +287,7 @@ export function createIdleFix(deps: IdleDeps): void {
             top: item.top,
             left: item.left,
             error: false,
-            text: String(mark.count),
+            text: mark.count > 9 ? '9+' : String(mark.count),
             ariaLabel: `LocalPolish: ${mark.count} ${mark.count === 1 ? 'fix' : 'fixes'}`,
             onActivate: guarded(() => activate(item.el)),
           });
@@ -308,6 +305,20 @@ export function createIdleFix(deps: IdleDeps): void {
     ids.set(el, id);
     return id;
   }
+}
+
+// The marker's center, or null when the field's corner is not on screen.
+function markSpot(el: HTMLElement): { top: number; left: number } | null {
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return null;
+  const style = getComputedStyle(el);
+  const borders = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+  const scrollbar = Math.max(0, el.offsetWidth - el.clientWidth - borders);
+  const insetY = rect.height < SMALL_FIELD ? rect.height / 2 : MARK_INSET;
+  const top = rect.bottom - insetY;
+  const left = rect.right - scrollbar - MARK_INSET;
+  if (top < 0 || left < 0 || top > window.innerHeight || left > window.innerWidth) return null;
+  return { top, left };
 }
 
 function choosePart(el: HTMLElement, full: string): Sent | null {

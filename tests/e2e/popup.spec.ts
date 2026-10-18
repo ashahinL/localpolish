@@ -452,6 +452,50 @@ test.describe('idle fix', () => {
     await expect(page.locator('#ta')).toHaveValue('I went home today. friend');
   });
 
+  test('more than 9 fixes shows 9+', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'one two three four five six seven eight nine ten' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('a b c d e f g h i j');
+    await pause(page);
+
+    await expect(page.getByRole('button', { name: 'LocalPolish: 10 fixes' })).toHaveText('9+');
+  });
+
+  test('the marker hides while its corner is scrolled away', async ({ page }) => {
+    await page.addStyleTag({ content: 'body { padding-bottom: 3000px; }' });
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    const mark = page.locator('.lp-mark');
+    await expect(mark).toHaveCount(1);
+
+    await page.evaluate(() => window.scrollTo(0, 1000));
+    await expect(mark).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(mark).toHaveCount(1);
+  });
+
+  test('other markers come back when the popup closes', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    for (const field of ['#ta', '#ce']) {
+      await page.locator(field).click();
+      await page.keyboard.type('i has went home today');
+      await pause(page);
+    }
+    const marks = page.locator('.lp-mark');
+    await expect(marks).toHaveCount(2);
+
+    await marks.first().click();
+    await expect(page.locator('.lp-popup')).toBeVisible();
+    await expect(marks).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.lp-popup')).toHaveCount(0);
+    await expect(marks).toHaveCount(1);
+  });
+
   test('an unchanged fix shows no marker', async ({ page }) => {
     const text = 'nothing needs a fix today';
     await startIdle(page, [[{ type: 'done', text }]]);
