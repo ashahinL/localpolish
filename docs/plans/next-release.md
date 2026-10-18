@@ -42,7 +42,7 @@ Claude checked every finding against the code at `7e35740`. All 22 are real. The
 | A18 | P3    | P3     | True. The options page has no Fix while I type switch.                                                                                                                                 |
 | A19 | P2    | P3     | True, but the package is only in the test fixture. Nothing ships in the zip.                                                                                                          |
 | A20 | P2    | P3     | True. Keep it cheap: macOS minutes cost 10 times Linux minutes on a private repo. Run only the bridge unit tests on macOS and Windows.                                                 |
-| A21 | P2    | Owner  | True, but required checks would block the direct pushes to `main` that this project uses. It may also need a paid plan for a private repo. The owner decides. It is not a Sol task.     |
+| A21 | P2    | Skip   | True, but required checks would block the direct pushes to `main` that this project uses. The owner chose to skip it (18 October 2026).                                             |
 | A22 | P3    | P3     | True. Step 6 pushes without `git pull --rebase`, and the bridge text is wrong: a pull alone updates `bridge/host.mjs`, because the wrapper runs it from the clone.                     |
 
 Changes to the plan, compared with Sol's draft:
@@ -50,7 +50,7 @@ Changes to the plan, compared with Sol's draft:
 1. **Fewer, grouped tasks.** Most fixes are under 20 lines. 22 single-fix tasks would cost more in review than in code. Fixes that touch the same files are grouped into one task and one commit.
 2. **Smaller fixes.** A01 uses `location.ancestorOrigins` in the content script, plus a background check for idle requests only. A09 uses `navigator.locks`. A15 fixes the one rule normalizer that every list goes through. A16 is a focus check in the frame.
 3. **No forced major release.** Sol's draft said T15h (A08) forces a new bridge install, which `RELEASING.md` treats as a major release. It does not: the old wrapper keeps working for every normal path. Only people with a `$`, a backtick or a `"` in the repo path need to reinstall. So the next release can be 1.1.0. T17a updates `RELEASING.md` to say this.
-4. **A21 is the owner's decision,** not a task.
+4. **A21 is skipped** by the owner's choice. Pushes to `main` stay direct.
 5. **Optimizations move to the backlog.** Nobody has reported the popup or idle Fix as slow. Measure first, in a later release.
 
 ## T15: privacy and draft safety
@@ -71,12 +71,12 @@ Changes to the plan, compared with Sol's draft:
 - [ ] **T17a. Privacy, release guide and bench docs** (A17, A22). Sol medium. Brief: [T17a-docs.md](../briefs/T17a-docs.md). Depends on: T15 and T16, so the docs describe the finished behavior.
 - [ ] **T17b. Remove the vulnerable test dependency chain** (A19). Sol medium. Brief: [T17b-dev-deps.md](../briefs/T17b-dev-deps.md). Depends on: nothing.
 - [ ] **T17c. Bridge tests on macOS and Windows, and Node 22 in CI** (A20). Sol medium. Brief: [T17c-ci.md](../briefs/T17c-ci.md). Depends on: T15e, T17b.
-- [ ] **A21. Branch protection.** Owner decision. See the review table.
+- **A21. Branch protection.** Skipped by the owner on 18 October 2026.
 
 ## T18: product additions (after T15-T17)
 
 - [ ] **T18a. Final-text view in the rewrite popup** (F02). Art lane (Claude Opus). Brief: [T18a-final-view.md](../briefs/T18a-final-view.md). Depends on: T15c.
-- [ ] **T18b. First-run setup** (F01). Art lane (Claude Opus). Brief: [T18b-first-run.md](../briefs/T18b-first-run.md). Needs the owner first: should idle Fix be on or off for a new install? Depends on: T16b.
+- [ ] **T18b. First-run setup** (F01). Art lane (Claude Opus). Brief: [T18b-first-run.md](../briefs/T18b-first-run.md). Fix while I type stays on by default (owner, 18 October 2026). Depends on: T16b.
 - [ ] **T18c. Keep API keys out of content scripts** (F03). Sol high. Brief: [T18c-key-isolation.md](../briefs/T18c-key-isolation.md). Depends on: T15a, T15b, T16a.
 
 ## Backlog (not in this release)
