@@ -48,6 +48,7 @@ Nothing else gets one.
    npm run test:e2e
    ```
    The last GitHub Actions run on `main` must be green too.
+   Run `gh workflow run platforms.yml --ref main` and wait for it to pass before you tag.
 2. **Test by hand.** Reload the extension on `chrome://extensions`, then
    reload the test tabs (an open tab keeps the old content script). Go
    through `docs/manual-checklist.md` for anything this version changed, and

@@ -232,6 +232,47 @@ const ready = setInterval(() => {
     },
   );
 
+  it.runIf(process.platform === 'win32')(
+    'kills a grandchild on Windows when Chrome closes stdin',
+    async () => {
+      const bin = tempDir('lp-bin-');
+      const pidFile = path.join(bin, 'pid');
+      const script = `
+require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+setInterval(() => {}, 1000);
+`;
+      writeCli(
+        bin,
+        'claude',
+        `#!/usr/bin/env node
+const { spawn } = require('child_process');
+spawn(process.execPath, ['-e', ${JSON.stringify(script)}], { stdio: 'ignore' });
+setInterval(() => {}, 1000);
+`,
+      );
+      const host = startHost(bin, 4000);
+      host.child.stdin.write(rewrite('claude', 'hello'));
+      const pid = await waitForPid(pidFile);
+      pids.push(pid);
+      host.child.stdin.end();
+      await host.closed;
+      await expect
+        .poll(
+          () => {
+            try {
+              process.kill(pid, 0);
+              return 'alive';
+            } catch (err) {
+              return err.code;
+            }
+          },
+          { timeout: 5000 },
+        )
+        .toBe('ESRCH');
+    },
+    10000,
+  );
+
   it.skipIf(windows)('kills the processes the cli started', async () => {
     const bin = tempDir('lp-bin-');
     const pidFile = path.join(bin, 'pid');

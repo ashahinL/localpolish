@@ -70,7 +70,7 @@ Changes to the plan, compared with Sol's draft:
 
 - [ ] **T17a. Privacy, release guide and bench docs** (A17, A22). Sol medium. Brief: [T17a-docs.md](../briefs/T17a-docs.md). Depends on: T15 and T16, so the docs describe the finished behavior.
 - [x] **T17b. Remove the vulnerable test dependency chain** (A19). Sol medium. Brief: [T17b-dev-deps.md](../briefs/T17b-dev-deps.md). Depends on: nothing.
-- [ ] **T17c. Bridge tests on macOS and Windows, and Node 22 in CI** (A20). Sol medium. Brief: [T17c-ci.md](../briefs/T17c-ci.md). Depends on: T15e, T17b.
+- [x] **T17c. Bridge tests on macOS and Windows, and Node 22 in CI** (A20). Sol medium. Brief: [T17c-ci.md](../briefs/T17c-ci.md). Depends on: T15e, T17b.
 - **A21. Branch protection.** Skipped by the owner on 18 October 2026.
 
 ## T18: product additions (after T15-T17)
@@ -119,3 +119,7 @@ Changes to the plan, compared with Sol's draft:
 - T16a: all gates passed, with 262 unit tests passed, 1 Windows-only test skipped, and 107 browser tests passed. Shared Web Locks, damaged storage, and canonical site entries have coverage. As scoped, concurrent edits of entire model records for different providers can still overwrite each other. Reusable skill: none.
 
 - T17b: Immutable is pinned to 3.8.4 under Draft.js. Full and production-only audits both report zero vulnerabilities, down from two high dev-only package entries. All gates passed: 262 unit tests, 1 Windows-only skip, and 107 browser tests. Every production build file is byte-for-byte unchanged by the override. No delegated work or reusable skill was needed.
+
+- T17c: added dispatch/tag-only macOS and Windows bridge jobs and an Ubuntu Node 22 job, a Windows grandchild cleanup test, and the pre-tag dispatch command. Node 22 targeted tests passed: 84 passed and 3 Windows-only skips across 5 files. Lint, Node 22 typecheck, and changed-file formatting passed. The orchestrator still owns full gates, browser checks, commit, push, and remote workflow verification; no CI run link yet. The repo is public; the owner-approved dispatch/tag schedule stays unchanged. Reusable skill: none.
+
+- T17c local verification: all gates passed, with 262 unit tests passed, 2 platform-specific tests skipped, and 107 browser tests passed. Remote platform verification follows the required push and dispatch.
