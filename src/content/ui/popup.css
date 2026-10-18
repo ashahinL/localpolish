@@ -357,20 +357,18 @@ button:focus-visible {
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  /* The ring takes the page-facing theme color, the shadow lifts it off light pages. */
   box-shadow:
     0 0 0 1.5px var(--lp-bg),
     0 1px 4px rgb(0 0 0 / 0.35);
+  translate: -50% -50%;
   cursor: pointer;
   transition: transform 120ms ease-out;
   animation: lp-mark-in 160ms ease-out;
 }
 
-/* idle.ts places the marker's center; the negative margins center each size on it. */
 .lp-mark-fixes {
   width: 18px;
   height: 18px;
-  margin: -9px 0 0 -9px;
   font-size: 11px;
   background: #f5c518;
   color: #1a1a1a;
@@ -379,7 +377,6 @@ button:focus-visible {
 .lp-mark-error {
   width: 14px;
   height: 14px;
-  margin: -7px 0 0 -7px;
   font-size: 10px;
   background: #d93025;
   color: #ffffff;

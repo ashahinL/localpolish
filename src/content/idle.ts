@@ -77,7 +77,6 @@ export function createIdleFix(deps: IdleDeps): void {
     if (!(event.target instanceof Node)) return;
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;
-    // A field that grows while typing moves its corner.
     reposition();
     const slot = slotOf(host);
     clearTimeout(slot.timer);
@@ -240,7 +239,6 @@ export function createIdleFix(deps: IdleDeps): void {
   }
 
   function renderMarks(): void {
-    // The popup covers this corner. Show the marker again once it closes.
     if (deps.isPopupOpen()) {
       if (shown) render(null, layer('marks'));
       shown = false;
@@ -307,7 +305,6 @@ export function createIdleFix(deps: IdleDeps): void {
   }
 }
 
-// The marker's center, or null when the field's corner is not on screen.
 function markSpot(el: HTMLElement): { top: number; left: number } | null {
   const rect = el.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return null;

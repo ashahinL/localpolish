@@ -336,6 +336,8 @@ test('the button mounts in the dialog that holds the field', async ({ page }) =>
   await expect(page.locator('.lp-popup')).toBeVisible();
 });
 
+const FAKE_REPLY_MS = 100;
+
 test.describe('idle fix', () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.install();
@@ -355,8 +357,7 @@ test.describe('idle fix', () => {
 
   async function pause(page: Page): Promise<void> {
     await page.clock.fastForward(5000);
-    // The fake port replies on a timer that starts when the idle timer fires.
-    await page.clock.fastForward(100);
+    await page.clock.fastForward(FAKE_REPLY_MS);
   }
 
   function requests(page: Page): Promise<number> {
@@ -447,7 +448,7 @@ test.describe('idle fix', () => {
     await page.getByRole('button', { name: 'LocalPolish: error' }).click();
     const popup = page.locator('.lp-popup');
     await popup.getByRole('button', { name: 'Retry' }).click();
-    await page.clock.fastForward(100);
+    await page.clock.fastForward(FAKE_REPLY_MS);
     await popup.getByRole('button', { name: 'Accept' }).click();
     await expect(page.locator('#ta')).toHaveValue('I went home today. friend');
   });
