@@ -70,13 +70,15 @@ On Windows, run this in PowerShell instead.
 $env:CODEX_HOME="$env:USERPROFILE\AppData\Local\LocalPolish\codex-home"; mkdir -Force $env:CODEX_HOME | Out-Null; codex login
 ```
 
-7. Open the options page. Right-click the extension icon and choose **Options**. You can also open `chrome://extensions`, then open **LocalPolish**. Click **Details**, then **Extension options**. Pick a provider, then press **Test connection**.
+7. Click the LocalPolish icon in the toolbar (pin it from the puzzle-piece menu). The popup has every setting. Pick a provider on its **Provider** tab, then press **Test connection**. The gear opens the full options page.
 
 ## Using it
 
 Select text in a text field. A small round button appears under the spot where your selection ends. Click it.
 
 Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field.
+
+**Fix while I type** is on by default. When you stop typing for 3 seconds in a message field, LocalPolish runs a Fix in the background, and a small marker shows how many fixes it found. Click the marker to see the diff. Turn it off with the **Fix while I type** switch in the toolbar popup.
 
 The popup has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green.
 
@@ -88,11 +90,11 @@ A warning lists any link, @mention, #hashtag, code, or emoji that the rewrite dr
 
 If the site does not accept the change, the popup copies the new text and asks you to paste it with `Cmd+V`. Off macOS, that note says `Ctrl+V`.
 
-To hide the button on a site, open the options page and go to **Sites**. Enter one hostname per line. Subdomains of that host are included. The shortcut still works on those sites.
+To hide the button on the site you are on, turn off the **Show on** switch for it in the toolbar popup. This adds the exact hostname to **Sites**. The **Sites** tab, or the options page, edits the whole list. Subdomains of a listed host are included. The idle Fix is off on those sites too. The shortcut still works on them.
 
 ## Providers
 
-Choose a provider on the options page. The default is Codex with `gpt-6-luna`, because it scored best on Fix. Model and thinking effort are dropdowns. Each one has presets and **Custom**. You can change them at any time.
+Choose a provider on the popup's **Provider** tab or on the options page. The default is Codex with `gpt-6-luna`, because it scored best on Fix. Model and thinking effort are dropdowns. Each one has presets and **Custom**. You can change them at any time.
 
 | Provider              | How it connects                                                                            | Default model and effort                                     |
 | --------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -104,7 +106,7 @@ Choose a provider on the options page. The default is Codex with `gpt-6-luna`, b
 
 Those defaults are the cheapest setups that scored well on a Fix benchmark. The scores are in the [Fix mode benchmark, 2026-10-17](docs/benchmarks/2026-10-17-fix-mode.md) and the [Fix prompt test](bench/README.md).
 
-The OpenAI-compatible provider can take an API key. Leave the key empty for a local server. The Anthropic provider needs a key. You enter keys on the options page.
+The OpenAI-compatible provider can take an API key. Leave the key empty for a local server. The Anthropic provider needs a key. You enter keys on the **Provider** tab or the options page.
 
 Ollama blocks requests from extensions until you allow them. Start it like this.
 
@@ -151,7 +153,7 @@ Remove the bridge with this command.
 npm run bridge:uninstall
 ```
 
-The options page shows the bridge status. Each CLI shows its version, or the words "not found". **Test connection** checks the provider you picked.
+The popup's **Provider** tab and the options page show the bridge status. Each CLI shows its version, or the words "not found". **Test connection** checks the provider you picked.
 
 ## Sites that need Copy instead of Accept
 

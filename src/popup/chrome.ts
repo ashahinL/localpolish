@@ -8,6 +8,7 @@ interface PopupChrome {
   };
   runtime: {
     openOptionsPage(): Promise<void>;
+    getManifest(): { version: string };
   };
 }
 
@@ -22,4 +23,8 @@ export async function activeTabUrl(): Promise<string | undefined> {
 
 export function openOptionsPage(): void {
   void extension().runtime.openOptionsPage();
+}
+
+export function extensionVersion(): string {
+  return extension().runtime.getManifest().version;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { isCli } from '../options/ProviderSection';
 import { SettingsContext, useSettings, useSettingsApi } from '../options/useSettings';
+import { AboutTab } from './AboutTab';
 import { activeTabUrl } from './chrome';
 import { Header } from './Header';
 import { HomeTab } from './HomeTab';
@@ -78,6 +79,7 @@ function PopupApp() {
           <ProviderTab settings={settings} bridge={bridge} test={test} />
         )}
         {settings && tab === 'sites' && <SitesTab settings={settings} host={host} />}
+        {settings && tab === 'about' && <AboutTab />}
       </main>
     </div>
   );
