@@ -7,6 +7,7 @@ export interface RewriteRequest {
   mode: Mode;
   tone: Tone;
   text: string;
+  trigger?: 'idle';
 }
 
 export type RewriteEvent =

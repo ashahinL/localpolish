@@ -180,7 +180,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         finish({ error: STOPPED });
       }),
     );
-    port.postMessage({ mode: 'fix', tone: 'polite', text: full });
+    port.postMessage({ mode: 'fix', tone: 'polite', text: full, trigger: 'idle' });
     return promise;
   }
 

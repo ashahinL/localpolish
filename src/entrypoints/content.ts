@@ -4,8 +4,9 @@ import { createIdleFix } from '../content/idle';
 // Kept apart so it is erased: WXT loads this file without main() to read its options,
 // and an inline `type` import would still pull in the controller and its CSS.
 import type { PortLike } from '../content/controller';
-import { captureTarget, focusedEditable } from '../content/editable';
+import { captureTarget, deepActiveElement, focusedEditable } from '../content/editable';
 import { guarded } from '../content/guard';
+import { frameHosts } from '../content/site';
 import { showToast } from '../content/ui/toast';
 import { REWRITE_PORT } from '../core/messages';
 import { DEFAULT_SETTINGS, isBlocked, loadSettings, type Settings } from '../core/settings';
@@ -64,10 +65,15 @@ function start(): void {
     if (!ext.runtime?.id) throw new Error('Extension context invalidated');
     return ext.runtime.connect({ name: REWRITE_PORT });
   };
-  const isEnabled = (): boolean =>
-    settings !== null && !isBlocked(location.hostname, settings.blocklist);
-  const isIdleEnabled = (): boolean =>
-    settings !== null && settings.idleFix && !isBlocked(location.hostname, settings.blocklist);
+  const hosts = () => frameHosts(location.hostname, Array.from(location.ancestorOrigins ?? []));
+  const isEnabled = (): boolean => {
+    if (settings === null) return false;
+    const blocklist = settings.blocklist;
+    if (blocklist.length === 0) return true;
+    const frameHosts = hosts();
+    return frameHosts !== null && !frameHosts.some((host) => isBlocked(host, blocklist));
+  };
+  const isIdleEnabled = (): boolean => settings !== null && settings.idleFix && isEnabled();
 
   const controller = createController({
     connect,
@@ -97,6 +103,8 @@ function start(): void {
   ext.runtime.onMessage.addListener(
     guarded((message) => {
       if (!isOpenPopup(message) || !document.hasFocus()) return;
+      const active = deepActiveElement();
+      if (active instanceof HTMLIFrameElement || active instanceof HTMLFrameElement) return;
       const target = captureTarget({ wholeFieldIfEmpty: true });
       if (target) idle.open(target);
       else if (focusedEditable()) showToast('Type some text first.');

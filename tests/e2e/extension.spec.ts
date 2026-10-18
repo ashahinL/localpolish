@@ -7,6 +7,7 @@ import {
   expect,
   test as base,
   type BrowserContext,
+  type Locator,
   type Page,
   type Worker,
 } from '@playwright/test';
@@ -260,6 +261,22 @@ test('Esc does not reach the page', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as PageApi).__keys)).not.toContain('Escape');
 });
 
+test('the shortcut in an iframe opens one popup and no parent toast', async ({ page, sw }) => {
+  await openFixture(page, 'frames.html');
+  const frame = page.frameLocator('#cross-host');
+  const field = frame.locator('textarea');
+  await field.pressSequentially(SOURCE);
+  await field.selectText();
+  await expect(frame.locator('.lp-fab')).toBeVisible();
+  await page.keyboard.press('End');
+  await sendOpenPopup(page, sw, field);
+
+  await expect(frame.locator('.lp-popup')).toHaveCount(1);
+  await expect(frame.locator('.lp-popup')).toBeVisible();
+  await expect(page.locator('.lp-popup')).toHaveCount(0);
+  await expect(page.locator('.lp-toast')).toHaveCount(0);
+});
+
 test.describe('idle Fix', () => {
   test('a pause sends one Fix and shows the marker', async ({ page, mock, sw }) => {
     await writeSettings(sw, `${mock.url}/v1`);
@@ -268,6 +285,28 @@ test.describe('idle Fix', () => {
     await page.keyboard.type('i has went home today');
     await expect.poll(() => mock.requests.length, { timeout: 10_000 }).toBe(1);
     await expect(page.locator('.lp-mark')).toBeVisible();
+  });
+
+  test('a blocked site gets no idle Fix from its iframes', async ({ page, mock, sw }) => {
+    await writeSettings(sw, `${mock.url}/v1`, { blocklist: ['localhost'] });
+    await openFixture(page, 'frames.html');
+    for (const selector of ['#cross-host', '#srcdoc', '#blank']) {
+      const frame = page.frameLocator(selector);
+      await frame.locator('textarea').pressSequentially('i has went home today');
+      await frame.locator('textarea').selectText();
+      await page.waitForTimeout(4500);
+      expect(mock.requests).toHaveLength(0);
+      await expect(frame.locator('.lp-mark')).toHaveCount(0);
+      await expect(frame.locator('.lp-fab')).toHaveCount(0);
+    }
+  });
+
+  test('an unblocked page still fixes inside an iframe', async ({ page, mock }) => {
+    await openFixture(page, 'frames.html');
+    const frame = page.frameLocator('#cross-host');
+    await frame.locator('textarea').pressSequentially('i has went home today');
+    await expect.poll(() => mock.requests.length, { timeout: 10_000 }).toBe(1);
+    await expect(frame.locator('.lp-mark')).toBeVisible();
   });
 
   test('idle Fix off: a pause sends nothing', async ({ page, mock, sw }) => {
@@ -308,8 +347,9 @@ async function writeSettings(
   }, settings);
 }
 
-async function openFixture(page: Page): Promise<void> {
-  await page.goto('http://localhost:5179/');
+async function openFixture(page: Page, fixture = ''): Promise<void> {
+  await page.goto(`http://localhost:5179/${fixture}`);
+  if (fixture) return;
   await page.waitForFunction(() => {
     const api = (window as unknown as PageApi).__lp;
     return typeof api?.draftText === 'function';
@@ -334,9 +374,9 @@ async function accept(page: Page): Promise<void> {
   await expect(page.locator('.lp-popup')).toHaveCount(0);
 }
 
-async function sendOpenPopup(page: Page, sw: Worker, field: string): Promise<void> {
+async function sendOpenPopup(page: Page, sw: Worker, field: string | Locator): Promise<void> {
   await page.bringToFront();
-  await page.locator(field).focus();
+  await (typeof field === 'string' ? page.locator(field) : field).focus();
   await sw.evaluate(async () => {
     const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Frame editors</title>
+  </head>
+  <body>
+    <iframe
+      id="cross-host"
+      title="Cross-host editor"
+      src="http://127.0.0.1:5179/frame-editor.html"
+    ></iframe>
+    <iframe id="srcdoc" title="Srcdoc editor" srcdoc="<textarea></textarea>"></iframe>
+    <iframe id="blank" title="Blank editor" src="about:blank"></iframe>
+    <script>
+      document.querySelector('#blank').contentDocument.body.innerHTML = '<textarea></textarea>';
+    </script>
+  </body>
+</html>

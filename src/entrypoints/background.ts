@@ -7,13 +7,14 @@ import {
   type RewriteRequest,
   type RuntimeMessage,
 } from '../core/messages';
-import { loadSettings, type Mode, type Tone } from '../core/settings';
+import { isBlocked, loadSettings, type Mode, type Tone } from '../core/settings';
 
 const MODES = new Set<Mode>(['fix', 'rephrase', 'shorter', 'tone']);
 const TONES = new Set<Tone>(['polite', 'formal', 'casual', 'angry-civil']);
 
 interface RewritePort {
   name: string;
+  sender?: { tab?: { url?: string }; url?: string };
   postMessage(message: unknown): void;
   onMessage: { addListener(cb: (message: unknown) => void): void };
   onDisconnect: { addListener(cb: () => void): void };
@@ -47,13 +48,14 @@ function extension(): ExtensionChrome {
 
 function isRewriteRequest(value: unknown): value is RewriteRequest {
   if (typeof value !== 'object' || value === null) return false;
-  const message = value as { mode?: unknown; tone?: unknown; text?: unknown };
+  const message = value as { mode?: unknown; tone?: unknown; text?: unknown; trigger?: unknown };
   return (
     typeof message.mode === 'string' &&
     MODES.has(message.mode as Mode) &&
     typeof message.tone === 'string' &&
     TONES.has(message.tone as Tone) &&
-    typeof message.text === 'string'
+    typeof message.text === 'string' &&
+    (message.trigger === undefined || message.trigger === 'idle')
   );
 }
 
@@ -95,6 +97,22 @@ export default defineBackground(() => {
       void loadSettings()
         .then((settings) => {
           if (controller.signal.aborted) return;
+          if (request.trigger === 'idle') {
+            const hosts: string[] = [];
+            for (const url of [port.sender?.tab?.url, port.sender?.url]) {
+              if (!url) continue;
+              try {
+                const host = new URL(url).hostname;
+                if (host) hosts.push(host);
+              } catch {
+                // Blank or opaque frames may not have a parseable sender URL.
+              }
+            }
+            if (!settings.idleFix || hosts.some((host) => isBlocked(host, settings.blocklist))) {
+              post(port, { type: 'error', message: 'LocalPolish is off on this site.' });
+              return;
+            }
+          }
           return runRewrite(
             request,
             settings,

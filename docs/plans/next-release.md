@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: ready for Sol. No implementation started.
+Status: in progress. T15a is verified and committed. T15c and T15e are implemented in isolated checkouts and await integration.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -55,7 +55,7 @@ Changes to the plan, compared with Sol's draft:
 
 ## T15: privacy and draft safety
 
-- [ ] **T15a. Site blocking in every frame, one shortcut handler** (A01, A16). Sol medium. Brief: [T15a-frames.md](../briefs/T15a-frames.md). Depends on: nothing.
+- [x] **T15a. Site blocking in every frame, one shortcut handler** (A01, A16). Sol medium. Brief: [T15a-frames.md](../briefs/T15a-frames.md). Depends on: nothing.
 - [ ] **T15b. Settings changes reach existing idle work** (A02). Sol medium. Brief: [T15b-live-settings.md](../briefs/T15b-live-settings.md). Depends on: T15a.
 - [ ] **T15c. Safe Accept in rich editors** (A04, A05). Sol high. Brief: [T15c-safe-accept.md](../briefs/T15c-safe-accept.md). Depends on: nothing.
 - [ ] **T15d. Small privacy and output fixes** (A03, A06, A12, A13, A14). Sol medium. Brief: [T15d-small-fixes.md](../briefs/T15d-small-fixes.md). Depends on: nothing.
@@ -101,3 +101,7 @@ Changes to the plan, compared with Sol's draft:
 - [ ] CI is green at the release commit, including the new macOS, Windows and Node 22 jobs.
 - [ ] Owner, by hand on macOS and Windows: one rewrite each with Claude CLI, Codex CLI and one API provider, using fixed sample text. Block a site and check that an editor in an iframe on it sends nothing. Never submit a draft.
 - [ ] Follow the corrected `RELEASING.md`. Download the published zip, check its SHA-256, load it in a fresh profile, and press Test connection.
+
+## Implementation notes
+
+- T15a: all gates passed. 224 unit tests passed, 1 Windows-only test skipped, and 94 browser tests passed. Each blocked iframe stays focused for the full idle delay in its regression test. Reusable skill: none.

@@ -89,7 +89,7 @@ function editingHost(el: HTMLElement): HTMLElement {
   return host;
 }
 
-function deepActiveElement(): Element | null {
+export function deepActiveElement(): Element | null {
   let active: Element | null = document.activeElement;
   while (active?.shadowRoot?.activeElement) {
     active = active.shadowRoot.activeElement;

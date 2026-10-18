@@ -1,6 +1,6 @@
 import { h, render } from 'preact';
 import { fieldFocusCaret, focusCaret } from './caret';
-import { findEditable } from './editable';
+import { deepActiveElement, findEditable } from './editable';
 import { guarded } from './guard';
 import { placeButton, type Rect } from './position';
 import { FloatingButton } from './ui/FloatingButton';
@@ -86,10 +86,4 @@ function selectionCaret(): Rect | null {
     return null;
   }
   return focusCaret();
-}
-
-function deepActiveElement(): Element | null {
-  let active = document.activeElement;
-  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
-  return active;
 }
