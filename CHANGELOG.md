@@ -8,7 +8,7 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **For contributors**
 
-- Audit of 1.0.0 with confirmed findings, evidence, and a draft plan for the next release. No runtime changes.
+- Audit of 1.0.0 with confirmed findings and evidence, a review of it, and the next-release plan with one brief per task. No runtime changes.
 
 ## 1.0.0 — 2026-10-18
 
