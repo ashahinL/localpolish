@@ -406,16 +406,36 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
-  test('text typed after the request stays in the field', async ({ page }) => {
+  test('typing during a request drops that answer and the next pause sends the whole post', async ({
+    page,
+  }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'I went home today.' }],
+      [{ type: 'done', text: 'I went home today.\nI am tired.' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('i is tired');
+    await page.clock.fastForward(FAKE_REPLY_MS);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+
+    await pause(page);
+    expect(await requests(page)).toBe(2);
+    await page.locator('.lp-mark').click();
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today.\nI am tired.');
+  });
+
+  test('typing hides the marker', async ({ page }) => {
     await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
     await page.locator('#ta').click();
     await page.keyboard.type('i has went home today');
     await pause(page);
-    await page.keyboard.type(' friend');
-
-    await page.getByRole('button', { name: 'LocalPolish: 3 fixes' }).click();
-    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
-    await expect(page.locator('#ta')).toHaveValue('I went home today. friend');
+    await expect(page.locator('.lp-mark')).toHaveCount(1);
+    await page.keyboard.type(' now');
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
   test('an error shows a red marker and the message in the popup', async ({ page }) => {
@@ -433,24 +453,6 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-popup').getByRole('alert')).toHaveText(
       'The bridge is not installed.',
     );
-  });
-
-  test('Retry from an error marker only replaces the sent part', async ({ page }) => {
-    await startIdle(page, [
-      [{ type: 'error', message: 'The bridge is not installed.' }],
-      [{ type: 'done', text: 'I went home today.' }],
-    ]);
-    await page.locator('#ta').click();
-    await page.keyboard.type('i has went home today');
-    await pause(page);
-    await page.keyboard.type(' friend');
-
-    await page.getByRole('button', { name: 'LocalPolish: error' }).click();
-    const popup = page.locator('.lp-popup');
-    await popup.getByRole('button', { name: 'Retry' }).click();
-    await page.clock.fastForward(FAKE_REPLY_MS);
-    await popup.getByRole('button', { name: 'Accept' }).click();
-    await expect(page.locator('#ta')).toHaveValue('I went home today. friend');
   });
 
   test('more than 9 fixes shows 9+', async ({ page }) => {

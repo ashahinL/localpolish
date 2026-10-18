@@ -136,10 +136,10 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - When the user stops typing for 3 seconds and the field still has focus, run one Fix in the background. Send nothing if the text did not change since the last idle Fix.
   - On everywhere, with a block list (the Sites list, or its own list; decide at build time).
   - Only multi-line message fields: `<textarea>` and contenteditable. Never single-line `<input>` (search, login, email, URL, name). Also skip `role="searchbox"` or `role="combobox"`, `spellcheck="false"` and code editors (CodeMirror, Monaco). Skip text under 4 words.
-  - Send the whole field up to about 3,000 characters. Above that, send only the paragraph being written.
+  - Always send the whole field (changed 2026-10-18: a part lost the context of the rest of the post).
   - One idle request per field; different fields and tabs run in parallel. A new pause in the same field waits for that field's request.
-  - Typing on while a request runs does not cancel it. The answer applies to the part that was sent. Track that part as it moves: offsets in a textarea, a live Range in a rich editor.
-  - Accept always overwrites the tracked part, even if the user edited it. The popup's diff compares the part's current text with the fix, so it shows exactly what Accept replaces. Accept never touches text outside the part.
+  - Typing on while a request runs does not cancel it, but its answer is dropped when it arrives, because the text changed. Typing also hides a shown marker. The next pause sends the whole field again.
+  - Accept replaces the whole field. The marker only shows while the field still holds exactly the text that was sent.
   - Result, shown on the floating button near the end of the text:
     - Fixes found: a small yellow circle with the number of changes (from the word diff). Click opens the normal popup with the diff ready, no new request.
     - No fixes: nothing.

@@ -2,7 +2,6 @@ import { Fragment, h, render } from 'preact';
 import { wordDiff } from '../core/diff';
 import { type PortLike, type Preset } from './controller';
 import {
-  applyReplacement,
   fieldText,
   findEditable,
   focusedEditable,
@@ -11,7 +10,7 @@ import {
   type Target,
 } from './editable';
 import { guarded } from './guard';
-import { countChanges, mapRange, mergePart, pickParagraph, wordCount } from './idleText';
+import { countChanges, wordCount } from './idleText';
 import { IdleMark } from './ui/IdleMark';
 import { layer } from './ui/root';
 
@@ -23,36 +22,13 @@ export interface IdleDeps {
 }
 
 const IDLE_MS = 3000;
-const WHOLE_LIMIT = 3000;
 const MIN_WORDS = 4;
 const MARK_INSET = 14;
 const SMALL_FIELD = 32;
 const FOLLOW_MS = 250;
 const STOPPED = 'LocalPolish stopped before the new text was ready. Try again.';
 
-interface Sent {
-  sentText: string;
-  start: number;
-  end: number;
-  text: string;
-}
-
-interface FixResult {
-  sentText: string;
-  start: number;
-  end: number;
-  fixed: string;
-  count: number;
-}
-
-interface ErrorResult {
-  error: string;
-  sentText: string;
-  start: number;
-  end: number;
-}
-
-type IdleResult = FixResult | ErrorResult;
+type IdleResult = { fixed: string; count: number } | { error: string };
 
 interface Slot {
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -78,8 +54,9 @@ export function createIdleFix(deps: IdleDeps): void {
     if (!(event.target instanceof Node)) return;
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;
-    reposition();
     const slot = slotOf(host);
+    if (slot.result) hide(host, slot);
+    reposition();
     clearTimeout(slot.timer);
     slot.timer = setTimeout(
       guarded(() => {
@@ -119,12 +96,11 @@ export function createIdleFix(deps: IdleDeps): void {
     }
     const full = fieldText(el);
     if (full === slot.lastFull) return;
-    const part = choosePart(el, full);
-    if (!part || wordCount(part.text) < MIN_WORDS) return;
-    send(el, slot, full, part);
+    if (wordCount(full) < MIN_WORDS) return;
+    send(el, slot, full);
   }
 
-  function send(el: HTMLElement, slot: Slot, full: string, part: Sent): void {
+  function send(el: HTMLElement, slot: Slot, full: string): void {
     slot.running = true;
     slot.pending = false;
     let port: PortLike;
@@ -149,8 +125,8 @@ export function createIdleFix(deps: IdleDeps): void {
       if (!el.isConnected) {
         drop(el, slot);
         renderMarks();
-      } else {
-        record(el, slot, part, outcome);
+      } else if (fieldText(el) === full) {
+        record(el, slot, full, outcome);
       }
       if (slot.pending) {
         slot.pending = false;
@@ -169,41 +145,28 @@ export function createIdleFix(deps: IdleDeps): void {
         finish({ error: STOPPED });
       }),
     );
-    port.postMessage({ mode: 'fix', tone: 'polite', text: part.text });
+    port.postMessage({ mode: 'fix', tone: 'polite', text: full });
   }
 
   function record(
     el: HTMLElement,
     slot: Slot,
-    part: Sent,
+    sent: string,
     outcome: { fixed: string } | { error: string },
   ): void {
     if ('error' in outcome) {
-      slot.result = {
-        error: outcome.error,
-        sentText: part.sentText,
-        start: part.start,
-        end: part.end,
-      };
+      slot.result = outcome;
       marked.add(el);
       renderMarks();
       return;
     }
     const count =
-      outcome.fixed.trim() === part.text.trim()
-        ? 0
-        : countChanges(wordDiff(part.text, outcome.fixed));
+      outcome.fixed.trim() === sent.trim() ? 0 : countChanges(wordDiff(sent, outcome.fixed));
     if (count === 0) {
       hide(el, slot);
       return;
     }
-    slot.result = {
-      sentText: part.sentText,
-      start: part.start,
-      end: part.end,
-      fixed: outcome.fixed,
-      count,
-    };
+    slot.result = { fixed: outcome.fixed, count };
     marked.add(el);
     renderMarks();
   }
@@ -226,17 +189,9 @@ export function createIdleFix(deps: IdleDeps): void {
     const slot = slots.get(el);
     if (!slot || !slot.result) return;
     const result = slot.result;
-    const current = fieldText(el);
-    const range = mapRange(result.sentText, current, result.start, result.end);
-    const target = { ...wholeFieldTarget(el), text: current.slice(range.start, range.end) };
     hide(el, slot);
-    const replace = (text: string) => {
-      const now = fieldText(el);
-      const mapped = mapRange(result.sentText, now, result.start, result.end);
-      return applyReplacement(wholeFieldTarget(el), mergePart(now, mapped, text));
-    };
-    if ('error' in result) deps.openPopup(target, { error: result.error, replace });
-    else deps.openPopup(target, { fixed: result.fixed, replace });
+    if ('fixed' in result) slot.lastFull = result.fixed;
+    deps.openPopup(wholeFieldTarget(el), result);
   }
 
   function renderMarks(): void {
@@ -322,50 +277,6 @@ function markSpot(el: HTMLElement): { top: number; left: number } | null {
   const left = rect.right - scrollbar - MARK_INSET;
   if (top < 0 || left < 0 || top > window.innerHeight || left > window.innerWidth) return null;
   return { top, left };
-}
-
-function choosePart(el: HTMLElement, full: string): Sent | null {
-  if (full.length <= WHOLE_LIMIT) {
-    return { sentText: full, start: 0, end: full.length, text: full };
-  }
-  const offset = offsetInField(el, full);
-  if (offset === null) return null;
-  const range = pickParagraph(full, offset);
-  return {
-    sentText: full,
-    start: range.start,
-    end: range.end,
-    text: full.slice(range.start, range.end),
-  };
-}
-
-function offsetInField(el: HTMLElement, full: string): number | null {
-  if (el instanceof HTMLTextAreaElement) return el.selectionStart;
-  const focus = window.getSelection()?.focusNode;
-  if (!focus || !el.contains(focus)) return null;
-  const child = directChild(el, focus);
-  if (!child) return null;
-  const raw = child instanceof HTMLElement ? child.innerText : (child.textContent ?? '');
-  return lastParagraphStart(full, raw.trim());
-}
-
-function directChild(root: HTMLElement, node: Node): Node | null {
-  if (node === root) return null;
-  let current: Node = node;
-  while (current.parentNode !== null && current.parentNode !== root) current = current.parentNode;
-  return current.parentNode === root ? current : null;
-}
-
-function lastParagraphStart(text: string, needle: string): number | null {
-  let found: number | null = null;
-  let at = 0;
-  while (at <= text.length) {
-    const range = pickParagraph(text, at);
-    if (text.slice(range.start, range.end).trim() === needle) found = range.start;
-    if (range.end >= text.length) break;
-    at = range.end + 1;
-  }
-  return found;
 }
 
 function readOutcome(message: unknown): { fixed: string } | { error: string } | null {

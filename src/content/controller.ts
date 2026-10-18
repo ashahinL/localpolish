@@ -2,7 +2,7 @@ import { h, render } from 'preact';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
 import { type DefaultMode, type Settings, type Tone } from '../core/settings';
 import { copyText } from './clipboard';
-import { applyReplacement, type ApplyResult, type Target } from './editable';
+import { applyReplacement, type Target } from './editable';
 import { guarded, settle } from './guard';
 import { type Rect } from './position';
 import {
@@ -32,9 +32,7 @@ export interface ControllerDeps {
   isMac: boolean;
 }
 
-export type Preset = { replace(text: string): Promise<ApplyResult> } & (
-  { fixed: string } | { error: string }
-);
+export type Preset = { fixed: string } | { error: string };
 
 export interface Controller {
   open(target: Target, preset?: Preset): void;
@@ -50,7 +48,6 @@ interface Session {
   container: HTMLElement;
   copiedTimer: ReturnType<typeof setTimeout> | undefined;
   accepting: boolean;
-  replace?: (text: string) => Promise<ApplyResult>;
 }
 
 const UPDATED = 'LocalPolish was updated. Reload this page to use it.';
@@ -92,7 +89,6 @@ export function createController(deps: ControllerDeps): Controller {
       container: layer('popup'),
       copiedTimer: undefined,
       accepting: false,
-      replace: preset?.replace,
     };
     session = s;
     window.addEventListener('keydown', onKeyDown, true);
@@ -194,7 +190,7 @@ export function createController(deps: ControllerDeps): Controller {
     const text = s.state.result;
     s.accepting = true;
     try {
-      const result = await (s.replace ? s.replace(text) : applyReplacement(s.target, text));
+      const result = await applyReplacement(s.target, text);
       if (session !== s) return;
       if (result.ok) {
         close();
