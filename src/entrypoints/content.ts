@@ -8,19 +8,15 @@ import { captureTarget, deepActiveElement, focusedEditable } from '../content/ed
 import { guarded } from '../content/guard';
 import { frameHosts } from '../content/site';
 import { showToast } from '../content/ui/toast';
-import { REWRITE_PORT } from '../core/messages';
-import { DEFAULT_SETTINGS, isBlocked, loadSettings, type Settings } from '../core/settings';
+import { REWRITE_PORT, type PageSettings } from '../core/messages';
+import { DEFAULT_SETTINGS, isBlocked } from '../core/settings';
 
 interface ContentChrome {
   runtime: {
     id?: string;
     connect(info: { name: string }): PortLike;
+    sendMessage(message: { type: 'page-settings' }): Promise<PageSettings | null>;
     onMessage: { addListener(cb: (message: unknown) => void): void };
-  };
-  storage: {
-    onChanged: {
-      addListener(cb: (changes: Record<string, unknown>, areaName: string) => void): void;
-    };
   };
 }
 
@@ -43,13 +39,14 @@ function start(): void {
   const ext = (globalThis as unknown as { chrome: ContentChrome }).chrome;
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
   // Null until loaded, so the button never flashes on a blocklisted site.
-  let settings: Settings | null = null;
+  let settings: PageSettings | null = null;
   let idle: ReturnType<typeof createIdleFix> | undefined = undefined;
   let button: ReturnType<typeof createButton> | undefined = undefined;
 
   const refresh = () => {
-    loadSettings().then(
+    ext.runtime.sendMessage({ type: 'page-settings' }).then(
       (loaded) => {
+        if (!loaded) return;
         settings = loaded;
         idle?.refresh();
         button?.refresh();
@@ -58,11 +55,6 @@ function start(): void {
     );
   };
   refresh();
-  ext.storage.onChanged.addListener(
-    guarded((changes, areaName) => {
-      if (areaName === 'local' && 'settings' in changes) refresh();
-    }),
-  );
 
   const connect = (): PortLike => {
     // runtime.id disappears once the extension reloads and this script is orphaned.
@@ -106,6 +98,14 @@ function start(): void {
 
   ext.runtime.onMessage.addListener(
     guarded((message) => {
+      if (
+        typeof message === 'object' &&
+        message !== null &&
+        (message as { type?: unknown }).type === 'page-settings-changed'
+      ) {
+        refresh();
+        return;
+      }
       if (!isOpenPopup(message) || !document.hasFocus()) return;
       const active = deepActiveElement();
       if (active instanceof HTMLIFrameElement || active instanceof HTMLFrameElement) return;

@@ -3,6 +3,7 @@ import { getProvider } from '../background/providers';
 import { runRewrite, testConnection } from '../background/rewrite';
 import {
   REWRITE_PORT,
+  type PageSettings,
   type RewriteEvent,
   type RewriteRequest,
   type RuntimeMessage,
@@ -37,8 +38,19 @@ interface ExtensionChrome {
     onCommand: { addListener(cb: (command: string) => void): void };
   };
   tabs: {
-    query(queryInfo: { active: boolean; currentWindow: boolean }): Promise<Array<{ id?: number }>>;
+    query(queryInfo: {
+      active?: boolean;
+      currentWindow?: boolean;
+    }): Promise<Array<{ id?: number }>>;
     sendMessage(tabId: number, message: RuntimeMessage): Promise<unknown>;
+  };
+  storage: {
+    local: {
+      setAccessLevel(options: { accessLevel: 'TRUSTED_CONTEXTS' }): Promise<void>;
+    };
+    onChanged: {
+      addListener(cb: (changes: Record<string, unknown>, areaName: string) => void): void;
+    };
   };
 }
 
@@ -62,7 +74,13 @@ function isRewriteRequest(value: unknown): value is RewriteRequest {
 function isRuntimeMessage(value: unknown): value is RuntimeMessage {
   if (typeof value !== 'object' || value === null) return false;
   const type = (value as { type?: unknown }).type;
-  return type === 'test-connection' || type === 'bridge-status' || type === 'open-popup';
+  return (
+    type === 'test-connection' ||
+    type === 'bridge-status' ||
+    type === 'open-popup' ||
+    type === 'page-settings' ||
+    type === 'page-settings-changed'
+  );
 }
 
 function post(port: RewritePort, event: RewriteEvent): void {
@@ -78,6 +96,27 @@ function errorMessage(err: unknown, fallback: string): string {
 }
 
 export default defineBackground(() => {
+  void extension().storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+
+  extension().storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local' || !('settings' in changes)) return;
+    void extension()
+      .tabs.query({})
+      .then((tabs) =>
+        Promise.all(
+          tabs.map((tab) => {
+            if (tab.id === undefined) return;
+            return extension()
+              .tabs.sendMessage(tab.id, { type: 'page-settings-changed' })
+              .catch(() => {
+                // A tab without the content script rejects sendMessage.
+              });
+          }),
+        ),
+      )
+      .catch(() => {});
+  });
+
   extension().runtime.onConnect.addListener((port) => {
     if (port.name !== REWRITE_PORT) return;
 
@@ -129,7 +168,12 @@ export default defineBackground(() => {
   });
 
   extension().runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (!isRuntimeMessage(message) || message.type === 'open-popup') return;
+    if (
+      !isRuntimeMessage(message) ||
+      message.type === 'open-popup' ||
+      message.type === 'page-settings-changed'
+    )
+      return;
 
     const reply = (response: unknown) => {
       try {
@@ -138,6 +182,16 @@ export default defineBackground(() => {
         // The options page can close before the reply is ready.
       }
     };
+
+    if (message.type === 'page-settings') {
+      void loadSettings()
+        .then(({ blocklist, idleFix, defaultMode }) => {
+          const settings: PageSettings = { blocklist, idleFix, defaultMode };
+          reply(settings);
+        })
+        .catch(() => reply(null));
+      return true;
+    }
 
     if (message.type === 'test-connection') {
       void loadSettings()

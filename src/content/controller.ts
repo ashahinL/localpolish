@@ -28,7 +28,7 @@ export interface PortLike {
 
 export interface ControllerDeps {
   connect(): PortLike;
-  getSettings(): Settings;
+  getSettings(): Pick<Settings, 'defaultMode'>;
   isMac: boolean;
   onAccepted?(target: Target): void;
 }

@@ -17,6 +17,7 @@ const EXTENSION_ID = 'ealpmjmaclnlpelpcacmbicmdipmbeei';
 const DIST = fileURLToPath(new URL('../../dist', import.meta.url));
 const SOURCE = 'i has went home';
 const REWRITE = 'I went home.';
+const FAKE_API_KEY = 'sk-localpolish-e2e-fake';
 
 interface ExtensionChrome {
   storage: {
@@ -110,6 +111,7 @@ test('textarea via the floating button', async ({ page, mock }) => {
   await openRewrite(page, '#ta');
 
   expect(mock.requests).toHaveLength(1);
+  expect(mock.requests[0]?.authorization).toBe(`Bearer ${FAKE_API_KEY}`);
   const body = mock.requests[0]?.body;
   expect(body.model).toBe('mock-model');
   expect(body.messages[0].content.startsWith('Fix the grammar')).toBe(true);
@@ -117,6 +119,94 @@ test('textarea via the floating button', async ({ page, mock }) => {
 
   await accept(page);
   await expect(page.locator('#ta')).toHaveValue(REWRITE);
+});
+
+test('content scripts cannot read local storage or receive stored keys', async ({
+  page,
+  mock,
+  sw,
+}) => {
+  const session = await page.context().newCDPSession(page);
+  const contexts = new Set<number>();
+  session.on('Runtime.executionContextCreated', ({ context }) => contexts.add(context.id));
+  session.on('Runtime.executionContextDestroyed', ({ executionContextId }) =>
+    contexts.delete(executionContextId),
+  );
+  try {
+    await session.send('Runtime.enable');
+    let contextId: number | undefined;
+    await expect
+      .poll(async () => {
+        for (const id of contexts) {
+          const result = await session.send('Runtime.evaluate', {
+            contextId: id,
+            expression: 'globalThis.chrome?.runtime?.id',
+            returnByValue: true,
+          });
+          if (result.result.value === EXTENSION_ID) {
+            contextId = id;
+            return true;
+          }
+        }
+        return false;
+      })
+      .toBe(true);
+    if (contextId === undefined) throw new Error('Extension content world not found');
+
+    const storage = await session.send('Runtime.evaluate', {
+      contextId,
+      expression: `(async () => {
+        globalThis.__lpStorageChanges = [];
+        chrome.storage.onChanged.addListener((...args) => globalThis.__lpStorageChanges.push(args));
+        globalThis.__lpSettingsNotice = new Promise(resolve => {
+          chrome.runtime.onMessage.addListener(message => {
+            if (message.type === 'page-settings-changed') resolve(message);
+          });
+        });
+        try {
+          return { stored: await chrome.storage.local.get('settings') };
+        } catch (error) {
+          return { error: error.message };
+        }
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    expect(storage.exceptionDetails).toBeUndefined();
+    expect(storage.result.value).toEqual({
+      error: 'Access to storage is not allowed from this context.',
+    });
+
+    await writeSettings(sw, `${mock.url}/v1`, {
+      blocklist: ['blocked.example'],
+      idleFix: false,
+      defaultMode: 'shorter',
+    });
+    const refreshed = await session.send('Runtime.evaluate', {
+      contextId,
+      expression: `(async () => {
+        const notice = await globalThis.__lpSettingsNotice;
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return {
+          notice,
+          storageChanges: globalThis.__lpStorageChanges,
+          settings: await chrome.runtime.sendMessage({ type: 'page-settings' }),
+        };
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+      timeout: 5000,
+    });
+    expect(refreshed.exceptionDetails).toBeUndefined();
+    expect(refreshed.result.value).toEqual({
+      notice: { type: 'page-settings-changed' },
+      storageChanges: [],
+      settings: { blocklist: ['blocked.example'], idleFix: false, defaultMode: 'shorter' },
+    });
+    expect(JSON.stringify(refreshed.result.value)).not.toContain(FAKE_API_KEY);
+  } finally {
+    await session.detach();
+  }
 });
 
 test('textarea inside a modal dialog', async ({ page }) => {
@@ -392,6 +482,7 @@ async function writeSettings(
   const settings: Record<string, unknown> = {
     provider: 'openai-compatible',
     openaiBaseUrl,
+    openaiApiKey: FAKE_API_KEY,
     models: { 'openai-compatible': 'mock-model' },
     ...extra,
   };

@@ -20,6 +20,10 @@ browser, on your device:
 Chrome does not sync this storage to your other devices, and LocalPolish
 does not log it. Removing the extension deletes all of it.
 
+Only trusted extension contexts, including the background, toolbar popup,
+and options page, can read this storage. Content scripts receive only the
+site list, idle Fix switch, and default mode. They cannot read stored API keys.
+
 LocalPolish writes no text or answer to disk. While a tab is open, Fix while
 I type keeps the last text it sent from each field and the answer in that
 tab's memory, so the marker and the popup can reuse them. Closing or reloading

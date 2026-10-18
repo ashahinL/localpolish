@@ -1,4 +1,4 @@
-import { type Mode, type Tone } from './settings';
+import { type Mode, type Settings, type Tone } from './settings';
 
 export const HOST_NAME = 'com.localpolish.bridge';
 export const REWRITE_PORT = 'rewrite';
@@ -24,5 +24,11 @@ export type BridgeStatus =
 
 export type TestResult = { ok: true; sample: string; ms: number } | { ok: false; message: string };
 
+export type PageSettings = Pick<Settings, 'blocklist' | 'idleFix' | 'defaultMode'>;
+
 export type RuntimeMessage =
-  { type: 'test-connection' } | { type: 'bridge-status' } | { type: 'open-popup' };
+  | { type: 'test-connection' }
+  | { type: 'bridge-status' }
+  | { type: 'open-popup' }
+  | { type: 'page-settings' }
+  | { type: 'page-settings-changed' };

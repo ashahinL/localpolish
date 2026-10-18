@@ -10,14 +10,35 @@ vi.mock('./rewrite', () => ({ runRewrite: vi.fn(), testConnection: vi.fn() }));
 vi.mock('./providers', () => ({ getProvider: vi.fn() }));
 vi.mock('./providers/cli', () => ({ pingBridge: vi.fn() }));
 
-async function connect(sender?: { tab?: { url?: string }; url?: string }) {
+async function startBackground() {
   const onConnect = vi.fn();
+  const onRuntimeMessage = vi.fn();
+  const onStorageChanged = vi.fn();
+  const setAccessLevel = vi.fn().mockResolvedValue(undefined);
+  const query = vi.fn().mockResolvedValue([]);
+  const sendMessage = vi.fn().mockResolvedValue(undefined);
   vi.stubGlobal('defineBackground', (start: () => void) => start());
   vi.stubGlobal('chrome', {
-    runtime: { onConnect: { addListener: onConnect }, onMessage: { addListener: vi.fn() } },
+    runtime: {
+      onConnect: { addListener: onConnect },
+      onMessage: { addListener: onRuntimeMessage },
+    },
     commands: { onCommand: { addListener: vi.fn() } },
+    storage: {
+      local: { setAccessLevel },
+      onChanged: { addListener: onStorageChanged },
+    },
+    tabs: { query, sendMessage },
   });
   await import('../entrypoints/background');
+  const message = onRuntimeMessage.mock.calls[0]?.[0];
+  const storageChanged = onStorageChanged.mock.calls[0]?.[0];
+  if (!message || !storageChanged) throw new Error('Background settings listeners not registered');
+  return { onConnect, message, storageChanged, setAccessLevel, query, sendMessage };
+}
+
+async function connect(sender?: { tab?: { url?: string }; url?: string }) {
+  const { onConnect } = await startBackground();
   const onMessage = vi.fn();
   const postMessage = vi.fn();
   const listener = onConnect.mock.calls[0]?.[0];
@@ -34,7 +55,7 @@ async function connect(sender?: { tab?: { url?: string }; url?: string }) {
   return { send, postMessage };
 }
 
-describe('rewrite port site checks', () => {
+describe('background settings and rewrite ports', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -45,6 +66,68 @@ describe('rewrite port site checks', () => {
   });
 
   afterEach(() => vi.unstubAllGlobals());
+
+  it('restricts local storage to trusted contexts at startup', async () => {
+    const background = await startBackground();
+    expect(background.setAccessLevel).toHaveBeenCalledExactlyOnceWith({
+      accessLevel: 'TRUSTED_CONTEXTS',
+    });
+  });
+
+  it('answers page-settings with only site, idle and default mode settings', async () => {
+    vi.mocked(loadSettings).mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      openaiApiKey: 'fake-openai-secret',
+      anthropicApiKey: 'fake-anthropic-secret',
+      blocklist: ['blocked.example'],
+      idleFix: false,
+      defaultMode: 'shorter',
+    });
+    const background = await startBackground();
+    const reply = vi.fn();
+    const keepOpen = background.message({ type: 'page-settings' }, {}, reply);
+    expect(keepOpen).toBe(true);
+    await vi.waitFor(() =>
+      expect(reply).toHaveBeenCalledExactlyOnceWith({
+        blocklist: ['blocked.example'],
+        idleFix: false,
+        defaultMode: 'shorter',
+      }),
+    );
+  });
+
+  it('answers a failed page-settings read without returning stored settings', async () => {
+    vi.mocked(loadSettings).mockRejectedValue(new Error('Storage unavailable'));
+    const background = await startBackground();
+    const reply = vi.fn();
+    background.message({ type: 'page-settings' }, {}, reply);
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledExactlyOnceWith(null));
+  });
+
+  it('notifies every tab without forwarding the storage record', async () => {
+    const background = await startBackground();
+    background.query.mockResolvedValue([{ id: 1 }, { id: 2 }, {}, { id: 3 }]);
+    background.sendMessage.mockRejectedValueOnce(new Error('No content script'));
+    background.storageChanged({ settings: { newValue: { openaiApiKey: 'fake-secret' } } }, 'local');
+    await vi.waitFor(() => expect(background.sendMessage).toHaveBeenCalledTimes(3));
+    expect(background.query).toHaveBeenCalledExactlyOnceWith({});
+    expect(background.sendMessage.mock.calls).toEqual([
+      [1, { type: 'page-settings-changed' }],
+      [2, { type: 'page-settings-changed' }],
+      [3, { type: 'page-settings-changed' }],
+    ]);
+  });
+
+  it.each([
+    [{ settings: {} }, 'sync'],
+    [{ settings: {} }, 'session'],
+    [{ other: {} }, 'local'],
+  ])('ignores unrelated storage changes: %j, %s', async (changes, areaName) => {
+    const background = await startBackground();
+    background.storageChanged(changes, areaName);
+    expect(background.query).not.toHaveBeenCalled();
+    expect(background.sendMessage).not.toHaveBeenCalled();
+  });
 
   it.each([
     { tab: { url: 'https://blocked.example/page' }, url: 'https://editor.example/' },

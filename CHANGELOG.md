@@ -8,6 +8,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **Safer**
 
+- Content scripts cannot read local storage and receive only site, idle Fix, and default mode settings, keeping API keys in trusted extension contexts (F03).
+
 - Privacy policy explains the tab-memory cache, API key destinations, idle exclusions, and Grok history and X-search limits (A17).
 
 - A02: Settings changes now remove idle markers and cancel automatic work immediately. Blocking a site also hides its selection button, while manual rewrites keep working.

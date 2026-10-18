@@ -8,7 +8,7 @@ type PostedBody = any;
 
 export interface MockOpenAI {
   url: string;
-  requests: Array<{ body: PostedBody }>;
+  requests: Array<{ body: PostedBody; authorization?: string }>;
   reply(next: MockReply): void;
   close(): Promise<void>;
 }
@@ -21,7 +21,7 @@ const CORS = {
 };
 
 export function startMockOpenAI(): Promise<MockOpenAI> {
-  const requests: Array<{ body: PostedBody }> = [];
+  const requests: MockOpenAI['requests'] = [];
   let next: MockReply = defaultReply;
 
   const server = createServer((req, res) => {
@@ -33,7 +33,7 @@ export function startMockOpenAI(): Promise<MockOpenAI> {
 
     readBody(req)
       .then((raw) => {
-        requests.push({ body: parseBody(raw) });
+        requests.push({ body: parseBody(raw), authorization: req.headers.authorization });
         writeReply(res, next);
       })
       .catch(() => {
