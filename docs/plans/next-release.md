@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: implementation complete. All 13 tasks are verified and committed. All local gates and both dependency audits pass. The final CI run and the owner's manual release checks remain.
+Status: implementation complete. All 13 tasks are verified and committed. All local gates, both dependency audits, and CI at the implementation commit pass. The owner's diff review and manual release checks remain.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -139,3 +139,5 @@ Changes to the plan, compared with Sol's draft:
 - Final local dependency checks: full and production-only audits both report zero vulnerabilities. No real providers or rewrite CLIs were used.
 
 - Fleet skill reports: all delegates said none, except T18b suggested a note for sandboxed worktrees with linked node_modules, using wxt prepare and vitest --configLoader runner. The orchestrator agrees this is a short operating note, not enough for a new skill.
+
+- Final implementation verification at `f1b6c4c`: [full CI](https://github.com/ashahinL/localpolish/actions/runs/39158863446) and [macOS, Windows, and Node 22](https://github.com/ashahinL/localpolish/actions/runs/39158871142) passed. All task worktrees are archived, the dev server is stopped, and the working tree is clean. The release checklist stays open for the owner's manual provider checks, release version, and published-package verification.
