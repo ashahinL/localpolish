@@ -56,8 +56,8 @@ describe.runIf(process.platform === 'darwin')('installBridge on macOS', () => {
     ].filter((dir, index, all) => all.indexOf(dir) === index);
     const wrapper = [
       '#!/bin/sh',
-      `export PATH="${dirsOnPath.join(':')}"`,
-      `exec "${nodePath}" "/repo/bridge/host.mjs"`,
+      `export PATH='${dirsOnPath.join(':')}'`,
+      `exec '${nodePath}' '/repo/bridge/host.mjs'`,
       '',
     ].join('\n');
     expect(fs.readFileSync(result.wrapperPath, 'utf8')).toBe(wrapper);
@@ -80,6 +80,31 @@ describe.runIf(process.platform === 'darwin')('installBridge on macOS', () => {
     expect(fs.existsSync(path.join(home, 'Library', 'Application Support', 'LocalPolish'))).toBe(
       false,
     );
+  });
+
+  it('runs the host from a path with shell characters without expanding them', () => {
+    const dir = tempDir('lp-wrapper-');
+    const repo = path.join(dir, 'repo $(touch expanded) \'q\' "d" `b` é');
+    const bridge = path.join(repo, 'bridge');
+    const okFile = path.join(dir, 'ok');
+    fs.mkdirSync(bridge, { recursive: true });
+    fs.writeFileSync(
+      path.join(bridge, 'host.mjs'),
+      `import fs from 'node:fs';\nfs.writeFileSync(${JSON.stringify(okFile)}, 'ok');\n`,
+    );
+    const { wrapperPath } = installBridge({
+      home: dir,
+      repoDir: repo,
+      nodePath: process.execPath,
+      pathEnv: '',
+    });
+    const result = spawnSync(wrapperPath, [], { cwd: dir, encoding: 'utf8' });
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    expect(fs.readFileSync(okFile, 'utf8')).toBe('ok');
+    expect(
+      fs.readdirSync(dir, { recursive: true }).some((file) => path.basename(file) === 'expanded'),
+    ).toBe(false);
+    expect(fs.existsSync(path.join(process.cwd(), 'expanded'))).toBe(false);
   });
 
   it('installs and uninstalls when the scripts are executed directly', () => {

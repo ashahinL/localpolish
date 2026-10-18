@@ -185,6 +185,53 @@ setTimeout(() => {}, 30000);
     expect(() => process.kill(pid, 0)).toThrow();
   });
 
+  it.skipIf(windows)(
+    'kills a grandchild that ignores SIGTERM when Chrome closes stdin',
+    async () => {
+      const bin = tempDir('lp-bin-');
+      const pidFile = path.join(bin, 'pid');
+      const script = `
+process.on('SIGTERM', () => {});
+require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+setInterval(() => {}, 1000);
+`;
+      writeCli(
+        bin,
+        'claude',
+        `#!/usr/bin/env node
+const { spawn } = require('child_process');
+const fs = require('fs');
+spawn(process.execPath, ['-e', ${JSON.stringify(script)}], { stdio: 'ignore' });
+const ready = setInterval(() => {
+  if (fs.existsSync(${JSON.stringify(pidFile)})) {
+    clearInterval(ready);
+    setInterval(() => {}, 1000);
+  }
+}, 20);
+`,
+      );
+      const host = startHost(bin, 4000);
+      host.child.stdin.write(rewrite('claude', 'hello'));
+      const pid = await waitForPid(pidFile);
+      pids.push(pid);
+      host.child.stdin.end();
+      await host.closed;
+      await expect
+        .poll(
+          () => {
+            try {
+              process.kill(pid, 0);
+              return 'alive';
+            } catch (err) {
+              return err.code;
+            }
+          },
+          { timeout: 3000 },
+        )
+        .toBe('ESRCH');
+    },
+  );
+
   it.skipIf(windows)('kills the processes the cli started', async () => {
     const bin = tempDir('lp-bin-');
     const pidFile = path.join(bin, 'pid');

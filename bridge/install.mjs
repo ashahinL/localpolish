@@ -54,6 +54,7 @@ export function installBridge({ home, repoDir, nodePath, pathEnv, platform = pro
   // cmd reads the file in the console code page, so it switches to UTF-8 for non-ASCII paths,
   // and a literal % must be doubled or cmd expands it as a variable.
   const cmdText = (/** @type {string} */ value) => value.replaceAll('%', '%%');
+  const shellQuote = (/** @type {string} */ value) => "'" + value.replaceAll("'", "'\\''") + "'";
   const wrapper = windows
     ? [
         '@echo off',
@@ -62,9 +63,12 @@ export function installBridge({ home, repoDir, nodePath, pathEnv, platform = pro
         `"${cmdText(nodePath)}" "${cmdText(hostPath)}"`,
         '',
       ].join('\r\n')
-    : ['#!/bin/sh', `export PATH="${dirs.join(':')}"`, `exec "${nodePath}" "${hostPath}"`, ''].join(
-        '\n',
-      );
+    : [
+        '#!/bin/sh',
+        `export PATH=${shellQuote(dirs.join(':'))}`,
+        `exec ${shellQuote(nodePath)} ${shellQuote(hostPath)}`,
+        '',
+      ].join('\n');
   fs.writeFileSync(wrapperPath, wrapper, { mode: 0o755 });
   fs.chmodSync(wrapperPath, 0o755);
 

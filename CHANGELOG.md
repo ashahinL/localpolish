@@ -16,6 +16,9 @@ finished but not released yet waits under Unreleased. How a version ships:
 - Idle Fix skips fields that inherit spellcheck off and honors an explicit spellcheck on (A03).
 - API keys over HTTP require a real loopback hostname and cannot use other protocols (A06).
 
+- Bridge cancellation kills resistant descendants before the host exits (A07).
+- The macOS bridge wrapper treats shell-special characters in paths literally (A08).
+
 **Fixes**
 
 - Accept stops before pasting if the selection moves to another editor or the selected text changes during the wait (A04).

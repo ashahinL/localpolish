@@ -149,6 +149,14 @@ function handleRewrite(msg) {
     fs.rmSync(dir, { recursive: true, force: true });
   };
 
+  const killGroup = (/** @type {NodeJS.Signals} */ signal) => {
+    try {
+      if (child.pid !== undefined) process.kill(-child.pid, signal);
+    } catch {
+      // Already gone.
+    }
+  };
+
   // A CLI can ignore SIGTERM. SIGKILL follows if it is still running.
   const killChild = () => {
     if (killed) return;
@@ -163,13 +171,6 @@ function handleRewrite(msg) {
       );
       return;
     }
-    const killGroup = (/** @type {NodeJS.Signals} */ signal) => {
-      try {
-        if (child.pid !== undefined) process.kill(-child.pid, signal);
-      } catch {
-        // Already gone.
-      }
-    };
     killGroup('SIGTERM');
     killTimer = setTimeout(() => killGroup('SIGKILL'), KILL_AFTER_MS);
   };
@@ -183,7 +184,10 @@ function handleRewrite(msg) {
     clearTimeout(runTimer);
     if (message) process.stdout.write(encodeMessage(message));
     const done = () => {
-      clearTimeout(killTimer);
+      if (killed && process.platform !== 'win32') {
+        clearTimeout(killTimer);
+        killGroup('SIGKILL');
+      }
       removeDir();
       exitWhenFlushed();
     };
@@ -241,7 +245,6 @@ function handleRewrite(msg) {
   });
 
   child.on('close', (code) => {
-    clearTimeout(killTimer);
     if (settled) return;
     if (stdinClosed) {
       finish(null);
