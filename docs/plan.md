@@ -148,7 +148,7 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - [x] **T13a.** Logic and a plain marker.
   - Built: a 3 second pause in a message field runs one Fix, and a corner marker opens the popup with that diff or the error.
   - [x] **T13b.** Marker look and placement.
-  - Built: a 16 px yellow count badge ("9+" above 9) and a 12 px red "!" dot, with a theme ring, shadow, hover, focus ring and a pop-in that reduced motion turns off. The marker sits 14 px in from the corner, left of a visible scrollbar, centered in fields under 32 px tall, hides when the corner is off screen or the field has no size, and follows a field that grows while typing.
+  - Built: a 16 px yellow count badge ("9+" above 9) and a 12 px red "!" dot, with a theme ring, shadow, hover, focus ring and a pop-in that reduced motion turns off. The marker sits 14 px in from the corner, left of a visible scrollbar, on the bottom edge of fields under 32 px tall, hides when the corner is off screen or the field has no size, and follows a field that grows or moves (rechecked every 250 ms while shown).
 
 ## Later (not MVP, keep the design open)
 

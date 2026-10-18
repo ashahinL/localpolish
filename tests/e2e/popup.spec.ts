@@ -497,6 +497,25 @@ test.describe('idle fix', () => {
     await expect(marks).toHaveCount(1);
   });
 
+  test('the marker follows a field that moves without a scroll', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    const mark = page.locator('.lp-mark');
+    const centerX = async () => {
+      const box = await mark.boundingBox();
+      return box ? Math.round(box.x + box.width / 2) : null;
+    };
+    const before = (await centerX()) ?? 0;
+
+    await page.locator('#ta').evaluate((el) => {
+      el.style.transform = 'translateX(80px)';
+    });
+    await page.clock.fastForward(300);
+    await expect.poll(centerX).toBe(before + 80);
+  });
+
   test('an unchanged fix shows no marker', async ({ page }) => {
     const text = 'nothing needs a fix today';
     await startIdle(page, [[{ type: 'done', text }]]);

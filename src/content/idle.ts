@@ -27,6 +27,7 @@ const WHOLE_LIMIT = 3000;
 const MIN_WORDS = 4;
 const MARK_INSET = 14;
 const SMALL_FIELD = 32;
+const FOLLOW_MS = 250;
 const STOPPED = 'LocalPolish stopped before the new text was ready. Try again.';
 
 interface Sent {
@@ -66,7 +67,7 @@ export function createIdleFix(deps: IdleDeps): void {
   const ids = new WeakMap<HTMLElement, number>();
   const marked = new Set<HTMLElement>();
   let nextId = 1;
-  let shown = false;
+  let follow: ReturnType<typeof setInterval> | undefined;
 
   document.addEventListener('input', guarded(onInput), true);
   document.addEventListener('focusin', guarded(reposition), true);
@@ -240,8 +241,7 @@ export function createIdleFix(deps: IdleDeps): void {
 
   function renderMarks(): void {
     if (deps.isPopupOpen()) {
-      if (shown) render(null, layer('marks'));
-      shown = false;
+      hideAll();
       return;
     }
     const items = [];
@@ -257,11 +257,11 @@ export function createIdleFix(deps: IdleDeps): void {
       if (spot) items.push({ el, result, ...spot });
     }
     if (items.length === 0) {
-      if (shown) render(null, layer('marks'));
-      shown = false;
+      hideAll();
       return;
     }
-    shown = true;
+    // Sites move their composers without a scroll or resize event (X adds its toolbar under the box).
+    follow ??= setInterval(guarded(renderMarks), FOLLOW_MS);
     render(
       h(
         Fragment,
@@ -295,6 +295,13 @@ export function createIdleFix(deps: IdleDeps): void {
     );
   }
 
+  function hideAll(): void {
+    if (follow === undefined) return;
+    clearInterval(follow);
+    follow = undefined;
+    render(null, layer('marks'));
+  }
+
   function idOf(el: HTMLElement): number {
     let id = ids.get(el);
     if (id !== undefined) return id;
@@ -311,8 +318,7 @@ function markSpot(el: HTMLElement): { top: number; left: number } | null {
   const style = getComputedStyle(el);
   const borders = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
   const scrollbar = Math.max(0, el.offsetWidth - el.clientWidth - borders);
-  const insetY = rect.height < SMALL_FIELD ? rect.height / 2 : MARK_INSET;
-  const top = rect.bottom - insetY;
+  const top = rect.height < SMALL_FIELD ? rect.bottom : rect.bottom - MARK_INSET;
   const left = rect.right - scrollbar - MARK_INSET;
   if (top < 0 || left < 0 || top > window.innerHeight || left > window.innerWidth) return null;
   return { top, left };
