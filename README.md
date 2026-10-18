@@ -36,6 +36,8 @@ npm run build
 npm run bridge:install
 ```
 
+On Windows, run it in your own terminal, not from an app's built-in agent such as the Claude desktop app. Those apps can keep their registry writes private, so Chrome would not find the bridge.
+
 6. Log in to each CLI you want to use. Do this once, in a terminal.
 
 For Claude Code, run `claude` and log in.
