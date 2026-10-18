@@ -32,7 +32,9 @@ export interface ControllerDeps {
   isMac: boolean;
 }
 
-export type Preset = { fixed: string } | { error: string };
+type Outcome = { fixed: string } | { error: string };
+
+export type Preset = Outcome | { pending: Promise<Outcome>; cancel(): void };
 
 export interface Controller {
   open(target: Target, preset?: Preset): void;
@@ -45,6 +47,8 @@ interface Session {
   anchor: Rect;
   state: PopupState;
   port: PortLike | null;
+  waiting: Promise<Outcome> | undefined;
+  cancelWaiting: (() => void) | undefined;
   container: HTMLElement;
   copiedTimer: ReturnType<typeof setTimeout> | undefined;
   accepting: boolean;
@@ -86,6 +90,8 @@ export function createController(deps: ControllerDeps): Controller {
       anchor: anchorRect(target),
       state: initialState(target.text, choice),
       port: null,
+      waiting: undefined,
+      cancelWaiting: undefined,
       container: layer('popup'),
       copiedTimer: undefined,
       accepting: false,
@@ -95,6 +101,21 @@ export function createController(deps: ControllerDeps): Controller {
     window.addEventListener('mousedown', onPointerDown, true);
     if (!preset) {
       request(s, { type: 'start', choice });
+      return;
+    }
+    if ('pending' in preset) {
+      const pending = preset.pending;
+      s.waiting = pending;
+      s.cancelWaiting = preset.cancel;
+      dispatch(s, { type: 'start', choice: 'fix' });
+      void pending.then(
+        guarded((outcome) => {
+          if (session !== s || s.waiting !== pending) return;
+          s.waiting = undefined;
+          if ('fixed' in outcome) dispatch(s, { type: 'done', text: outcome.fixed });
+          else dispatch(s, { type: 'error', message: outcome.error });
+        }),
+      );
       return;
     }
     if ('fixed' in preset) dispatch(s, { type: 'done', text: preset.fixed });
@@ -146,6 +167,9 @@ export function createController(deps: ControllerDeps): Controller {
   }
 
   function request(s: Session, action: Extract<PopupAction, { type: 'start' | 'retry' }>): void {
+    s.cancelWaiting?.();
+    s.cancelWaiting = undefined;
+    s.waiting = undefined;
     stopPort(s);
     dispatch(s, action);
     const choice = s.state.choice;

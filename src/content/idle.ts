@@ -18,7 +18,8 @@ export interface IdleDeps {
   connect(): PortLike;
   isEnabled(): boolean;
   isPopupOpen(): boolean;
-  openPopup(target: Target, preset: Preset): void;
+  isFixDefault(): boolean;
+  openPopup(target: Target, preset?: Preset): void;
 }
 
 const IDLE_MS = 3000;
@@ -28,7 +29,8 @@ const SMALL_FIELD = 32;
 const FOLLOW_MS = 250;
 const STOPPED = 'LocalPolish stopped before the new text was ready. Try again.';
 
-type IdleResult = { fixed: string; count: number } | { error: string };
+type Outcome = { fixed: string } | { error: string };
+type IdleResult = { sent: string; fixed: string; count: number } | { sent: string; error: string };
 
 interface Slot {
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -36,9 +38,12 @@ interface Slot {
   pending: boolean;
   lastFull: string | undefined;
   result: IdleResult | undefined;
+  runningText: string | undefined;
+  inflight: Promise<Outcome> | undefined;
+  finish: ((outcome: Outcome | undefined) => void) | undefined;
 }
 
-export function createIdleFix(deps: IdleDeps): void {
+export function createIdleFix(deps: IdleDeps): { open(target: Target): void } {
   const slots = new WeakMap<HTMLElement, Slot>();
   const ids = new WeakMap<HTMLElement, number>();
   const marked = new Set<HTMLElement>();
@@ -55,7 +60,6 @@ export function createIdleFix(deps: IdleDeps): void {
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;
     const slot = slotOf(host);
-    if (slot.result) hide(host, slot);
     reposition();
     clearTimeout(slot.timer);
     slot.timer = setTimeout(
@@ -81,6 +85,9 @@ export function createIdleFix(deps: IdleDeps): void {
       pending: false,
       lastFull: undefined,
       result: undefined,
+      runningText: undefined,
+      inflight: undefined,
+      finish: undefined,
     };
     slots.set(el, slot);
     return slot;
@@ -88,6 +95,7 @@ export function createIdleFix(deps: IdleDeps): void {
 
   function tryRun(el: HTMLElement): void {
     const slot = slotOf(el);
+    if (deps.isPopupOpen()) return;
     if (!deps.isEnabled() || focusedEditable() !== el || !el.isConnected || !isIdleField(el))
       return;
     if (slot.running) {
@@ -100,7 +108,7 @@ export function createIdleFix(deps: IdleDeps): void {
     send(el, slot, full);
   }
 
-  function send(el: HTMLElement, slot: Slot, full: string): void {
+  function send(el: HTMLElement, slot: Slot, full: string): Promise<Outcome> | undefined {
     slot.running = true;
     slot.pending = false;
     let port: PortLike;
@@ -108,12 +116,18 @@ export function createIdleFix(deps: IdleDeps): void {
       port = deps.connect();
     } catch {
       slot.running = false;
-      return;
+      return undefined;
     }
     slot.lastFull = full;
+    slot.runningText = full;
+    let resolveOutcome: (outcome: Outcome) => void = () => {};
+    const promise = new Promise<Outcome>((resolve) => {
+      resolveOutcome = resolve;
+    });
+    slot.inflight = promise;
     let settled = false;
 
-    const finish = (outcome: { fixed: string } | { error: string }) => {
+    const finish = (outcome: Outcome | undefined) => {
       if (settled) return;
       settled = true;
       try {
@@ -122,17 +136,27 @@ export function createIdleFix(deps: IdleDeps): void {
         // An orphaned port throws on disconnect; it is already gone.
       }
       slot.running = false;
+      slot.runningText = undefined;
+      slot.inflight = undefined;
+      slot.finish = undefined;
+      if (!outcome) {
+        // Cancelled: do not record an error marker or start the queued run.
+        slot.pending = false;
+        return;
+      }
       if (!el.isConnected) {
         drop(el, slot);
         renderMarks();
-      } else if (fieldText(el) === full) {
+      } else {
         record(el, slot, full, outcome);
       }
+      resolveOutcome(outcome);
       if (slot.pending) {
         slot.pending = false;
         tryRun(el);
       }
     };
+    slot.finish = finish;
 
     port.onMessage.addListener(
       guarded((message: unknown) => {
@@ -146,6 +170,11 @@ export function createIdleFix(deps: IdleDeps): void {
       }),
     );
     port.postMessage({ mode: 'fix', tone: 'polite', text: full });
+    return promise;
+  }
+
+  function cancel(slot: Slot): void {
+    slot.finish?.(undefined);
   }
 
   function record(
@@ -155,7 +184,7 @@ export function createIdleFix(deps: IdleDeps): void {
     outcome: { fixed: string } | { error: string },
   ): void {
     if ('error' in outcome) {
-      slot.result = outcome;
+      slot.result = { sent, error: outcome.error };
       marked.add(el);
       renderMarks();
       return;
@@ -166,7 +195,7 @@ export function createIdleFix(deps: IdleDeps): void {
       hide(el, slot);
       return;
     }
-    slot.result = { fixed: outcome.fixed, count };
+    slot.result = { sent, fixed: outcome.fixed, count };
     marked.add(el);
     renderMarks();
   }
@@ -187,11 +216,64 @@ export function createIdleFix(deps: IdleDeps): void {
 
   function activate(el: HTMLElement): void {
     const slot = slots.get(el);
-    if (!slot || !slot.result) return;
-    const result = slot.result;
-    hide(el, slot);
-    if ('fixed' in result) slot.lastFull = result.fixed;
-    deps.openPopup(wholeFieldTarget(el), result);
+    const result = slot?.result;
+    if (!slot || !result) return;
+    const current = fieldText(el);
+    if ('error' in result) {
+      hide(el, slot);
+      deps.openPopup(wholeFieldTarget(el), { error: result.error });
+      return;
+    }
+    if (result.sent === current) {
+      hide(el, slot);
+      slot.lastFull = result.fixed;
+      deps.openPopup(wholeFieldTarget(el), { fixed: result.fixed });
+      return;
+    }
+    const pending = inflightFor(slot, current);
+    if (pending) {
+      deps.openPopup(wholeFieldTarget(el), waitOn(slot, pending));
+      return;
+    }
+    cancel(slot);
+    const started = send(el, slot, current);
+    if (!started) return;
+    deps.openPopup(wholeFieldTarget(el), waitOn(slot, started));
+  }
+
+  function open(target: Target): void {
+    const el = target.kind === 'field' ? target.el : target.root;
+    const slot = slotOf(el);
+    const current = fieldText(el);
+    if (deps.isFixDefault() && target.text === current) {
+      const result = slot.result;
+      if (result && 'fixed' in result && result.sent === current) {
+        slot.lastFull = result.fixed;
+        deps.openPopup(target, { fixed: result.fixed });
+        return;
+      }
+      const pending = inflightFor(slot, current);
+      if (pending) {
+        deps.openPopup(target, waitOn(slot, pending));
+        return;
+      }
+    }
+    cancel(slot);
+    deps.openPopup(target);
+  }
+
+  function waitOn(slot: Slot, pending: Promise<Outcome>): Preset {
+    return {
+      pending,
+      cancel() {
+        if (slot.inflight === pending) cancel(slot);
+      },
+    };
+  }
+
+  function inflightFor(slot: Slot, text: string): Promise<Outcome> | undefined {
+    if (slot.inflight && slot.runningText === text) return slot.inflight;
+    return undefined;
   }
 
   function renderMarks(): void {
@@ -223,12 +305,14 @@ export function createIdleFix(deps: IdleDeps): void {
         null,
         items.map((item) => {
           const mark = item.result;
+          const stale = fieldText(item.el) !== mark.sent;
           if ('error' in mark) {
             return h(IdleMark, {
               key: idOf(item.el),
               top: item.top,
               left: item.left,
               error: true,
+              stale,
               text: '!',
               title: mark.error,
               ariaLabel: 'LocalPolish: error',
@@ -240,6 +324,7 @@ export function createIdleFix(deps: IdleDeps): void {
             top: item.top,
             left: item.left,
             error: false,
+            stale,
             text: mark.count > 9 ? '9+' : String(mark.count),
             ariaLabel: `LocalPolish: ${mark.count} ${mark.count === 1 ? 'fix' : 'fixes'}`,
             onActivate: guarded(() => activate(item.el)),
@@ -265,6 +350,8 @@ export function createIdleFix(deps: IdleDeps): void {
     ids.set(el, id);
     return id;
   }
+
+  return { open };
 }
 
 function markSpot(el: HTMLElement): { top: number; left: number } | null {

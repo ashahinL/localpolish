@@ -12,22 +12,27 @@ import { createIdleFix } from '../../../src/content/idle.ts';
 import { DEFAULT_SETTINGS } from '../../../src/core/settings.ts';
 
 // Each connect() replays the next script; the last one repeats.
-const fake = { scripts: [], settings: DEFAULT_SETTINGS, calls: 0 };
+const fake = { scripts: [], settings: DEFAULT_SETTINGS, calls: 0, open: 0, maxOpen: 0 };
 
 function fakePort(script) {
+  fake.open += 1;
+  if (fake.open > fake.maxOpen) fake.maxOpen = fake.open;
   const messageListeners = [];
   const disconnectListeners = [];
   let open = true;
+  let closed = false;
   return {
     postMessage() {
       script.forEach((event, index) => {
+        // Playwright resumes real time after fastForward, so a 20ms reply can land
+        // before the next test step and the in-flight checks would miss it.
         setTimeout(
           () => {
             if (!open) return;
             if (event === 'disconnect') disconnectListeners.forEach((listener) => listener());
             else messageListeners.forEach((listener) => listener(event));
           },
-          20 * (index + 1),
+          100 * (index + 1),
         );
       });
     },
@@ -35,6 +40,9 @@ function fakePort(script) {
     onDisconnect: { addListener: (listener) => disconnectListeners.push(listener) },
     disconnect() {
       open = false;
+      if (closed) return;
+      closed = true;
+      fake.open -= 1;
     },
   };
 }
@@ -49,6 +57,8 @@ const controller = createController({
   isMac: false,
 });
 
+let idle;
+
 const popupApi = {
   openPopup(scripts, settings = {}) {
     fake.scripts = scripts;
@@ -61,6 +71,8 @@ const popupApi = {
   setScripts(scripts) {
     fake.scripts = scripts;
     fake.calls = 0;
+    fake.open = 0;
+    fake.maxOpen = 0;
   },
   startButton() {
     createButton({
@@ -74,14 +86,21 @@ const popupApi = {
     });
   },
   startIdle() {
-    createIdleFix({
+    idle = createIdleFix({
       connect,
       isEnabled: () => true,
       isPopupOpen: controller.isOpen,
+      isFixDefault: () => fake.settings.defaultMode === 'fix',
       openPopup: controller.open,
     });
   },
+  manual() {
+    const target = captureTarget({ wholeFieldIfEmpty: true });
+    if (!target) throw new Error('no target');
+    idle.open(target);
+  },
   requests: () => fake.calls,
+  maxOpen: () => fake.maxOpen,
 };
 
 // Facebook's composer is Lexical.

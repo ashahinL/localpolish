@@ -1,6 +1,6 @@
 # LocalPolish plan
 
-Status: T0-T13 done.
+Status: T0-T13c done.
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
@@ -138,17 +138,19 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Only multi-line message fields: `<textarea>` and contenteditable. Never single-line `<input>` (search, login, email, URL, name). Also skip `role="searchbox"` or `role="combobox"`, `spellcheck="false"` and code editors (CodeMirror, Monaco). Skip text under 4 words.
   - Always send the whole field (changed 2026-10-18: a part lost the context of the rest of the post).
   - One idle request per field; different fields and tabs run in parallel. A new pause in the same field waits for that field's request.
-  - Typing on while a request runs does not cancel it, but its answer is dropped when it arrives, because the text changed. Typing also hides a shown marker. The next pause sends the whole field again.
-  - Accept replaces the whole field. The marker only shows while the field still holds exactly the text that was sent.
+  - Typing on while a request runs does not cancel it. The answer is kept, and the marker stays. When the field no longer matches the text that was sent, the marker dims. The next pause sends the whole field again.
+  - Accept replaces the whole field.
   - Result, shown on the floating button near the end of the text:
-    - Fixes found: a small yellow circle with the number of changes (from the word diff). Click opens the normal popup with the diff ready, no new request.
+    - Fixes found: a small yellow circle with the number of changes (from the word diff). A click opens the popup with that diff when the field is unchanged. When the field has changed, the click waits on one new Fix of the current text.
     - No fixes: nothing.
     - Request failed (bridge down, timeout, quota): a small red dot at the field's corner (like Grammarly; bottom right unless the user says otherwise). Click opens a popup with the error and how to fix it.
-  - The manual flow (select, then button or shortcut) always works, whether or not the idle Fix ran.
+  - The manual flow (select, then button or shortcut) reuses a fresh idle Fix, or the in-flight request, when it is a Fix of that same whole field. Otherwise it cancels the idle request and sends its own. One field never has two requests at once.
   - [x] **T13a.** Logic and a plain marker.
   - Built: a 3 second pause in a message field runs one Fix, and a corner marker opens the popup with that diff or the error.
   - [x] **T13b.** Marker look and placement.
   - Built: a 16 px yellow count badge ("9+" above 9) and a 12 px red "!" dot, with a theme ring, shadow, hover, focus ring and a pop-in that reduced motion turns off. The marker sits 14 px in from the corner, left of a visible scrollbar, on the bottom edge of fields under 32 px tall, hides when the corner is off screen or the field has no size, and follows a field that grows or moves (rechecked every 250 ms while shown).
+  - [x] **T13c.** Marker stays while typing, and the manual flow reuses the idle Fix.
+  - Built: typing keeps the count and dims the marker when the text changed; a click or the button/shortcut reuses a fresh answer or the in-flight request, and one field never runs two requests at once.
 
 ## Later (not MVP, keep the design open)
 

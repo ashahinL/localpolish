@@ -73,28 +73,29 @@ function start(): void {
     isMac,
   });
 
+  const idle = createIdleFix({
+    connect,
+    isEnabled,
+    isPopupOpen: controller.isOpen,
+    isFixDefault: () => (settings ?? DEFAULT_SETTINGS).defaultMode === 'fix',
+    openPopup: controller.open,
+  });
+
   createButton({
     isMac,
     isEnabled,
     isPopupOpen: controller.isOpen,
     onActivate() {
       const target = captureTarget({ wholeFieldIfEmpty: false });
-      if (target) controller.open(target);
+      if (target) idle.open(target);
     },
-  });
-
-  createIdleFix({
-    connect,
-    isEnabled,
-    isPopupOpen: controller.isOpen,
-    openPopup: controller.open,
   });
 
   ext.runtime.onMessage.addListener(
     guarded((message) => {
       if (!isOpenPopup(message) || !document.hasFocus()) return;
       const target = captureTarget({ wholeFieldIfEmpty: true });
-      if (target) controller.open(target);
+      if (target) idle.open(target);
       else if (focusedEditable()) showToast('Type some text first.');
       else showToast('Click into a text field first.');
     }),

@@ -382,6 +382,10 @@ button:focus-visible {
   color: #ffffff;
 }
 
+.lp-mark-stale {
+  opacity: 0.5;
+}
+
 .lp-mark:hover {
   transform: scale(1.15);
 }

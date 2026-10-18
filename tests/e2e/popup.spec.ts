@@ -31,7 +31,9 @@ type PageApi = {
     setScripts: (scripts: FakeEvent[][]) => void;
     startButton: () => void;
     startIdle: () => void;
+    manual: () => void;
     requests: () => number;
+    maxOpen: () => number;
     draftText: () => string;
   };
 };
@@ -336,7 +338,7 @@ test('the button mounts in the dialog that holds the field', async ({ page }) =>
   await expect(page.locator('.lp-popup')).toBeVisible();
 });
 
-const FAKE_REPLY_MS = 100;
+const FAKE_REPLY_MS = 150;
 
 test.describe('idle fix', () => {
   test.beforeEach(async ({ page }) => {
@@ -362,6 +364,14 @@ test.describe('idle fix', () => {
 
   function requests(page: Page): Promise<number> {
     return page.evaluate(() => (window as unknown as PageApi).__lp.requests());
+  }
+
+  function manual(page: Page): Promise<void> {
+    return page.evaluate(() => (window as unknown as PageApi).__lp.manual());
+  }
+
+  function maxOpen(page: Page): Promise<number> {
+    return page.evaluate(() => (window as unknown as PageApi).__lp.maxOpen());
   }
 
   test('a pause shows the fix count and Accept applies it without a new request', async ({
@@ -406,36 +416,121 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
-  test('typing during a request drops that answer and the next pause sends the whole post', async ({
-    page,
-  }) => {
-    await startIdle(page, [
-      [{ type: 'done', text: 'I went home today.' }],
-      [{ type: 'done', text: 'I went home today.\nI am tired.' }],
-    ]);
-    await page.locator('#ta').click();
-    await page.keyboard.type('i has went home today');
-    await page.clock.fastForward(3000);
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('i is tired');
-    await page.clock.fastForward(FAKE_REPLY_MS);
-    await expect(page.locator('.lp-mark')).toHaveCount(0);
-
-    await pause(page);
-    expect(await requests(page)).toBe(2);
-    await page.locator('.lp-mark').click();
-    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
-    await expect(page.locator('#ta')).toHaveValue('I went home today.\nI am tired.');
-  });
-
-  test('typing hides the marker', async ({ page }) => {
+  test('typing after a marker shows keeps it dimmed with the same count', async ({ page }) => {
     await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
     await page.locator('#ta').click();
     await page.keyboard.type('i has went home today');
     await pause(page);
-    await expect(page.locator('.lp-mark')).toHaveCount(1);
+
+    const mark = page.getByRole('button', { name: 'LocalPolish: 3 fixes' });
+    await expect(mark).toBeVisible();
+    await expect(mark).toHaveText('3');
     await page.keyboard.type(' now');
-    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    await expect(mark).toBeVisible();
+    await expect(mark).toHaveClass(/lp-mark-stale/);
+    await expect(mark).toHaveText('3');
+  });
+
+  test('an answer that lands after typing shows dimmed', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    await page.keyboard.type(' now');
+    await page.clock.fastForward(FAKE_REPLY_MS);
+
+    const mark = page.getByRole('button', { name: 'LocalPolish: 3 fixes' });
+    await expect(mark).toBeVisible();
+    await expect(mark).toHaveClass(/lp-mark-stale/);
+    await expect(mark).toHaveText('3');
+  });
+
+  test('clicking a dimmed marker sends one new request', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'I went home today.' }],
+      [{ type: 'done', text: 'I went home today now.' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+
+    await page.keyboard.type(' now');
+    await page.locator('.lp-mark').click();
+    expect(await requests(page)).toBe(2);
+    await page.clock.fastForward(FAKE_REPLY_MS);
+
+    const popup = page.locator('.lp-popup');
+    await expect(popup.locator('.lp-diff')).toBeVisible();
+    expect(await newText(page)).toBe('I went home today now.');
+    await popup.getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today now.');
+    expect(await maxOpen(page)).toBe(1);
+  });
+
+  test('manual after a fresh idle answer reuses it', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+
+    await manual(page);
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(await newText(page)).toBe('I went home today.');
+    expect(await requests(page)).toBe(1);
+  });
+
+  test('manual while the idle request runs uses that answer', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    const waiting = await page.evaluate(() => {
+      (window as unknown as PageApi).__lp.manual();
+      const root = document.querySelector('localpolish-root')?.shadowRoot;
+      return root?.querySelector('.lp-working') !== null;
+    });
+    expect(waiting).toBe(true);
+    await page.clock.fastForward(FAKE_REPLY_MS);
+
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(await newText(page)).toBe('I went home today.');
+    expect(await requests(page)).toBe(1);
+    expect(await maxOpen(page)).toBe(1);
+  });
+
+  test('switching tab while waiting on the idle request cancels it', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'I went home today.' }],
+      [{ type: 'done', text: 'Went home.' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    await page.evaluate(() => (window as unknown as PageApi).__lp.manual());
+    await page.locator('.lp-popup').getByRole('button', { name: 'Shorter' }).click();
+    await page.clock.fastForward(FAKE_REPLY_MS);
+
+    expect(await newText(page)).toBe('Went home.');
+    expect(await requests(page)).toBe(2);
+    expect(await maxOpen(page)).toBe(1);
+  });
+
+  test('manual with part of the field selected keeps one open port', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'done', text: 'I went home today.' }],
+      [{ type: 'done', text: 'I went.' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    await page.locator('#ta').evaluate((el: HTMLTextAreaElement) => {
+      el.setSelectionRange(0, 4);
+    });
+    await manual(page);
+    expect(await requests(page)).toBe(2);
+    expect(await maxOpen(page)).toBe(1);
   });
 
   test('an error shows a red marker and the message in the popup', async ({ page }) => {
