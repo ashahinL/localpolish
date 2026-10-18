@@ -157,7 +157,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 
 ## Later (not MVP, keep the design open)
 
-- Underlines on the fixed words, after the T13 badge (start with plain textareas).
+- Underlines on the fixed words (low priority; start with plain textareas).
+- An on/off switch for the idle Fix. It belongs in a new extension UI (popup), not the options page; build that UI first.
 - Linux bridge installer (nice to have, low priority).
 - Usage stats in the extension UI: how many requests ran today with each model, and their average speed.
 - Dropped on 2026-10-18: per-site default tone (Keep tone is the default; the user picks a chip) and a rewrite history (not a polishing feature).
