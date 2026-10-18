@@ -30,6 +30,8 @@ type PageApi = {
     openPopup: (scripts: FakeEvent[][], settings?: Record<string, unknown>) => void;
     setScripts: (scripts: FakeEvent[][]) => void;
     startButton: () => void;
+    startIdle: () => void;
+    requests: () => number;
     draftText: () => string;
   };
 };
@@ -332,4 +334,131 @@ test('the button mounts in the dialog that holds the field', async ({ page }) =>
   ).toBe('dlg');
   await page.locator('.lp-fab').click();
   await expect(page.locator('.lp-popup')).toBeVisible();
+});
+
+test.describe('idle fix', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+  });
+
+  test.afterEach(async ({ page }) => {
+    await page.clock.resume();
+  });
+
+  async function startIdle(page: Page, scripts: FakeEvent[][]): Promise<void> {
+    await page.evaluate((next) => {
+      const api = (window as unknown as PageApi).__lp;
+      api.setScripts(next);
+      api.startIdle();
+    }, scripts);
+  }
+
+  async function pause(page: Page): Promise<void> {
+    await page.clock.fastForward(5000);
+    // The fake port replies on a timer that starts when the idle timer fires.
+    await page.clock.fastForward(100);
+  }
+
+  function requests(page: Page): Promise<number> {
+    return page.evaluate(() => (window as unknown as PageApi).__lp.requests());
+  }
+
+  test('a pause shows the fix count and Accept applies it without a new request', async ({
+    page,
+  }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+
+    const mark = page.getByRole('button', { name: 'LocalPolish: 3 fixes' });
+    await expect(mark).toBeVisible();
+    await expect(mark).toHaveText('3');
+    expect(await requests(page)).toBe(1);
+
+    await mark.click();
+    const popup = page.locator('.lp-popup');
+    await expect(popup.locator('.lp-diff')).toBeVisible();
+    expect(await newText(page)).toBe('I went home today.');
+    expect(await requests(page)).toBe(1);
+
+    await popup.getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today.');
+    await expect(popup).toHaveCount(0);
+  });
+
+  test('fewer than 5 words sends nothing', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'Hello there friend of mine.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('only four words here');
+    await pause(page);
+    expect(await requests(page)).toBe(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('a single-line input sends nothing', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'This has more than five words.' }]]);
+    await page.locator('#inp').click();
+    await page.keyboard.type('this has more than five words');
+    await pause(page);
+    expect(await requests(page)).toBe(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('text typed after the request stays in the field', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await page.keyboard.type(' friend');
+
+    await page.getByRole('button', { name: 'LocalPolish: 3 fixes' }).click();
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today. friend');
+  });
+
+  test('an error shows a red marker and the message in the popup', async ({ page }) => {
+    await startIdle(page, [[{ type: 'error', message: 'The bridge is not installed.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+
+    const mark = page.getByRole('button', { name: 'LocalPolish: error' });
+    await expect(mark).toBeVisible();
+    await expect(mark).toHaveText('!');
+    await expect(mark).toHaveClass(/lp-mark-error/);
+
+    await mark.click();
+    await expect(page.locator('.lp-popup').getByRole('alert')).toHaveText(
+      'The bridge is not installed.',
+    );
+  });
+
+  test('Retry from an error marker only replaces the sent part', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'error', message: 'The bridge is not installed.' }],
+      [{ type: 'done', text: 'I went home today.' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await page.keyboard.type(' friend');
+
+    await page.getByRole('button', { name: 'LocalPolish: error' }).click();
+    const popup = page.locator('.lp-popup');
+    await popup.getByRole('button', { name: 'Retry' }).click();
+    await page.clock.fastForward(100);
+    await popup.getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today. friend');
+  });
+
+  test('an unchanged fix shows no marker', async ({ page }) => {
+    const text = 'nothing needs a fix today';
+    await startIdle(page, [[{ type: 'done', text }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type(text);
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
 });

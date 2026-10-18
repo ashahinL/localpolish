@@ -41,6 +41,26 @@ export function captureTarget(opts: { wholeFieldIfEmpty: boolean }): Target | nu
   return captureRich(opts.wholeFieldIfEmpty);
 }
 
+export function fieldText(el: HTMLElement): string {
+  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) return el.value;
+  return readRich(el, el.innerText);
+}
+
+export function isIdleField(el: HTMLElement): boolean {
+  if (!isIdleHost(el)) return false;
+  const role = el.getAttribute('role');
+  if (role === 'searchbox' || role === 'combobox') return false;
+  if (el.getAttribute('spellcheck') === 'false') return false;
+  return el.closest('.cm-editor, .CodeMirror, .monaco-editor') === null;
+}
+
+export function wholeFieldTarget(el: HTMLElement): Target {
+  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+    return { kind: 'field', el, start: 0, end: el.value.length, text: el.value };
+  }
+  return { kind: 'rich', root: el, range: contentsOf(el), text: fieldText(el), whole: true };
+}
+
 export async function applyReplacement(target: Target, text: string): Promise<ApplyResult> {
   if (text === target.text) return { ok: true };
   if (target.kind === 'field') return applyField(target, text);
@@ -111,8 +131,7 @@ function captureRich(wholeFieldIfEmpty: boolean): Target | null {
   }
   // selection.toString() keeps breaks between blocks. range.toString() does not.
   // It puts two newlines between <p> blocks, but each block is one line.
-  const raw = selection.toString();
-  const text = isParagraphEditor(root) ? raw.replaceAll('\n\n', '\n') : raw;
+  const text = readRich(root, selection.toString());
   if (text.trim() === '') return null;
   const whole = expanded || nothingOutside(root, range);
   return { kind: 'rich', root, range, text, whole };
@@ -121,6 +140,16 @@ function captureRich(wholeFieldIfEmpty: boolean): Target | null {
 function isParagraphEditor(root: HTMLElement): boolean {
   const blocks = [...root.children];
   return blocks.length > 0 && blocks.every((block) => block.tagName === 'P');
+}
+
+function readRich(root: HTMLElement, raw: string): string {
+  return isParagraphEditor(root) ? raw.replaceAll('\n\n', '\n') : raw;
+}
+
+function isIdleHost(el: HTMLElement): boolean {
+  if (el instanceof HTMLInputElement) return false;
+  if (el instanceof HTMLTextAreaElement) return !el.disabled && !el.readOnly;
+  return el.isContentEditable && el.parentElement?.isContentEditable !== true;
 }
 
 function nothingOutside(root: HTMLElement, range: Range): boolean {

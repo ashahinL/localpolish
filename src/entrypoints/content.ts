@@ -1,5 +1,6 @@
 import { createButton } from '../content/button';
 import { createController } from '../content/controller';
+import { createIdleFix } from '../content/idle';
 // Kept apart so it is erased: WXT loads this file without main() to read its options,
 // and an inline `type` import would still pull in the controller and its CSS.
 import type { PortLike } from '../content/controller';
@@ -58,24 +59,35 @@ function start(): void {
     }),
   );
 
+  const connect = (): PortLike => {
+    // runtime.id disappears once the extension reloads and this script is orphaned.
+    if (!ext.runtime?.id) throw new Error('Extension context invalidated');
+    return ext.runtime.connect({ name: REWRITE_PORT });
+  };
+  const isEnabled = (): boolean =>
+    settings !== null && !isBlocked(location.hostname, settings.blocklist);
+
   const controller = createController({
-    connect() {
-      // runtime.id disappears once the extension reloads and this script is orphaned.
-      if (!ext.runtime?.id) throw new Error('Extension context invalidated');
-      return ext.runtime.connect({ name: REWRITE_PORT });
-    },
+    connect,
     getSettings: () => settings ?? DEFAULT_SETTINGS,
     isMac,
   });
 
   createButton({
     isMac,
-    isEnabled: () => settings !== null && !isBlocked(location.hostname, settings.blocklist),
+    isEnabled,
     isPopupOpen: controller.isOpen,
     onActivate() {
       const target = captureTarget({ wholeFieldIfEmpty: false });
       if (target) controller.open(target);
     },
+  });
+
+  createIdleFix({
+    connect,
+    isEnabled,
+    isPopupOpen: controller.isOpen,
+    openPopup: controller.open,
   });
 
   ext.runtime.onMessage.addListener(

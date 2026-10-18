@@ -8,6 +8,7 @@ import { registerRichText } from '@lexical/rich-text';
 import { applyReplacement, captureTarget } from '../../../src/content/editable.ts';
 import { createButton } from '../../../src/content/button.ts';
 import { createController } from '../../../src/content/controller.ts';
+import { createIdleFix } from '../../../src/content/idle.ts';
 import { DEFAULT_SETTINGS } from '../../../src/core/settings.ts';
 
 // Each connect() replays the next script; the last one repeats.
@@ -38,8 +39,12 @@ function fakePort(script) {
   };
 }
 
+function connect() {
+  return fakePort(fake.scripts[Math.min(fake.calls++, fake.scripts.length - 1)] ?? []);
+}
+
 const controller = createController({
-  connect: () => fakePort(fake.scripts[Math.min(fake.calls++, fake.scripts.length - 1)] ?? []),
+  connect,
   getSettings: () => fake.settings,
   isMac: false,
 });
@@ -68,6 +73,15 @@ const popupApi = {
       },
     });
   },
+  startIdle() {
+    createIdleFix({
+      connect,
+      isEnabled: () => true,
+      isPopupOpen: controller.isOpen,
+      openPopup: controller.open,
+    });
+  },
+  requests: () => fake.calls,
 };
 
 // Facebook's composer is Lexical.

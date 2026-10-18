@@ -53,13 +53,15 @@
    `all: initial` and would be inherited; resetting the top elements stops that. */
 .lp-popup,
 .lp-fab,
-.lp-toast {
+.lp-toast,
+.lp-mark {
   all: initial;
 }
 
 .lp-popup,
 .lp-fab,
-.lp-toast {
+.lp-toast,
+.lp-mark {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -342,6 +344,31 @@ button:focus-visible {
 .lp-fab:hover {
   color: #ffffff;
   background: var(--lp-accent);
+}
+
+.lp-mark {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lp-mark-fixes {
+  background: #f5c518;
+  color: #1a1a1a;
+}
+
+.lp-mark-error {
+  background: #d93025;
+  color: #ffffff;
 }
 
 .lp-toast {
