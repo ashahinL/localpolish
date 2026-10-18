@@ -22,6 +22,7 @@ const FAKE_API_KEY = 'sk-localpolish-e2e-fake';
 interface ExtensionChrome {
   storage: {
     local: {
+      get(key: string): Promise<Record<string, unknown>>;
       set(items: Record<string, unknown>): Promise<void>;
     };
   };
@@ -105,6 +106,46 @@ test.beforeEach(async ({ page, mock, sw }) => {
   mock.requests.length = 0;
   await writeSettings(sw, `${mock.url}/v1`);
   await openFixture(page);
+});
+
+// Runs first: the worker's fresh profile opened the setup tab on install.
+test('first-run setup tests the provider and turning idle Fix off stops idle requests', async ({
+  extensionContext,
+  page,
+  mock,
+  sw,
+}) => {
+  const setupUrl = `chrome-extension://${EXTENSION_ID}/setup.html`;
+  await expect
+    .poll(() => extensionContext.pages().some((other) => other.url() === setupUrl))
+    .toBe(true);
+  const setup = extensionContext.pages().find((other) => other.url() === setupUrl);
+  if (!setup) throw new Error('No setup tab');
+  await setup.bringToFront();
+
+  const idle = setup.getByRole('switch', { name: 'Fix while I type' });
+  await expect(idle).toHaveAttribute('aria-checked', 'true');
+  await expect(setup.getByText(`${mock.url}/v1, a server on this computer`)).toBeVisible();
+  await expect(setup.getByRole('button', { name: 'Test connection' })).toHaveCount(1);
+  await setup.getByRole('button', { name: 'Test connection' }).click();
+  await expect(setup.getByText('Works. Got')).toBeVisible();
+
+  await idle.click();
+  await expect(idle).toHaveAttribute('aria-checked', 'false');
+  await expect.poll(() => storedSettings(sw).then((stored) => stored?.idleFix)).toBe(false);
+
+  mock.requests.length = 0;
+  await page.bringToFront();
+  await openFixture(page);
+  await page.locator('#ta').click();
+  await page.keyboard.type('i has went home today');
+  await page.waitForTimeout(4500);
+  expect(mock.requests).toHaveLength(0);
+  await expect(page.locator('.lp-mark')).toHaveCount(0);
+
+  const closed = setup.waitForEvent('close');
+  await setup.getByRole('button', { name: 'Done' }).click();
+  await closed;
 });
 
 test('textarea via the floating button', async ({ page, mock }) => {
@@ -490,6 +531,14 @@ async function writeSettings(
     const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
     return chrome.storage.local.set({ settings: stored });
   }, settings);
+}
+
+async function storedSettings(sw: Worker): Promise<Record<string, unknown> | undefined> {
+  return sw.evaluate(async () => {
+    const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
+    const stored = await chrome.storage.local.get('settings');
+    return stored.settings as Record<string, unknown> | undefined;
+  });
 }
 
 async function openFixture(page: Page, fixture = ''): Promise<void> {

@@ -8,6 +8,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **New**
 
+- First-run setup opens on install with provider, connection test, and Fix while I type controls. Missing-bridge errors stay quiet for idle Fix (F01).
+
 - The rewrite popup has a **Changes | Final** switch. Final shows only the new text, and the popup switches to it when Accept and Copy both fail (F02).
 
 **Safer**

@@ -12,6 +12,8 @@ vi.mock('./providers/cli', () => ({ pingBridge: vi.fn() }));
 
 async function startBackground() {
   const onConnect = vi.fn();
+  const onInstalled = vi.fn();
+  const create = vi.fn().mockResolvedValue(undefined);
   const onRuntimeMessage = vi.fn();
   const onStorageChanged = vi.fn();
   const setAccessLevel = vi.fn().mockResolvedValue(undefined);
@@ -20,6 +22,8 @@ async function startBackground() {
   vi.stubGlobal('defineBackground', (start: () => void) => start());
   vi.stubGlobal('chrome', {
     runtime: {
+      onInstalled: { addListener: onInstalled },
+      getURL: (path: string) => `chrome-extension://localpolish${path}`,
       onConnect: { addListener: onConnect },
       onMessage: { addListener: onRuntimeMessage },
     },
@@ -28,13 +32,25 @@ async function startBackground() {
       local: { setAccessLevel },
       onChanged: { addListener: onStorageChanged },
     },
-    tabs: { query, sendMessage },
+    tabs: { query, sendMessage, create },
   });
   await import('../entrypoints/background');
   const message = onRuntimeMessage.mock.calls[0]?.[0];
   const storageChanged = onStorageChanged.mock.calls[0]?.[0];
   if (!message || !storageChanged) throw new Error('Background settings listeners not registered');
-  return { onConnect, message, storageChanged, setAccessLevel, query, sendMessage };
+  const installed = onInstalled.mock.calls[0]?.[0] as
+    ((details: { reason: string }) => void) | undefined;
+  if (!installed) throw new Error('No onInstalled listener');
+  return {
+    onConnect,
+    message,
+    storageChanged,
+    setAccessLevel,
+    query,
+    sendMessage,
+    installed,
+    create,
+  };
 }
 
 async function connect(sender?: { tab?: { url?: string }; url?: string }) {
@@ -188,4 +204,28 @@ describe('background settings and rewrite ports', () => {
     expect(loadSettings).not.toHaveBeenCalled();
     expect(runRewrite).not.toHaveBeenCalled();
   });
+});
+
+describe('onInstalled', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('opens the setup page on a fresh install', async () => {
+    const { installed, create } = await startBackground();
+    installed({ reason: 'install' });
+    expect(create).toHaveBeenCalledWith({ url: 'chrome-extension://localpolish/setup.html' });
+  });
+
+  it.each(['update', 'chrome_update', 'shared_module_update'])(
+    'opens nothing on %s',
+    async (reason) => {
+      const { installed, create } = await startBackground();
+      installed({ reason });
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
 });

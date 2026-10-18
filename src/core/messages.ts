@@ -2,6 +2,8 @@ import { type Mode, type Settings, type Tone } from './settings';
 
 export const HOST_NAME = 'com.localpolish.bridge';
 export const REWRITE_PORT = 'rewrite';
+/** Error code for a missing bridge, so idle Fix can stay quiet before setup. */
+export const BRIDGE_MISSING = 'bridge-missing';
 
 export interface RewriteRequest {
   mode: Mode;
@@ -13,7 +15,7 @@ export interface RewriteRequest {
 export type RewriteEvent =
   | { type: 'chunk'; text: string }
   | { type: 'done'; text: string }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string; code?: typeof BRIDGE_MISSING };
 
 export type BridgeStatus =
   | {

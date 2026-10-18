@@ -4,7 +4,7 @@ import { type StreamFn } from './types';
 const OLLAMA_HINT =
   ' Ollama blocks unknown origins: set OLLAMA_ORIGINS=chrome-extension://* and restart Ollama.';
 
-function isLoopbackHost(hostname: string): boolean {
+export function isLoopbackHost(hostname: string): boolean {
   return (
     hostname === 'localhost' ||
     hostname.endsWith('.localhost') ||

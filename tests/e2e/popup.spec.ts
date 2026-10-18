@@ -21,7 +21,7 @@ const test = base.extend<{ page: Page }, { sharedContext: BrowserContext }>({
 type FakeEvent =
   | { type: 'chunk'; text: string }
   | { type: 'done'; text: string }
-  | { type: 'error'; message: string }
+  | { type: 'error'; message: string; code?: 'bridge-missing' }
   | 'disconnect';
 
 type PageApi = {
@@ -724,6 +724,23 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-popup').getByRole('alert')).toHaveText(
       'The bridge is not installed.',
     );
+  });
+
+  test('a missing bridge shows no marker, but the popup still shows the error', async ({
+    page,
+  }) => {
+    const message = 'The LocalPolish bridge is not installed.';
+    await startIdle(page, [[{ type: 'error', message, code: 'bridge-missing' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+
+    expect(await requests(page)).toBe(1);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+
+    await manual(page);
+    await page.clock.fastForward(FAKE_REPLY_MS);
+    await expect(page.locator('.lp-popup').getByRole('alert')).toHaveText(message);
   });
 
   test('more than 9 fixes shows 9+', async ({ page }) => {

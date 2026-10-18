@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
+import { BridgeMissingError } from './providers/cli';
 import { REWRITE_TIMEOUT_MS, runRewrite, testConnection } from './rewrite';
 import { type StreamFn } from './providers/types';
 
@@ -55,6 +56,25 @@ describe('runRewrite', () => {
     );
 
     expect(events).toEqual([{ type: 'error', message: 'The model is offline.' }]);
+  });
+
+  it('marks a missing bridge with its error code', async () => {
+    const stream: StreamFn = async () => {
+      throw new BridgeMissingError();
+    };
+    const events: RewriteEvent[] = [];
+
+    await runRewrite(
+      request,
+      settings(),
+      stream,
+      (event) => events.push(event),
+      new AbortController().signal,
+    );
+
+    expect(events).toEqual([
+      { type: 'error', message: new BridgeMissingError().message, code: 'bridge-missing' },
+    ]);
   });
 
   it('posts nothing when the signal is already aborted', async () => {

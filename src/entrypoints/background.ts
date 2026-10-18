@@ -23,6 +23,8 @@ interface RewritePort {
 
 interface ExtensionChrome {
   runtime: {
+    onInstalled: { addListener(cb: (details: { reason: string }) => void): void };
+    getURL(path: string): string;
     onConnect: { addListener(cb: (port: RewritePort) => void): void };
     onMessage: {
       addListener(
@@ -43,6 +45,7 @@ interface ExtensionChrome {
       currentWindow?: boolean;
     }): Promise<Array<{ id?: number }>>;
     sendMessage(tabId: number, message: RuntimeMessage): Promise<unknown>;
+    create(props: { url: string }): Promise<unknown>;
   };
   storage: {
     local: {
@@ -115,6 +118,15 @@ export default defineBackground(() => {
         ),
       )
       .catch(() => {});
+  });
+
+  extension().runtime.onInstalled.addListener(({ reason }) => {
+    if (reason !== 'install') return;
+    void extension()
+      .tabs.create({ url: extension().runtime.getURL('/setup.html') })
+      .catch(() => {
+        // The setup page is a convenience; the toolbar popup still works without it.
+      });
   });
 
   extension().runtime.onConnect.addListener((port) => {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../../core/settings';
-import { cliProvider, pingBridge } from './cli';
+import { BridgeMissingError, cliProvider, pingBridge } from './cli';
 import { type PromptPair } from './types';
 
 const prompt: PromptPair = { system: 'Be brief.', user: 'Fix this.' };
@@ -134,6 +134,7 @@ describe('cliProvider', () => {
     );
     runtime.lastError = { message: 'Specified native messaging host not found.' };
     emitDisconnect();
+    await expect(pending).rejects.toBeInstanceOf(BridgeMissingError);
     expect(await rejection(pending)).toBe(
       'The LocalPolish bridge is not installed. In the LocalPolish folder run: npm run bridge:install',
     );

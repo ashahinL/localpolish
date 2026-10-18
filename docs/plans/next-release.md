@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: in progress. T15-T17 are verified and committed. T18c is verified and committed. T18a is verified and committed. T18b continues automatically.
+Status: implementation complete. All 13 tasks are verified and committed. All local gates and both dependency audits pass. The final CI run and the owner's manual release checks remain.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -76,7 +76,7 @@ Changes to the plan, compared with Sol's draft:
 ## T18: product additions (after T15-T17)
 
 - [x] **T18a. Final-text view in the rewrite popup** (F02). Art lane (Claude Opus). Brief: [T18a-final-view.md](../briefs/T18a-final-view.md). Depends on: T15c.
-- [ ] **T18b. First-run setup** (F01). Art lane (Claude Opus). Brief: [T18b-first-run.md](../briefs/T18b-first-run.md). Fix while I type stays on by default (owner, 18 October 2026). Depends on: T16b.
+- [x] **T18b. First-run setup** (F01). Art lane (Claude Opus). Brief: [T18b-first-run.md](../briefs/T18b-first-run.md). Fix while I type stays on by default (owner, 18 October 2026). Depends on: T16b.
 - [x] **T18c. Keep API keys out of content scripts** (F03). Sol high. Brief: [T18c-key-isolation.md](../briefs/T18c-key-isolation.md). Depends on: T15a, T15b, T16a.
 
 ## Backlog (not in this release)
@@ -96,8 +96,8 @@ Changes to the plan, compared with Sol's draft:
 
 ## Release checks
 
-- [ ] All gates pass: lint, typecheck, unit tests, Prettier, build, e2e (91 tests at 1.0.0, plus the new ones).
-- [ ] `npm audit` (full and `--omit=dev`) has no unreviewed high finding.
+- [x] All gates pass: lint, typecheck, unit tests, Prettier, build, e2e (91 tests at 1.0.0, plus the new ones).
+- [x] `npm audit` (full and `--omit=dev`) has no unreviewed high finding.
 - [ ] CI is green at the release commit, including the new macOS, Windows and Node 22 jobs.
 - [ ] Owner, by hand on macOS and Windows: one rewrite each with Claude CLI, Codex CLI and one API provider, using fixed sample text. Block a site and check that an editor in an iframe on it sends nothing. Never submit a draft.
 - [ ] Follow the corrected `RELEASING.md`. Download the published zip, check its SHA-256, load it in a fresh profile, and press Test connection.
@@ -133,3 +133,9 @@ Changes to the plan, compared with Sol's draft:
 - T18c: the orchestrator's Chromium preflight confirmed that restricting local storage to trusted contexts rejects content-world reads and suppresses storage change events. The background now applies that restriction at every worker start and sends only blocklist, idle Fix, and default mode settings to content scripts, with change notices to all tabs. Lint and typecheck passed; 14 targeted unit tests passed in 1 file. Added 1 browser regression using the extension's actual CDP execution context and a bearer-key assertion against the mock server. All gates passed: 269 unit tests, 2 platform-specific skips, and 112 browser tests. The real content-world storage and live-settings regression passed. Version unchanged. Reusable skill: none.
 
 - T18a: all gates passed, with 272 unit tests, 2 platform-specific skips, and 115 browser tests. Changes and Final were checked in light and dark mode, including a 320-pixel viewport. The view persists across answers and opens automatically after failed Accept and Copy. Reusable skill: none.
+
+- T18b: all gates passed, with 292 unit tests, 2 platform-specific skips, and 117 browser tests. A fresh profile opened setup, tested the mock provider, saved idle Fix off, sent nothing after typing, and closed with Done. Update reasons open no setup tab in unit tests. Missing-bridge idle errors stay quiet; manual errors remain visible. Setup was checked in light and dark mode. The install listener and test fixture were combined with T18c during integration. Version unchanged.
+
+- Final local dependency checks: full and production-only audits both report zero vulnerabilities. No real providers or rewrite CLIs were used.
+
+- Fleet skill reports: all delegates said none, except T18b suggested a note for sandboxed worktrees with linked node_modules, using wxt prepare and vitest --configLoader runner. The orchestrator agrees this is a short operating note, not enough for a new skill.

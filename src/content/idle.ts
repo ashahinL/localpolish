@@ -1,5 +1,6 @@
 import { Fragment, h, render } from 'preact';
 import { wordDiff } from '../core/diff';
+import { BRIDGE_MISSING } from '../core/messages';
 import { type PortLike, type Preset } from './controller';
 import {
   fieldText,
@@ -29,7 +30,7 @@ const SMALL_FIELD = 32;
 const FOLLOW_MS = 250;
 const STOPPED = 'LocalPolish stopped before the new text was ready. Try again.';
 
-type Outcome = { fixed: string } | { error: string };
+type Outcome = { fixed: string } | { error: string; code?: typeof BRIDGE_MISSING };
 type IdleResult = { sent: string; fixed: string; count: number } | { sent: string; error: string };
 
 interface Slot {
@@ -191,12 +192,12 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     slot.finish?.(undefined);
   }
 
-  function record(
-    el: HTMLElement,
-    slot: Slot,
-    sent: string,
-    outcome: { fixed: string } | { error: string },
-  ): void {
+  function record(el: HTMLElement, slot: Slot, sent: string, outcome: Outcome): void {
+    // Before setup every pause fails this way, so idle Fix stays quiet. The popup still shows it.
+    if ('error' in outcome && outcome.code === BRIDGE_MISSING) {
+      hide(el, slot);
+      return;
+    }
     if ('error' in outcome) {
       slot.result = { sent, error: outcome.error };
       marked.add(el);
@@ -424,10 +425,11 @@ function markSpot(el: HTMLElement): { top: number; left: number } | null {
   return { top, left };
 }
 
-function readOutcome(message: unknown): { fixed: string } | { error: string } | null {
+function readOutcome(message: unknown): Outcome | null {
   if (typeof message !== 'object' || message === null) return null;
-  const event = message as { type?: unknown; text?: unknown; message?: unknown };
+  const event = message as { type?: unknown; text?: unknown; message?: unknown; code?: unknown };
   if (event.type === 'done' && typeof event.text === 'string') return { fixed: event.text };
-  if (event.type === 'error' && typeof event.message === 'string') return { error: event.message };
-  return null;
+  if (event.type !== 'error' || typeof event.message !== 'string') return null;
+  if (event.code === BRIDGE_MISSING) return { error: event.message, code: BRIDGE_MISSING };
+  return { error: event.message };
 }

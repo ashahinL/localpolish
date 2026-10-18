@@ -2,6 +2,7 @@ import { cleanOutput } from '../core/cleanup';
 import { type RewriteEvent, type RewriteRequest, type TestResult } from '../core/messages';
 import { buildPrompt } from '../core/prompts';
 import { type Settings } from '../core/settings';
+import { BridgeMissingError } from './providers/cli';
 import { type StreamFn } from './providers/types';
 
 const TEST_TIMEOUT_MS = 45_000;
@@ -50,7 +51,11 @@ export async function runRewrite(
     }
     if (signal.aborted) return;
     const message = err instanceof Error ? err.message : 'The rewrite failed.';
-    post({ type: 'error', message });
+    post(
+      err instanceof BridgeMissingError
+        ? { type: 'error', message, code: err.code }
+        : { type: 'error', message },
+    );
     return;
   } finally {
     clearTimeout(timer);

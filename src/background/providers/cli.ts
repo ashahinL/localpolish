@@ -1,4 +1,4 @@
-import { type BridgeStatus, HOST_NAME } from '../../core/messages';
+import { BRIDGE_MISSING, type BridgeStatus, HOST_NAME } from '../../core/messages';
 import { type Settings } from '../../core/settings';
 import { type StreamFn } from './types';
 
@@ -14,6 +14,14 @@ const NOT_INSTALLED =
   'The LocalPolish bridge is not installed. In the LocalPolish folder run: npm run bridge:install';
 
 const PING_TIMEOUT_MS = 10_000;
+
+export class BridgeMissingError extends Error {
+  readonly code = BRIDGE_MISSING;
+
+  constructor() {
+    super(NOT_INSTALLED);
+  }
+}
 
 interface NativePort {
   postMessage(message: unknown): void;
@@ -116,7 +124,8 @@ export function cliProvider(cli: CliName): StreamFn {
         if (settled) return;
         settled = true;
         signal.removeEventListener('abort', onAbort);
-        reject(new Error(bridgeStoppedMessage(detail)));
+        const stopped = bridgeStoppedMessage(detail);
+        reject(stopped === NOT_INSTALLED ? new BridgeMissingError() : new Error(stopped));
       });
 
       port.postMessage({

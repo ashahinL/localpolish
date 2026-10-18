@@ -124,6 +124,16 @@ npm run build
 
 4. Open `chrome://extensions`. Turn on **Developer mode**. Click **Load unpacked**, then pick the `dist/` folder.
 
+### First-run setup
+
+On a new install, LocalPolish opens a setup page in a new tab. An update does not open it. It has three short steps:
+
+1. **Pick a provider.** The same picker and forms as the toolbar popup. For a CLI provider it also shows the bridge, with the install command when the bridge is missing.
+2. **Test it.** **Test connection** sends a fixed sample, never your own text.
+3. **Fix while I type.** It is on. One line says where your text goes for the provider you picked. Turn it off here if you only want the button and the shortcut.
+
+Press **Done** to close the tab. You can change all of this later in the toolbar popup. Until the bridge is installed, Fix while I type shows no error markers. The button and the shortcut still show the error.
+
 ### Set up the bridge
 
 Only the CLI providers need it.

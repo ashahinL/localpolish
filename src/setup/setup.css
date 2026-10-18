@@ -1,0 +1,72 @@
+/* The setup page reuses popup.css, so undo the popup's fixed frame. */
+body {
+  width: auto;
+  height: auto;
+  min-height: 100vh;
+  overflow: auto;
+}
+
+.setup {
+  width: min(440px, 100% - 32px);
+  margin: 32px auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.setup-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.setup-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setup-intro h1 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.step-n {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.setup-done {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.setup-done button {
+  min-width: 96px;
+}
