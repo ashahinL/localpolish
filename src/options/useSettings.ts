@@ -17,7 +17,7 @@ export interface SettingsApi {
   status: SaveStatus;
   /** Typing changes wait for a pause before saving; everything else saves at once. */
   change(patch: Patch, typing?: boolean): void;
-  flush(): Promise<void>;
+  flush(): Promise<boolean>;
   startEditing(key: SettingsKey): void;
   stopEditing(key: SettingsKey): void;
 }
@@ -31,23 +31,32 @@ export function useSettings(): SettingsApi {
   const editing = useRef(new Set<SettingsKey>());
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // saveSettings reads then writes storage, so overlapping saves could drop each other's fields.
-  const queue = useRef<Promise<void>>(Promise.resolve());
+  const queue = useRef<Promise<boolean>>(Promise.resolve(true));
 
   const show = useCallback((next: Settings) => {
     current.current = next;
     setSettings(next);
   }, []);
 
-  const flush = useCallback((): Promise<void> => {
+  const flush = useCallback((): Promise<boolean> => {
     clearTimeout(timer.current);
     if (current.current && pending.current.size > 0) {
-      const patch = pickSettings(current.current, pending.current);
+      const keys = new Set(pending.current);
+      const patch = pickSettings(current.current, keys);
       pending.current.clear();
       queue.current = queue.current
         .then(() => saveSettings(patch))
         .then(
-          () => setStatus({ kind: 'saved', at: Date.now() }),
-          (err: unknown) => setStatus({ kind: 'error', message: errorMessage(err) }),
+          () => {
+            if (pending.current.size > 0) return false;
+            setStatus({ kind: 'saved', at: Date.now() });
+            return true;
+          },
+          (err: unknown) => {
+            for (const key of keys) pending.current.add(key);
+            setStatus({ kind: 'error', message: errorMessage(err) });
+            return false;
+          },
         );
     }
     return queue.current;

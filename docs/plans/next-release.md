@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: in progress. T15 and T16a are verified and committed. Remaining ready tasks continue automatically.
+Status: in progress. T15-T16 and T17b-T17c are verified and committed. T17a and the product additions continue automatically.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -64,7 +64,7 @@ Changes to the plan, compared with Sol's draft:
 ## T16: settings
 
 - [x] **T16a. Safe settings writes, checked settings reads, one site rule** (A09, A11, A15). Sol medium. Brief: [T16a-settings-store.md](../briefs/T16a-settings-store.md). Depends on: nothing. Run it after T15a if both are open, because both touch `isBlocked` callers.
-- [ ] **T16b. Failed saves stay pending; the idle switch on the options page** (A10, A18). Sol medium. Brief: [T16b-save-errors.md](../briefs/T16b-save-errors.md). Depends on: T16a.
+- [x] **T16b. Failed saves stay pending; the idle switch on the options page** (A10, A18). Sol medium. Brief: [T16b-save-errors.md](../briefs/T16b-save-errors.md). Depends on: T16a.
 
 ## T17: docs, dependencies and CI
 
@@ -123,3 +123,7 @@ Changes to the plan, compared with Sol's draft:
 - T17c: added dispatch/tag-only macOS and Windows bridge jobs and an Ubuntu Node 22 job, a Windows grandchild cleanup test, and the pre-tag dispatch command. Node 22 targeted tests passed: 84 passed and 3 Windows-only skips across 5 files. Lint, Node 22 typecheck, and changed-file formatting passed. The orchestrator still owns full gates, browser checks, commit, push, and remote workflow verification; no CI run link yet. The repo is public; the owner-approved dispatch/tag schedule stays unchanged. Reusable skill: none.
 
 - T17c local verification: all gates passed, with 262 unit tests passed, 2 platform-specific tests skipped, and 107 browser tests passed. Remote platform verification follows the required push and dispatch.
+
+- T16b: all gates passed, with 262 unit tests passed, 2 platform-specific tests skipped, and 111 browser tests passed. All 26 settings-page browser tests passed separately. Failed saves stay pending; both test controls stop on a failed flush; options can change idle Fix. Reusable skill: none.
+
+- T17c remote verification passed on macOS, Windows, and Ubuntu Node 22: [platform run](https://github.com/ashahinL/localpolish/actions/runs/39157484975). The platform jobs include the real Windows process-tree test.

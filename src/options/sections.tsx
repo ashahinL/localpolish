@@ -77,7 +77,14 @@ export function TestSection() {
   const run = async () => {
     setRunning(true);
     setResult(null);
-    await flush();
+    if (!(await flush())) {
+      setResult({
+        ok: false,
+        message: 'Settings were not saved, so the test did not run. Try again.',
+      });
+      setRunning(false);
+      return;
+    }
     setResult(await testConnection());
     setRunning(false);
   };
@@ -125,6 +132,18 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
               </option>
             ))}
           </select>
+        </Field>
+        <Field
+          id="idle-fix"
+          label="Fix while I type"
+          help="Fixes a field after a 3 s pause. Off: the button and the shortcut still work."
+        >
+          <input
+            id="idle-fix"
+            type="checkbox"
+            checked={settings.idleFix}
+            onChange={() => change({ idleFix: !settings.idleFix })}
+          />
         </Field>
       </div>
     </section>

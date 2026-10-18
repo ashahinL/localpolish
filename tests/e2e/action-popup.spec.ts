@@ -6,6 +6,7 @@ const DIST = new URL('../../dist', import.meta.url);
 const ORIGIN = 'https://localpolish.test';
 
 interface StubConfig {
+  failSets: number;
   settings?: Record<string, unknown>;
   tabUrl: string | undefined;
   bridge: unknown;
@@ -39,6 +40,7 @@ const test = base.extend<{ page: Page }, { sharedContext: BrowserContext }>({
 
 async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promise<void> {
   const config: StubConfig = {
+    failSets: 0,
     tabUrl: 'https://mail.google.com/mail/u/0/',
     bridge: BRIDGE_OK,
     test: { ok: true, sample: 'Hello.', ms: 1234 },
@@ -55,7 +57,9 @@ async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promi
     const listeners: Array<(changes: unknown, area: string) => void> = [];
     const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
     const opened: string[] = [];
+    const runtimeSent: Array<{ type: string }> = [];
     Object.assign(window, {
+      __runtimeSent: runtimeSent,
       __store: store,
       __opened: opened,
       __bridgeCalls: 0,
@@ -64,6 +68,10 @@ async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promi
           local: {
             get: async (key: string) => (key in store ? { [key]: copy(store[key]) } : {}),
             set: async (items: Record<string, unknown>) => {
+              if (cfg.failSets > 0) {
+                cfg.failSets -= 1;
+                throw new Error('Storage write failed');
+              }
               const changes: Record<string, unknown> = {};
               for (const [key, value] of Object.entries(items)) {
                 store[key] = copy(value);
@@ -79,6 +87,7 @@ async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promi
         },
         runtime: {
           sendMessage: async (message: { type: string }) => {
+            runtimeSent.push(copy(message));
             if (message.type === 'bridge-status') {
               (window as unknown as { __bridgeCalls: number }).__bridgeCalls += 1;
               return cfg.bridge;
@@ -340,6 +349,46 @@ test('hover help shows after 2 seconds', async ({ page }) => {
 
     await page.keyboard.press('Escape');
     await expect(tip).toBeHidden();
+  } finally {
+    await page.clock.resume();
+  }
+});
+
+test('a failed save blocks Test connection and is retried', async ({ page }) => {
+  await page.clock.install();
+  await openPopup(page, { failSets: 1 });
+  await page.getByRole('tab', { name: 'Provider' }).click();
+  await page.getByLabel('Model', { exact: true }).selectOption({ label: 'Custom…' });
+  await page.clock.pauseAt(Date.now() + 10_000);
+  try {
+    await page.getByLabel('Custom model', { exact: true }).fill('custom-retry-model');
+    const run = page.getByRole('button', { name: 'Test connection' });
+    // Keep focus in the input so the button's flush handles the pending typing edit.
+    await run.dispatchEvent('click');
+    await expect(page.getByText('Could not save: Storage write failed')).toBeVisible();
+    await expect(
+      page.getByText('Settings were not saved, so the test did not run. Try again.'),
+    ).toBeVisible();
+    await expect(run).toBeEnabled();
+    const testMessages = () =>
+      page.evaluate(() =>
+        (window as unknown as { __runtimeSent: Array<{ type: string }> }).__runtimeSent.filter(
+          (message) => message.type === 'test-connection',
+        ),
+      );
+    expect(await testMessages()).toHaveLength(0);
+    expect(
+      ((await stored(page))?.models as Record<string, string> | undefined)?.['codex-cli'],
+    ).not.toBe('custom-retry-model');
+
+    await run.click();
+    await expect
+      .poll(async () => ((await stored(page))?.models as Record<string, string>)?.['codex-cli'])
+      .toBe('custom-retry-model');
+    await expect.poll(testMessages).toHaveLength(1);
+    await page.clock.runFor(300);
+    await expect(page.getByText('Works. Got “Hello.” in 1.2 s')).toBeVisible();
+    await expect(page.getByText('Could not save: Storage write failed')).toHaveCount(0);
   } finally {
     await page.clock.resume();
   }

@@ -6,6 +6,7 @@ const DIST = new URL('../../dist', import.meta.url);
 const ORIGIN = 'https://localpolish.test';
 
 interface StubConfig {
+  failSets: number;
   settings?: Record<string, unknown>;
   bridge: unknown;
   test: unknown;
@@ -35,6 +36,7 @@ const test = base.extend<{ page: Page }, { sharedContext: BrowserContext }>({
 
 async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Promise<void> {
   const config: StubConfig = {
+    failSets: 0,
     bridge: BRIDGE_OK,
     test: { ok: true, sample: 'Hello.', ms: 1234 },
     shortcut: '⇧⌘K',
@@ -49,13 +51,19 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
     if (cfg.settings) store.settings = cfg.settings;
     const listeners: Array<(changes: unknown, area: string) => void> = [];
     const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+    const runtimeSent: Array<{ type: string }> = [];
     Object.assign(window, {
+      __runtimeSent: runtimeSent,
       __store: store,
       chrome: {
         storage: {
           local: {
             get: async (key: string) => (key in store ? { [key]: copy(store[key]) } : {}),
             set: async (items: Record<string, unknown>) => {
+              if (cfg.failSets > 0) {
+                cfg.failSets -= 1;
+                throw new Error('Storage write failed');
+              }
               const changes: Record<string, unknown> = {};
               for (const [key, value] of Object.entries(items)) {
                 store[key] = copy(value);
@@ -71,6 +79,7 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
         },
         runtime: {
           sendMessage: async (message: { type: string }) => {
+            runtimeSent.push(copy(message));
             if (message.type === 'bridge-status') return cfg.bridge;
             if (message.type === 'test-connection') {
               await new Promise((done) => setTimeout(done, 300));
@@ -167,3 +176,58 @@ test('bridge rows and the install hint when the bridge is missing', async ({ pag
   await expect(missing.getByText('npm run bridge:install')).toBeVisible();
   await missing.close();
 });
+
+test('a failed save blocks Test connection and is retried', async ({ page }) => {
+  await page.clock.install();
+  await openOptions(page, { failSets: 1 });
+  await page.getByLabel('Model', { exact: true }).selectOption({ label: 'Custom…' });
+  await page.clock.pauseAt(Date.now() + 10_000);
+  try {
+    await page.getByLabel('Custom model', { exact: true }).fill('custom-retry-model');
+    const run = page.getByRole('button', { name: 'Test connection' });
+    // Keep focus in the input so the button's flush handles the pending typing edit.
+    await run.dispatchEvent('click');
+    await expect(page.getByText('Could not save: Storage write failed')).toBeVisible();
+    await expect(
+      page.getByText('Settings were not saved, so the test did not run. Try again.'),
+    ).toBeVisible();
+    await expect(run).toBeEnabled();
+    const testMessages = () =>
+      page.evaluate(() =>
+        (window as unknown as { __runtimeSent: Array<{ type: string }> }).__runtimeSent.filter(
+          (message) => message.type === 'test-connection',
+        ),
+      );
+    expect(await testMessages()).toHaveLength(0);
+    expect(
+      ((await stored(page))?.models as Record<string, string> | undefined)?.['codex-cli'],
+    ).not.toBe('custom-retry-model');
+
+    await run.click();
+    await expect
+      .poll(async () => ((await stored(page))?.models as Record<string, string>)?.['codex-cli'])
+      .toBe('custom-retry-model');
+    await expect.poll(testMessages).toHaveLength(1);
+    await page.clock.runFor(300);
+    await expect(page.getByText('Works. Got “Hello.” in 1.2 s')).toBeVisible();
+    await expect(page.getByText('Could not save: Storage write failed')).toHaveCount(0);
+  } finally {
+    await page.clock.resume();
+  }
+});
+
+for (const idleFix of [true, false]) {
+  test(`Fix while I type shows stored ${idleFix} and saves both ways`, async ({ page }) => {
+    await openOptions(page, { settings: { idleFix } });
+    const toggle = page.getByRole('checkbox', { name: 'Fix while I type' });
+    await expect(toggle).toBeChecked({ checked: idleFix });
+
+    await toggle.click();
+    await expect.poll(async () => (await stored(page))?.idleFix).toBe(!idleFix);
+    await expect(toggle).toBeChecked({ checked: !idleFix });
+
+    await toggle.click();
+    await expect.poll(async () => (await stored(page))?.idleFix).toBe(idleFix);
+    await expect(toggle).toBeChecked({ checked: idleFix });
+  });
+}

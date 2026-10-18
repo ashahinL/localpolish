@@ -32,6 +32,9 @@ finished but not released yet waits under Unreleased. How a version ships:
 - Damaged stored settings use checked defaults rather than crashing (A11).
 - Site entries share one hostname normalizer, and options identifies invalid entries (A15).
 
+- Failed settings saves stay pending, and Test connection waits for a successful save (A10).
+- The full options page includes the Fix while I type checkbox (A18).
+
 **For contributors**
 
 - Run macOS and Windows bridge tests and Node 22 checks on manual dispatch and `v*` tags (A20).

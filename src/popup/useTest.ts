@@ -27,7 +27,15 @@ export function useTest(): TestState {
     void (async () => {
       setRunning(true);
       setResult(null);
-      await flush();
+      if (!(await flush())) {
+        if (id !== runId.current) return;
+        setResult({
+          ok: false,
+          message: 'Settings were not saved, so the test did not run. Try again.',
+        });
+        setRunning(false);
+        return;
+      }
       const next = await testConnection();
       if (id !== runId.current) return;
       setResult(next);
