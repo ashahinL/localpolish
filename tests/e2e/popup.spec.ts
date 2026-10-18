@@ -516,6 +516,23 @@ test.describe('idle fix', () => {
     await expect.poll(centerX).toBe(before + 80);
   });
 
+  test('Backspace still works in Draft.js after Accept', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'أيوه عايزه، يعني مني.' }]]);
+    await page.locator('#draft .public-DraftEditor-content').click();
+    await page.keyboard.type('ايوه عايوه ايه يعني مني');
+    await pause(page);
+
+    await page.locator('.lp-mark').click();
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    const draftText = () => page.evaluate(() => (window as unknown as PageApi).__lp.draftText());
+    await expect.poll(draftText).toBe('أيوه عايزه، يعني مني.');
+
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type('x');
+    await expect.poll(draftText).toBe('أيوه عايزه، يعني منx');
+  });
+
   test('an unchanged fix shows no marker', async ({ page }) => {
     const text = 'nothing needs a fix today';
     await startIdle(page, [[{ type: 'done', text }]]);

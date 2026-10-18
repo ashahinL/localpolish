@@ -112,6 +112,8 @@ function DraftBox() {
   return React.createElement(Editor, {
     editorState,
     onChange: setEditorState,
+    // X turns spellcheck on; the idle Fix skips fields that turn it off.
+    spellCheck: true,
   });
 }
 

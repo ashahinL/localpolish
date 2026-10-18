@@ -219,8 +219,9 @@ async function applyRich(
   const before = normalize(root.innerText);
 
   // Lexical (Facebook) drops the line breaks from insertText but splits pasted text into paragraphs.
-  if (root.dataset.lexicalEditor === 'true') {
-    // Lexical reads the new selection on the next selectionchange.
+  // insertText also drops Draft.js's (X) leaf spans, and then Backspace stops working.
+  if (root.dataset.lexicalEditor === 'true' || root.closest('.DraftEditor-root')) {
+    // Both editors read the new selection on the next selectionchange.
     await waitForRender();
     return paste(root, selection, text, before, target.text);
   }

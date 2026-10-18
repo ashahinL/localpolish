@@ -92,9 +92,13 @@ test('Draft.js updates its editor state', async ({ page }) => {
   expect(await captureText(page, false)).toBe('i has went home');
   await page.locator('#outside').click();
   expect(await apply(page, 'I went home.')).toEqual({ ok: true });
-  expect(await page.evaluate(() => (window as unknown as PageApi).__lp.draftText())).toBe(
-    'I went home.',
-  );
+  const draftText = () => page.evaluate(() => (window as unknown as PageApi).__lp.draftText());
+  expect(await draftText()).toBe('I went home.');
+
+  await page.locator('#draft .public-DraftEditor-content').click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Backspace');
+  await expect.poll(draftText).toBe('I went home');
 });
 
 test('Lexical keeps line breaks and undoes the change', async ({ page }) => {
