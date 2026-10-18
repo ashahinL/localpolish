@@ -165,7 +165,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Usage stats stay out of scope. The mockup's "Usage today" card with example data is **left out** of the build (fake numbers should not ship); it stays in Later.
   - [x] **T14a.** `idleFix` setting and the content script reads it. Brief: [T14a](briefs/T14a-idle-setting.md).
   - Built: `idleFix` (default `true`; a stored non-boolean loads as `true`). The idle Fix runs only when it is on and the site is not blocklisted; the button and shortcut ignore it. e2e: a pause sends one Fix; off or blocklisted sends nothing.
-  - [ ] **T14b.** Popup entrypoint, shared tokens, header, the two switches, tabs. Brief: [T14b](briefs/T14b-popup-shell.md).
+  - [x] **T14b.** Popup entrypoint, shared tokens, header, the two switches, tabs. Brief: [T14b](briefs/T14b-popup-shell.md).
+  - Built: `src/entrypoints/popup/` (WXT sets it as `action.default_popup`, title LocalPolish), shared light and dark tokens in `src/options/tokens.css`, and `src/popup/` with `App`, `Header` (Saved flash, save error, gear opens the options page), `QuickToggles` (idle switch; the site switch adds or removes the exact host, a broader rule disables it with "Hidden by {rule}. Edit in Sites"), roving-focus `Tabs`, and `sites.ts` with tests. The panel is empty until T14c.
   - [ ] **T14c.** Home tab. Brief: [T14c](briefs/T14c-popup-home.md).
   - [ ] **T14d.** Provider tab with all five provider forms. Brief: [T14d](briefs/T14d-popup-provider.md).
   - [ ] **T14e.** Sites tab. Brief: [T14e](briefs/T14e-popup-sites.md).
