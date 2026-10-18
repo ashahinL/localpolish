@@ -244,6 +244,12 @@ async function paste(
   before: string,
   original: string,
 ): Promise<ApplyResult> {
+  if (!root.contains(selection.anchorNode) || !root.contains(selection.focusNode)) {
+    return { ok: false, reason: 'changed' };
+  }
+  if (normalize(selection.toString()) !== normalize(original)) {
+    return { ok: false, reason: 'changed' };
+  }
   const anchor = selection.anchorNode;
   const anchorEl = anchor instanceof Element ? anchor : (anchor?.parentElement ?? null);
   if (!anchorEl) return { ok: false, reason: 'rejected' };
@@ -280,7 +286,11 @@ function replaced(root: HTMLElement, before: string, text: string, original: str
 }
 
 function normalize(value: string): string {
-  return value.replaceAll('\u00a0', ' ').replace(/\s+/g, ' ').trim();
+  return value
+    .replaceAll('\u00a0', ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\s+/g, (space) => (space.includes('\n') ? '\n' : ' '))
+    .trim();
 }
 
 function waitForRender(): Promise<void> {

@@ -127,6 +127,11 @@ lexical.setRootElement(document.getElementById('lexical'));
 registerRichText(lexical);
 registerHistory(lexical, createEmptyHistoryState(), 0);
 
+document.getElementById('other').addEventListener('paste', (event) => {
+  event.preventDefault();
+  document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+});
+
 function DraftBox() {
   const [editorState, setEditorState] = React.useState(() => EditorState.createEmpty());
   window.__lp = {

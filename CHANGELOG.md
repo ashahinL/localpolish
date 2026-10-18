@@ -13,6 +13,11 @@ finished but not released yet waits under Unreleased. How a version ships:
 - A01: Blocked sites now keep the button and idle Fix off in child frames, with a second site check for idle requests in the background.
 - A16: Only the focused frame handles the shortcut, so parent frames no longer show an extra toast.
 
+**Fixes**
+
+- Accept stops before pasting if the selection moves to another editor or the selected text changes during the wait (A04).
+- Accept detects changed paragraph splits and rejects ignored line-break rewrites (A05).
+
 **For contributors**
 
 - Audit of 1.0.0 with confirmed findings and evidence, a review of it, and the next-release plan with one brief per task. No runtime changes.

@@ -140,6 +140,95 @@ test('apply reports changed when the field text moved', async ({ page }) => {
   await expect(page.locator('#ta')).toHaveValue('something else');
 });
 
+for (const [name, selector] of [
+  ['Lexical', '#lexical'],
+  ['Draft.js', '#draft .public-DraftEditor-content'],
+] as const) {
+  test(`${name} does not paste into another editor during the wait`, async ({ page }) => {
+    await page.locator(selector).click();
+    await page.keyboard.type('i has went home');
+    await page.keyboard.press('ControlOrMeta+a');
+    expect(await captureText(page, false)).toBe('i has went home');
+
+    const result = await page.evaluate(() => {
+      const api = window as unknown as PageApi;
+      const pending = api.__lp.applyReplacement(api.__t, 'I went home.');
+      setTimeout(() => {
+        const other = document.getElementById('other') as HTMLElement;
+        other.focus();
+        const range = document.createRange();
+        range.selectNodeContents(other);
+        getSelection()?.removeAllRanges();
+        getSelection()?.addRange(range);
+      }, 0);
+      return pending;
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'changed' });
+    await expect(page.locator('#other')).toHaveText('Other editor original text');
+    await expect(page.locator(selector)).toHaveText('i has went home');
+  });
+}
+
+test('Lexical keeps edits made during the paste wait', async ({ page }) => {
+  await page.locator('#lexical').click();
+  await page.keyboard.type('i has went home');
+  await page.keyboard.press('ControlOrMeta+a');
+  expect(await captureText(page, false)).toBe('i has went home');
+
+  const result = await page.evaluate(() => {
+    const api = window as unknown as PageApi;
+    const pending = api.__lp.applyReplacement(api.__t, 'I went home.');
+    setTimeout(() => {
+      document.execCommand('insertText', false, 'edited while waiting');
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('lexical') as HTMLElement);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
+    }, 0);
+    return pending;
+  });
+
+  expect(result).toEqual({ ok: false, reason: 'changed' });
+  await expect(page.locator('#lexical')).toHaveText('edited while waiting');
+});
+
+test('apply reports changed when paragraph splits moved', async ({ page }) => {
+  await page.locator('#ce').evaluate((el) => {
+    el.innerHTML = '<p>hello world</p><p>line two</p>';
+  });
+  await page.locator('#ce').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  expect(await captureText(page, false)).toBe('hello world\nline two');
+  await page.locator('#outside').click();
+  await page.locator('#ce').evaluate((el) => {
+    el.innerHTML = '<p>hello</p><p>world line two</p>';
+  });
+
+  expect(await apply(page, 'Hello world.\nLine two.')).toEqual({ ok: false, reason: 'changed' });
+  const paragraphs = await page
+    .locator('#ce p')
+    .evaluateAll((els) => els.map((el) => el.textContent));
+  expect(paragraphs).toEqual(['hello', 'world line two']);
+});
+
+test('apply rejects a line-break rewrite that the editor ignores', async ({ page }) => {
+  await page.locator('#ce').click();
+  await page.keyboard.type('hello world');
+  await page.keyboard.press('ControlOrMeta+a');
+  expect(await captureText(page, false)).toBe('hello world');
+  await page.locator('#outside').click();
+  await page.locator('#ce').evaluate((el) => {
+    el.addEventListener('input', () => {
+      el.textContent = 'hello world';
+    });
+    el.addEventListener('paste', (event) => event.preventDefault());
+  });
+
+  expect(await apply(page, 'hello\nworld')).toEqual({ ok: false, reason: 'rejected' });
+  expect(await page.locator('#ce').innerText()).toBe('hello world');
+});
+
 test('wholeFieldIfEmpty selects the field only when asked', async ({ page }) => {
   await page.locator('#ta').click();
   await page.keyboard.type('i has went home');
