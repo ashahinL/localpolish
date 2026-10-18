@@ -44,11 +44,15 @@ function start(): void {
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
   // Null until loaded, so the button never flashes on a blocklisted site.
   let settings: Settings | null = null;
+  let idle: ReturnType<typeof createIdleFix> | undefined = undefined;
+  let button: ReturnType<typeof createButton> | undefined = undefined;
 
   const refresh = () => {
     loadSettings().then(
       (loaded) => {
         settings = loaded;
+        idle?.refresh();
+        button?.refresh();
       },
       () => {},
     );
@@ -79,10 +83,10 @@ function start(): void {
     connect,
     getSettings: () => settings ?? DEFAULT_SETTINGS,
     isMac,
-    onAccepted: (target) => idle.accepted(target),
+    onAccepted: (target) => idle?.accepted(target),
   });
 
-  const idle = createIdleFix({
+  idle = createIdleFix({
     connect,
     isEnabled: isIdleEnabled,
     isPopupOpen: controller.isOpen,
@@ -90,13 +94,13 @@ function start(): void {
     openPopup: controller.open,
   });
 
-  createButton({
+  button = createButton({
     isMac,
     isEnabled,
     isPopupOpen: controller.isOpen,
     onActivate() {
       const target = captureTarget({ wholeFieldIfEmpty: false });
-      if (target) idle.open(target);
+      if (target) idle?.open(target);
     },
   });
 
@@ -106,7 +110,7 @@ function start(): void {
       const active = deepActiveElement();
       if (active instanceof HTMLIFrameElement || active instanceof HTMLFrameElement) return;
       const target = captureTarget({ wholeFieldIfEmpty: true });
-      if (target) idle.open(target);
+      if (target) idle?.open(target);
       else if (focusedEditable()) showToast('Type some text first.');
       else showToast('Click into a text field first.');
     }),

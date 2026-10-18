@@ -15,7 +15,7 @@ export interface ButtonDeps {
 
 const DEBOUNCE_MS = 150;
 
-export function createButton(deps: ButtonDeps): void {
+export function createButton(deps: ButtonDeps): { refresh(): void } {
   const title = `LocalPolish (${deps.isMac ? '⌘⇧K' : 'Ctrl+Shift+K'})`;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let shown = false;
@@ -66,6 +66,7 @@ export function createButton(deps: ButtonDeps): void {
   );
   window.addEventListener('scroll', guarded(hide), { capture: true, passive: true });
   window.addEventListener('resize', guarded(hide), { passive: true });
+  return { refresh: update };
 }
 
 function selectionCaret(): Rect | null {

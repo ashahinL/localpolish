@@ -31,6 +31,7 @@ type PageApi = {
     setScripts: (scripts: FakeEvent[][]) => void;
     startButton: () => void;
     startIdle: () => void;
+    setEnabled: (on: boolean, refresh?: boolean) => void;
     manual: () => void;
     requests: () => number;
     maxOpen: () => number;
@@ -400,6 +401,77 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-mark')).toHaveCount(0);
     await pause(page);
     expect(await requests(page)).toBe(1);
+  });
+
+  test('turning idle off hides the marker and its click sends nothing', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await expect(page.locator('.lp-mark')).toBeVisible();
+
+    await page.evaluate(() => (window as unknown as PageApi).__lp.setEnabled(false));
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    expect(await requests(page)).toBe(1);
+
+    await page.evaluate(() => (window as unknown as PageApi).__lp.setEnabled(true));
+    await page.keyboard.type(' now');
+    await pause(page);
+    await expect(page.locator('.lp-mark')).toBeVisible();
+    expect(await requests(page)).toBe(2);
+  });
+
+  test('turning idle off during a request drops its answer', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    expect(await requests(page)).toBe(1);
+
+    await page.evaluate(() => (window as unknown as PageApi).__lp.setEnabled(false));
+    await page.clock.fastForward(FAKE_REPLY_MS);
+    await pause(page);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    expect(await requests(page)).toBe(1);
+  });
+
+  test('a stale marker click on a disabled page sends nothing', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await page.keyboard.type(' now');
+    await page.locator('.lp-mark').evaluate((el: HTMLButtonElement) => {
+      el.addEventListener(
+        'click',
+        () => (window as unknown as PageApi).__lp.setEnabled(false, false),
+        { capture: true, once: true },
+      );
+    });
+    await page.locator('.lp-mark').click();
+
+    expect(await requests(page)).toBe(1);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    await expect(page.locator('.lp-popup')).toHaveCount(0);
+  });
+
+  test('turning idle off preserves a request adopted by the manual popup', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    await page.evaluate(() => {
+      const api = (window as unknown as PageApi).__lp;
+      api.manual();
+      api.setEnabled(false);
+    });
+    await expect(page.locator('.lp-popup')).toBeVisible();
+    await page.clock.fastForward(FAKE_REPLY_MS);
+
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(await newText(page)).toBe('I went home today.');
+    expect(await requests(page)).toBe(1);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
   test('closing the popup keeps the marker until the field holds the fix', async ({ page }) => {

@@ -287,6 +287,60 @@ test.describe('idle Fix', () => {
     await expect(page.locator('.lp-mark')).toBeVisible();
   });
 
+  test('blocking the site removes existing idle work and its selection button', async ({
+    page,
+    mock,
+    sw,
+  }) => {
+    await writeSettings(sw, `${mock.url}/v1`);
+    await openFixture(page);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await expect.poll(() => mock.requests.length, { timeout: 10_000 }).toBe(1);
+    await expect(page.locator('.lp-mark')).toBeVisible();
+    await page.locator('#ta').selectText();
+    await expect(page.locator('.lp-fab')).toBeVisible();
+
+    await writeSettings(sw, `${mock.url}/v1`, { blocklist: ['localhost'] });
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    await expect(page.locator('.lp-fab')).toHaveCount(0);
+    await page.keyboard.press('End');
+    await page.keyboard.type(' more words');
+    await page.waitForTimeout(4500);
+    expect(mock.requests).toHaveLength(1);
+
+    await sendOpenPopup(page, sw, '#ta');
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(mock.requests).toHaveLength(2);
+  });
+
+  test('turning idle Fix off removes its marker but keeps the button and shortcut', async ({
+    page,
+    mock,
+    sw,
+  }) => {
+    await writeSettings(sw, `${mock.url}/v1`);
+    await openFixture(page);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await expect.poll(() => mock.requests.length, { timeout: 10_000 }).toBe(1);
+    await expect(page.locator('.lp-mark')).toBeVisible();
+    await page.locator('#ta').selectText();
+    await expect(page.locator('.lp-fab')).toBeVisible();
+
+    await writeSettings(sw, `${mock.url}/v1`, { idleFix: false });
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    await expect(page.locator('.lp-fab')).toBeVisible();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' more words');
+    await page.waitForTimeout(4500);
+    expect(mock.requests).toHaveLength(1);
+
+    await sendOpenPopup(page, sw, '#ta');
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(mock.requests).toHaveLength(2);
+  });
+
   test('a blocked site gets no idle Fix from its iframes', async ({ page, mock, sw }) => {
     await writeSettings(sw, `${mock.url}/v1`, { blocklist: ['localhost'] });
     await openFixture(page, 'frames.html');

@@ -60,6 +60,8 @@ const controller = createController({
 });
 
 let idle;
+let button;
+let enabled = true;
 
 const popupApi = {
   openPopup(scripts, settings = {}) {
@@ -78,9 +80,9 @@ const popupApi = {
     fake.sent = [];
   },
   startButton() {
-    createButton({
+    button = createButton({
       isMac: false,
-      isEnabled: () => true,
+      isEnabled: () => enabled,
       isPopupOpen: controller.isOpen,
       onActivate() {
         const target = captureTarget({ wholeFieldIfEmpty: false });
@@ -91,11 +93,18 @@ const popupApi = {
   startIdle() {
     idle = createIdleFix({
       connect,
-      isEnabled: () => true,
+      isEnabled: () => enabled,
       isPopupOpen: controller.isOpen,
       isFixDefault: () => fake.settings.defaultMode === 'fix',
       openPopup: controller.open,
     });
+  },
+  setEnabled(on, refresh = true) {
+    enabled = on;
+    if (refresh) {
+      idle?.refresh();
+      button?.refresh();
+    }
   },
   manual() {
     const target = captureTarget({ wholeFieldIfEmpty: true });

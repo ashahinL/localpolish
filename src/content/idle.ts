@@ -44,6 +44,7 @@ interface Slot {
 }
 
 export interface IdleFix {
+  refresh(): void;
   open(target: Target): void;
   accepted(target: Target): void;
 }
@@ -52,6 +53,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   const slots = new WeakMap<HTMLElement, Slot>();
   const ids = new WeakMap<HTMLElement, number>();
   const marked = new Set<HTMLElement>();
+  const waiting = new WeakSet<Slot>();
   let nextId = 1;
   let follow: ReturnType<typeof setInterval> | undefined;
 
@@ -150,6 +152,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       slot.runningText = undefined;
       slot.inflight = undefined;
       slot.finish = undefined;
+      waiting.delete(slot);
       if (!outcome) {
         slot.pending = false;
         renderMarks();
@@ -226,6 +229,10 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   }
 
   function activate(el: HTMLElement): void {
+    if (!deps.isEnabled()) {
+      renderMarks();
+      return;
+    }
     const slot = slots.get(el);
     const result = slot?.result;
     if (!slot || (!result && !slot.running)) return;
@@ -270,6 +277,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   }
 
   function waitOn(slot: Slot, pending: Promise<Outcome>): Preset {
+    waiting.add(slot);
     return {
       pending,
       cancel() {
@@ -284,6 +292,19 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   }
 
   function renderMarks(): void {
+    if (!deps.isEnabled()) {
+      for (const el of marked) {
+        const slot = slots.get(el);
+        if (!slot) continue;
+        if (!waiting.has(slot)) cancel(slot);
+        clearTimeout(slot.timer);
+        slot.timer = undefined;
+        slot.result = undefined;
+      }
+      marked.clear();
+      hideAll();
+      return;
+    }
     if (deps.isPopupOpen()) {
       hideAll();
       return;
@@ -388,7 +409,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (slot.result) hide(el, slot);
   }
 
-  return { open, accepted };
+  return { open, accepted, refresh: renderMarks };
 }
 
 function markSpot(el: HTMLElement): { top: number; left: number } | null {

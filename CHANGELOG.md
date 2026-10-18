@@ -8,6 +8,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **Safer**
 
+- A02: Settings changes now remove idle markers and cancel automatic work immediately. Blocking a site also hides its selection button, while manual rewrites keep working.
+
 - A01: Blocked sites now keep the button and idle Fix off in child frames, with a second site check for idle requests in the background.
 - A16: Only the focused frame handles the shortcut, so parent frames no longer show an extra toast.
 
