@@ -43,5 +43,10 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "draft-js": {
+      "immutable": "3.8.4"
+    }
   }
 }

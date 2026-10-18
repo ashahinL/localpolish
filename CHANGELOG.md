@@ -34,6 +34,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **For contributors**
 
+- Override Draft.js's test-only Immutable dependency to 3.8.4; both dependency audits are clean (A19).
+
 - Audit of 1.0.0 with confirmed findings and evidence, a review of it, and the next-release plan with one brief per task. No runtime changes.
 
 ## 1.0.0 — 2026-10-18
