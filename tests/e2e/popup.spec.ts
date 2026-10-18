@@ -34,6 +34,7 @@ type PageApi = {
     manual: () => void;
     requests: () => number;
     maxOpen: () => number;
+    sent: () => string[];
     draftText: () => string;
   };
 };
@@ -726,5 +727,47 @@ test.describe('idle fix', () => {
     await pause(page);
     expect(await requests(page)).toBe(1);
     await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('sends the whole field, every paragraph', async ({ page }) => {
+    const text = ['first part '.repeat(200), 'second part '.repeat(200)].join('\n\n');
+    await startIdle(page, [[{ type: 'done', text }]]);
+    await page.locator('#ta').click();
+    await page.locator('#ta').fill(text);
+    await pause(page);
+    expect(await page.evaluate(() => (window as unknown as PageApi).__lp.sent())).toEqual([text]);
+  });
+
+  test('clicking a dimmed error marker sends the current text', async ({ page }) => {
+    await startIdle(page, [
+      [{ type: 'error', message: 'Boom' }],
+      [{ type: 'done', text: 'I went home today now.' }],
+    ]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await expect(page.locator('.lp-mark')).toHaveClass(/lp-mark-error/);
+
+    await page.keyboard.type(' now');
+    await page.locator('.lp-mark').click();
+    await page.clock.fastForward(FAKE_REPLY_MS);
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(await requests(page)).toBe(2);
+    expect(await maxOpen(page)).toBe(1);
+  });
+
+  test('Accept on an unchanged manual answer sends no idle request', async ({ page }) => {
+    const text = 'nothing needs a fix today';
+    await startIdle(page, [[{ type: 'done', text }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type(text);
+    await manual(page);
+    await page.clock.fastForward(FAKE_REPLY_MS);
+    const popup = page.locator('.lp-popup');
+    await expect(popup.getByText('No changes needed.')).toBeVisible();
+    await popup.getByRole('button', { name: 'Accept' }).click();
+    await expect(popup).toHaveCount(0);
+    await pause(page);
+    expect(await requests(page)).toBe(1);
   });
 });

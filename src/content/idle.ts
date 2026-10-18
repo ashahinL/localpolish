@@ -69,6 +69,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (!host || !isIdleField(host)) return;
     const slot = slotOf(host);
     reposition();
+    slot.pending = false;
     clearTimeout(slot.timer);
     slot.timer = setTimeout(
       guarded(() => {
@@ -150,7 +151,6 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       slot.inflight = undefined;
       slot.finish = undefined;
       if (!outcome) {
-        // Cancelled: do not record an error marker or start the queued run.
         slot.pending = false;
         renderMarks();
         return;
@@ -230,12 +230,11 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     const result = slot?.result;
     if (!slot || (!result && !slot.running)) return;
     const current = fieldText(el);
-    if (result && 'error' in result) {
-      deps.openPopup(wholeFieldTarget(el), { error: result.error });
-      return;
-    }
     if (result && !slot.running && result.sent === current) {
-      deps.openPopup(wholeFieldTarget(el), { fixed: result.fixed });
+      deps.openPopup(
+        wholeFieldTarget(el),
+        'error' in result ? { error: result.error } : { fixed: result.fixed },
+      );
       return;
     }
     const pending = inflightFor(slot, current);
@@ -256,6 +255,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (deps.isFixDefault() && target.text === current) {
       const result = slot.result;
       if (result && 'fixed' in result && result.sent === current) {
+        cancel(slot);
         deps.openPopup(target, { fixed: result.fixed });
         return;
       }
@@ -303,7 +303,6 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         continue;
       }
       if (!result) continue;
-      // Gone once the field holds the fix, by Accept or by pasting a copied fix.
       if ('fixed' in result && fieldText(el).trim() === result.fixed.trim()) {
         slot.result = undefined;
         marked.delete(el);
@@ -312,7 +311,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       const spot = markSpot(el);
       if (spot) items.push({ el, result, ...spot });
     }
-    if (items.length === 0) {
+    if (marked.size === 0) {
       hideAll();
       return;
     }
@@ -382,7 +381,6 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     return id;
   }
 
-  // The accepted text is settled: no idle request for it, and no marker.
   function accepted(target: Target): void {
     const el = target.kind === 'field' ? target.el : target.root;
     const slot = slotOf(el);

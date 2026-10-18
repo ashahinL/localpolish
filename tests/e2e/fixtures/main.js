@@ -12,7 +12,7 @@ import { createIdleFix } from '../../../src/content/idle.ts';
 import { DEFAULT_SETTINGS } from '../../../src/core/settings.ts';
 
 // Each connect() replays the next script; the last one repeats.
-const fake = { scripts: [], settings: DEFAULT_SETTINGS, calls: 0, open: 0, maxOpen: 0 };
+const fake = { scripts: [], settings: DEFAULT_SETTINGS, calls: 0, open: 0, maxOpen: 0, sent: [] };
 
 function fakePort(script) {
   fake.open += 1;
@@ -22,7 +22,8 @@ function fakePort(script) {
   let open = true;
   let closed = false;
   return {
-    postMessage() {
+    postMessage(message) {
+      fake.sent.push(message);
       script.forEach((event, index) => {
         // Playwright resumes real time after fastForward, so a 20ms reply can land
         // before the next test step and the in-flight checks would miss it.
@@ -74,6 +75,7 @@ const popupApi = {
     fake.calls = 0;
     fake.open = 0;
     fake.maxOpen = 0;
+    fake.sent = [];
   },
   startButton() {
     createButton({
@@ -102,6 +104,7 @@ const popupApi = {
   },
   requests: () => fake.calls,
   maxOpen: () => fake.maxOpen,
+  sent: () => fake.sent.map((message) => message.text),
 };
 
 // Facebook's composer is Lexical.

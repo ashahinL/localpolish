@@ -209,6 +209,7 @@ export function createController(deps: ControllerDeps): Controller {
   async function accept(s: Session): Promise<void> {
     if (session !== s || s.accepting || !canAccept(s.state)) return;
     if (isUnchanged(s.state)) {
+      deps.onAccepted?.(s.target);
       close();
       return;
     }
