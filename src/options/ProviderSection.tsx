@@ -11,7 +11,7 @@ import {
 } from './presets';
 import { useSettingsApi } from './useSettings';
 
-const PROVIDERS: Array<{ id: ProviderId; title: string; subtitle: string }> = [
+export const PROVIDERS: Array<{ id: ProviderId; title: string; subtitle: string }> = [
   { id: 'claude-cli', title: 'Claude Code', subtitle: 'Your Claude subscription, via the bridge' },
   { id: 'codex-cli', title: 'Codex', subtitle: 'Your ChatGPT subscription, via the bridge' },
   { id: 'grok-cli', title: 'Grok CLI', subtitle: 'Your SuperGrok subscription, via the bridge' },
@@ -32,7 +32,7 @@ const BASE_URL_OPTIONS = OPENAI_BASE_URLS.map((preset) => ({
   label: `${preset.label} (${preset.value})`,
 }));
 
-function isCli(provider: ProviderId): provider is CliProviderId {
+export function isCli(provider: ProviderId): provider is CliProviderId {
   return provider === 'claude-cli' || provider === 'codex-cli' || provider === 'grok-cli';
 }
 

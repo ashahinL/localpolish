@@ -1,14 +1,27 @@
 import { useEffect, useState } from 'preact/hooks';
-import { SettingsContext, useSettings } from '../options/useSettings';
+import { SettingsContext, useSettings, useSettingsApi } from '../options/useSettings';
 import { activeTabUrl } from './chrome';
 import { Header } from './Header';
+import { HomeTab } from './HomeTab';
 import { hostOf } from './sites';
 import { QuickToggles } from './QuickToggles';
 import { Tabs, type TabId } from './Tabs';
+import { useBridge } from './useBridge';
+import { useTest } from './useTest';
 
 export function App() {
   const api = useSettings();
-  const { settings, loadError } = api;
+  return (
+    <SettingsContext.Provider value={api}>
+      <PopupApp />
+    </SettingsContext.Provider>
+  );
+}
+
+function PopupApp() {
+  const { settings, loadError } = useSettingsApi();
+  const bridge = useBridge();
+  const test = useTest();
   const [tab, setTab] = useState<TabId>('home');
   const [host, setHost] = useState<string | null | undefined>(undefined);
 
@@ -28,27 +41,33 @@ export function App() {
   }, []);
 
   return (
-    <SettingsContext.Provider value={api}>
-      <div class="popup">
-        <Header />
-        {settings && (
-          <>
-            <QuickToggles settings={settings} host={host} onOpenSites={() => setTab('sites')} />
-            <Tabs active={tab} onChange={setTab} />
-          </>
+    <div class="popup">
+      <Header />
+      {settings && (
+        <>
+          <QuickToggles settings={settings} host={host} onOpenSites={() => setTab('sites')} />
+          <Tabs active={tab} onChange={setTab} />
+        </>
+      )}
+      <main
+        class="panel"
+        id="panel"
+        // Preact's type for <main> only allows role "main". This panel is the tabpanel.
+        role={'tabpanel' as unknown as 'main'}
+        aria-labelledby={`tab-${tab}`}
+        key={tab}
+      >
+        {loadError && <p class="note note-error">Could not load settings: {loadError}</p>}
+        {!settings && !loadError && <p class="muted">Loading…</p>}
+        {settings && tab === 'home' && (
+          <HomeTab
+            settings={settings}
+            bridge={bridge}
+            test={test}
+            onOpenProvider={() => setTab('provider')}
+          />
         )}
-        <main
-          class="panel"
-          id="panel"
-          // Preact's type for <main> only allows role "main". This panel is the tabpanel.
-          role={'tabpanel' as unknown as 'main'}
-          aria-labelledby={`tab-${tab}`}
-          key={tab}
-        >
-          {loadError && <p class="note note-error">Could not load settings: {loadError}</p>}
-          {!settings && !loadError && <p class="muted">Loading…</p>}
-        </main>
-      </div>
-    </SettingsContext.Provider>
+      </main>
+    </div>
   );
 }

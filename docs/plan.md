@@ -167,7 +167,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - Built: `idleFix` (default `true`; a stored non-boolean loads as `true`). The idle Fix runs only when it is on and the site is not blocklisted; the button and shortcut ignore it. e2e: a pause sends one Fix; off or blocklisted sends nothing.
   - [x] **T14b.** Popup entrypoint, shared tokens, header, the two switches, tabs. Brief: [T14b](briefs/T14b-popup-shell.md).
   - Built: `src/entrypoints/popup/` (WXT sets it as `action.default_popup`, title LocalPolish), shared light and dark tokens in `src/options/tokens.css`, and `src/popup/` with `App`, `Header` (Saved flash, save error, gear opens the options page), `QuickToggles` (idle switch; the site switch adds or removes the exact host, a broader rule disables it with "Hidden by {rule}. Edit in Sites"), roving-focus `Tabs`, and `sites.ts` with tests. The panel is empty until T14c.
-  - [ ] **T14c.** Home tab. Brief: [T14c](briefs/T14c-popup-home.md).
+  - [x] **T14c.** Home tab. Brief: [T14c](briefs/T14c-popup-home.md).
+  - Built: the Home tab with the status card (connection pill, provider line from `summary.ts`, the bridge error note for a CLI provider, Test connection) and the Default mode segmented control. `useBridge` and `useTest` live in `App`, so a tab switch keeps the bridge check and the test result; a provider change clears the result and drops a late answer. `PROVIDERS` and `isCli` are exported from the options page. No usage card.
   - [ ] **T14d.** Provider tab with all five provider forms. Brief: [T14d](briefs/T14d-popup-provider.md).
   - [ ] **T14e.** Sites tab. Brief: [T14e](briefs/T14e-popup-sites.md).
   - [ ] **T14f.** About tab and README. Brief: [T14f](briefs/T14f-popup-about.md).
