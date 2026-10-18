@@ -1,3 +1,5 @@
+> Results from 17 October 2026. The bridge and the default have changed since. Today the default is Codex `gpt-6-luna` at effort `none` (`src/core/settings.ts`), and the Fix prompt is in `src/core/prompts.ts`.
+
 # Fix-mode benchmark
 
 Runs the same CLI commands the bridge runs (`bridge/lib.mjs` `buildCommand` and `parseLine`), on 5 test inputs, and scores each answer.

@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: in progress. T15-T16 and T17b-T17c are verified and committed. T17a and the product additions continue automatically.
+Status: in progress. T15-T17 are verified and committed. The three T18 product additions continue automatically.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -68,7 +68,7 @@ Changes to the plan, compared with Sol's draft:
 
 ## T17: docs, dependencies and CI
 
-- [ ] **T17a. Privacy, release guide and bench docs** (A17, A22). Sol medium. Brief: [T17a-docs.md](../briefs/T17a-docs.md). Depends on: T15 and T16, so the docs describe the finished behavior.
+- [x] **T17a. Privacy, release guide and bench docs** (A17, A22). Sol medium. Brief: [T17a-docs.md](../briefs/T17a-docs.md). Depends on: T15 and T16, so the docs describe the finished behavior.
 - [x] **T17b. Remove the vulnerable test dependency chain** (A19). Sol medium. Brief: [T17b-dev-deps.md](../briefs/T17b-dev-deps.md). Depends on: nothing.
 - [x] **T17c. Bridge tests on macOS and Windows, and Node 22 in CI** (A20). Sol medium. Brief: [T17c-ci.md](../briefs/T17c-ci.md). Depends on: T15e, T17b.
 - **A21. Branch protection.** Skipped by the owner on 18 October 2026.
@@ -127,3 +127,5 @@ Changes to the plan, compared with Sol's draft:
 - T16b: all gates passed, with 262 unit tests passed, 2 platform-specific tests skipped, and 111 browser tests passed. All 26 settings-page browser tests passed separately. Failed saves stay pending; both test controls stop on a failed flush; options can change idle Fix. Reusable skill: none.
 
 - T17c remote verification passed on macOS, Windows, and Ubuntu Node 22: [platform run](https://github.com/ashahinL/localpolish/actions/runs/39157484975). The platform jobs include the real Windows process-tree test.
+
+- T17a: updated privacy claims, Sites labels, release steps, and dated benchmark notes. Lint and typecheck passed; 64 targeted unit tests passed across 4 files. Changed-file formatting passed. All gates passed: 262 unit tests, 2 platform-specific skips, and 111 browser tests. Version and benchmark numbers are unchanged. Reusable skill: none.

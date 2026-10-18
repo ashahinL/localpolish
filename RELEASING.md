@@ -31,8 +31,11 @@ Nothing else gets one.
 
 - After `1.0.0`, new things or changes: next minor. `1.0.0` → `1.1.0`.
 - Only bug fixes: next patch. `1.0.0` → `1.0.1`.
-- A change that needs people to redo setup (a new bridge install, a new
+- Only a change that makes everyone redo setup (a new bridge install, a new
   login, a new extension ID): next major.
+- A reinstall that only some people need: next minor. Say who must reinstall
+  in the release notes. For example, T15e needs a reinstall only for repo
+  paths with a `$`, a backtick, or a `"`.
 - Numbers go up by one and never skip.
 - `manifest.json` takes numbers and dots only. No `-beta`.
 
@@ -65,9 +68,14 @@ Nothing else gets one.
    and start a new empty `## Unreleased` above it. Read the README against
    that section: a feature nobody can read about may as well not have
    shipped. Update the zip name in the README's Install section.
-6. **Commit, tag and push.**
+6. **Commit, rebase, tag and push.**
    ```bash
    git commit -am "Version X.Y.Z"
+   git pull --rebase
+   ```
+   Stop if the rebase conflicts. If it brought in new commits, run the gates
+   from step 1 again. After they pass, tag and push:
+   ```bash
    git tag -a vX.Y.Z -m "LocalPolish X.Y.Z"
    git push origin main vX.Y.Z
    ```
@@ -82,10 +90,25 @@ Nothing else gets one.
    ```
 8. **Check the release.** Download the zip from the release page, extract
    it, load it unpacked, and press **Test connection** once.
+9. **Delete merged branches.** Only delete branches Git lists as merged.
+   Check local branches with `git branch --merged main`. Check remote
+   branches with `git branch -r --merged origin/main`. Never delete `main`,
+   `master`, `dev`, `develop`, `prod`, `production`, or `release*` branches.
+   For each merged branch:
+   ```bash
+   git branch -d <branch>
+   git pull --rebase
+   git push origin --delete <branch>
+   ```
+   Stop if Git refuses the deletion or the rebase conflicts. Never force it.
 
 ## If the bridge changed
 
-The release zip holds only the extension. The bridge runs from the cloned
-repo, so a change in `bridge/` reaches people only when they pull and run
-`npm run bridge:install` again. Say so at the top of that version's
-changelog section and release notes.
+The release zip holds only the extension. The installed wrapper runs
+`bridge/host.mjs` straight from the cloned repo. Changes to `bridge/host.mjs`
+or `bridge/lib.mjs` reach people with `git pull` alone, from the next rewrite.
+
+Run `npm run bridge:install` again only when the wrapper or Chrome native
+messaging manifest changes (`bridge/install.mjs`), or when the repo folder
+moves. Say which update people need at the top of that version's changelog
+section and release notes.

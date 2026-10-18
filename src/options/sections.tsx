@@ -158,7 +158,7 @@ export function SitesSection({ settings }: { settings: Settings }) {
       <h2>Sites</h2>
       <Field
         id="blocklist"
-        label="Hide the button on these sites"
+        label="Hide LocalPolish on these sites"
         help="One hostname per line. The shortcut still works there."
       >
         <TextInput

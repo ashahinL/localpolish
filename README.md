@@ -76,7 +76,7 @@
 **Providers**
 
 - Claude Code, Codex and Grok CLI run on this computer through a native-messaging bridge, with
-  their tools turned off.
+  their tools turned off. Grok can still search X and keeps its session history in `~/.grok`.
 - Any OpenAI-compatible server (OpenAI, xAI, OpenRouter, LM Studio, Ollama), with an optional
   key, and the Anthropic API with a key.
 
@@ -188,7 +188,7 @@ A warning lists any link, @mention, #hashtag, code, or emoji that the rewrite dr
 
 If the site does not accept the change, the popup copies the new text and asks you to paste it with `Cmd+V`. Off macOS, that note says `Ctrl+V`.
 
-To hide the button on the site you are on, turn off the **Show on** switch for it in the toolbar popup. This adds the exact hostname to **Sites**. The **Sites** tab, or the options page, edits the whole list. Subdomains of a listed host are included. The idle Fix is off on those sites too. The shortcut still works on them.
+To hide LocalPolish on the site you are on, turn off the **Show on** switch for it in the toolbar popup. This adds the exact hostname to **Sites**. The **Sites** tab, or the options page, edits the whole list. Subdomains of a listed host are included. The button and Fix while I type stay off on those sites, including inside frames. The shortcut still works on them.
 
 ## The toolbar popup
 
@@ -232,9 +232,9 @@ launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"
 
 ## The bridge
 
-The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with its tools off. It streams the answer back.
+The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with its tools off. Grok can still search X and keeps its session history in `~/.grok`. It streams the answer back.
 
-Each CLI turns tools off in its own way:
+Each CLI turns tools off in its own way. Grok can still search X and keeps its session history in `~/.grok`:
 
 - Claude Code gets `--tools ""`, which leaves it with no tools.
 - Codex runs in a read-only sandbox, in its own home, with the shell, apps, plugins, browser and web search turned off.
@@ -302,7 +302,7 @@ Match the message on screen, then do the fix that follows it.
 - Your text goes only to the provider you chose: the CLI on this computer, which sends it on to its own service under your subscription, or the API URL you set.
 - Fix while I type sends a field's text after you pause, only in message fields and never on a site in **Sites**. Turn it off with its switch.
 - Settings and API keys stay in `chrome.storage.local` on this browser. Chrome does not sync them. LocalPolish does not log them.
-- The bridge runs the CLI in an empty temp folder that is deleted afterwards, with its tools off.
+- The bridge runs the CLI in an empty temp folder that is deleted afterwards, with its tools off. Grok can still search X and keeps its session history in `~/.grok`.
 
 The full policy is in [PRIVACY.md](PRIVACY.md). To report a security problem, see [SECURITY.md](SECURITY.md).
 

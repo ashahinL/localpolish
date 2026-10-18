@@ -18,9 +18,13 @@ browser, on your device:
 - the list of sites where LocalPolish stays hidden.
 
 Chrome does not sync this storage to your other devices, and LocalPolish
-does not log it. Removing the extension deletes all of it. Your text and the
-rewrites are not stored: an answer is kept only while the popup next to the
-field is open.
+does not log it. Removing the extension deletes all of it.
+
+LocalPolish writes no text or answer to disk. While a tab is open, Fix while
+I type keeps the last text it sent from each field and the answer in that
+tab's memory, so the marker and the popup can reuse them. Closing or reloading
+the tab clears them. What each CLI keeps is under "What it sends, and where"
+below.
 
 ## What it sends, and where
 
@@ -35,9 +39,10 @@ and tone. Where it goes depends on the provider you chose:
   that CLI on stdin. The CLI sends it to its own service (Anthropic, OpenAI
   or xAI) under your subscription and their privacy policies. The bridge
   runs the CLI in an empty temp folder, deleted when the run ends, with its
-  tools turned off. Claude Code runs with `--no-session-persistence` and
-  Codex with `--ephemeral`, in a separate Codex home. Grok CLI keeps its
-  own session history in `~/.grok`, and can still search X.
+  tools turned off. Grok CLI can still search X and keeps its own session
+  history in `~/.grok`. Claude Code saves no session
+  (`--no-session-persistence`). Codex runs with `--ephemeral`, in a separate
+  Codex home.
 - **OpenAI-compatible API.** The text goes to the base URL you set, with
   your API key if you entered one. That can be a server on this computer,
   such as Ollama or LM Studio.
@@ -45,24 +50,30 @@ and tone. Where it goes depends on the provider you chose:
 
 **Test connection** sends a short fixed sample, not your text.
 
-Fix while I type only reads message boxes and rich editors. It skips
-single-line inputs, search boxes, code editors, fields with spellcheck off,
-text under four words, and every site on the **Sites** list. Turn it off
-with its switch in the toolbar popup.
+Fix while I type reads textareas and rich editors. It skips
+single-line inputs, search boxes, CodeMirror and Monaco code editors, fields
+with spellcheck off, and text under four words. This includes fields inside
+an area that turns spellcheck off, unless the field turns it back on.
+It skips every site on the **Sites** list, including editors inside frames
+on those sites. Turn it off with its switch in the toolbar popup or the
+options page.
 
 ## On web pages
 
 A content script runs on every page so the button, the shortcut and Fix
-while I type work in any text field. It reads a field only when you select
-text in it, press the shortcut, or pause typing in it with Fix while I type
-on. It changes a field only when you press **Accept**, or accept a fix.
+while I type work in any text field. It reads a field when you select
+text in it, press the shortcut, or use Fix while I type. While an idle marker
+is shown, it also checks the field to keep the marker current. It changes a
+field only when you press **Accept**, or accept a fix.
 
 ## What it does not do
 
 - No account, no sign-in of its own, no server of ours.
 - No analytics, no crash reporting, no ads, no tracking.
-- No selling or sharing of data. It never sends your settings, keys or site
-  list anywhere, and it never sends text to a provider you did not pick.
+- No selling of data. It never sends text to a provider you did not pick.
+- It sends each API key only to the provider it belongs to: the
+  OpenAI-compatible key to the base URL you set, the Anthropic key to
+  Anthropic's API. It never sends your settings or site list anywhere.
 
 ## Permissions
 

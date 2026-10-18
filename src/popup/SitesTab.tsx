@@ -26,11 +26,13 @@ export function SitesTab({ settings, host }: SitesTabProps) {
     <>
       <section class="card stack" aria-labelledby="sites-h">
         <div class="ctitle">
-          <h2 id="sites-h">Button hidden on</h2>
+          <h2 id="sites-h">LocalPolish hidden on</h2>
           <span class="muted sites-count">{count === 1 ? '1 site' : `${count} sites`}</span>
         </div>
         {count === 0 ? (
-          <p class="empty">No sites yet. The button shows everywhere.</p>
+          <p class="empty">
+            No sites yet. The button and Fix while I type are allowed on every site.
+          </p>
         ) : (
           <ul class="sites" aria-labelledby="sites-h">
             {blocklist.map((entry, index) => (

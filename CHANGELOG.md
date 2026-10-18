@@ -8,6 +8,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **Safer**
 
+- Privacy policy explains the tab-memory cache, API key destinations, idle exclusions, and Grok history and X-search limits (A17).
+
 - A02: Settings changes now remove idle markers and cancel automatic work immediately. Blocking a site also hides its selection button, while manual rewrites keep working.
 
 - A01: Blocked sites now keep the button and idle Fix off in child frames, with a second site check for idle requests in the background.
@@ -20,6 +22,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 - The macOS bridge wrapper treats shell-special characters in paths literally (A08).
 
 **Fixes**
+
+- Sites labels now cover both the button and Fix while I type.
 
 - Accept stops before pasting if the selection moves to another editor or the selected text changes during the wait (A04).
 - Accept detects changed paragraph splits and rejects ignored line-break rewrites (A05).
@@ -36,6 +40,9 @@ finished but not released yet waits under Unreleased. How a version ships:
 - The full options page includes the Fix while I type checkbox (A18).
 
 **For contributors**
+
+- Release guide rebases before tagging, explains bridge updates and version rules, and deletes only merged branches (A22).
+- Old benchmark pages now identify their date and point to the current default and Fix prompt.
 
 - Run macOS and Windows bridge tests and Node 22 checks on manual dispatch and `v*` tags (A20).
 
