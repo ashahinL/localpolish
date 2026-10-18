@@ -46,6 +46,24 @@ describe('protected tokens', () => {
     expect(findMissingTokens(input, 'nice')).toEqual(['👍']);
   });
 
+  it.each(['🇪🇬', '👨‍👩‍👧', '1️⃣'])('reports a dropped whole emoji %s', (emoji) => {
+    expect(findMissingTokens(`hi ${emoji}`, 'hi')).toEqual([emoji]);
+  });
+
+  it('reports a changed skin tone', () => {
+    expect(findMissingTokens('hi 👍🏽', 'hi 👍')).toEqual(['👍🏽']);
+  });
+
+  it('keeps unchanged whole emoji sequences', () => {
+    const text = 'hi 👍🏽 🇪🇬 👨‍👩‍👧 1️⃣';
+    expect(extractProtectedTokens(text)).toEqual(['👍🏽', '🇪🇬', '👨‍👩‍👧', '1️⃣']);
+    expect(findMissingTokens(text, text)).toEqual([]);
+  });
+
+  it('does not treat plain symbols or digits as emoji', () => {
+    expect(extractProtectedTokens('#1 (c) 2026 123')).toEqual(['#1']);
+  });
+
   it('does not treat an email address as a mention', () => {
     expect(extractProtectedTokens('a@b.com')).toEqual([]);
   });

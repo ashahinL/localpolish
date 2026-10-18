@@ -13,10 +13,17 @@ finished but not released yet waits under Unreleased. How a version ships:
 - A01: Blocked sites now keep the button and idle Fix off in child frames, with a second site check for idle requests in the background.
 - A16: Only the focused frame handles the shortcut, so parent frames no longer show an extra toast.
 
+- Idle Fix skips fields that inherit spellcheck off and honors an explicit spellcheck on (A03).
+- API keys over HTTP require a real loopback hostname and cannot use other protocols (A06).
+
 **Fixes**
 
 - Accept stops before pasting if the selection moves to another editor or the selected text changes during the wait (A04).
 - Accept detects changed paragraph splits and rejects ignored line-break rewrites (A05).
+
+- Blocked or unexpectedly ended provider streams fail instead of enabling Accept for partial text (A12).
+- Output cleanup keeps text tags that the input already has (A13).
+- Missing-emoji warnings cover flags, skin tones, families, and keycaps as whole sequences (A14).
 
 **For contributors**
 

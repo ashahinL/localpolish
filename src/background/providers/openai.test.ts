@@ -183,6 +183,26 @@ describe('openaiProvider', () => {
     expect(message).toBe('The answer was cut off. Try a shorter text.');
   });
 
+  it.each([
+    ['content_filter', 'The provider blocked this answer.'],
+    ['tool_calls', 'The answer ended early (tool_calls). Try again.'],
+  ])('rejects a stream ending with %s before [DONE]', async (reason, expected) => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"I "}}]}\n\n' +
+      `data: {"choices":[{"delta":{},"finish_reason":"${reason}"}]}\n\n` +
+      'data: [DONE]\n\n';
+    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({ models: { 'openai-compatible': 'llama3.2' } }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe(expected);
+  });
+
   it('rejects with the message from an error event', async () => {
     const sse = 'data: {"error":{"message":"Overloaded"}}\n\n';
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
@@ -234,23 +254,27 @@ describe('openaiProvider', () => {
     expect(message).toBe('The answer was cut off. Try again.');
   });
 
-  it('accepts a stream that finishes with stop and no [DONE]', async () => {
-    const sse =
-      'data: {"choices":[{"delta":{"content":"I went."}}]}\n\n' +
-      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n';
-    globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
-    const parts: string[] = [];
-    await openaiProvider(
-      prompt,
-      settings({
-        openaiBaseUrl: 'http://localhost:11434/v1',
-        models: { 'openai-compatible': 'llama3.2' },
-      }),
-      (text) => parts.push(text),
-      new AbortController().signal,
-    );
-    expect(parts).toEqual(['I went.']);
-  });
+  it.each(['', 'data: [DONE]\n\n'])(
+    'accepts a stream that finishes with stop followed by %j',
+    async (ending) => {
+      const sse =
+        'data: {"choices":[{"delta":{"content":"I went."}}]}\n\n' +
+        'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n' +
+        ending;
+      globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
+      const parts: string[] = [];
+      await openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'http://localhost:11434/v1',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        (text) => parts.push(text),
+        new AbortController().signal,
+      );
+      expect(parts).toEqual(['I went.']);
+    },
+  );
 
   it('refuses to send an API key to a remote http server', async () => {
     globalThis.fetch = vi.fn(() => {
@@ -271,6 +295,33 @@ describe('openaiProvider', () => {
     expect(message).toBe(
       'Use an https:// base URL to send an API key to example.com, or remove the key.',
     );
+  });
+
+  it.each([
+    [
+      'http://127.audit.invalid/v1',
+      'Use an https:// base URL to send an API key to 127.audit.invalid, or remove the key.',
+    ],
+    ['ftp://localhost/v1', 'The base URL must start with http:// or https://.'],
+  ])('refuses to send an API key to %s', async (baseUrl, expected) => {
+    const fetchMock = vi.fn(() => {
+      throw new Error('fetch should not run');
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+    const message = await rejection(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: baseUrl,
+          openaiApiKey: 'sk-test',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        () => undefined,
+        new AbortController().signal,
+      ),
+    );
+    expect(message).toBe(expected);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('rejects a base URL that is not valid when an API key is set', async () => {
@@ -294,8 +345,10 @@ describe('openaiProvider', () => {
 
   it('sends an API key to loopback over http', async () => {
     for (const baseUrl of [
-      'http://127.0.0.1:11434/v1',
-      'http://[::1]:11434/v1',
+      'http://127.0.0.1:1234/v1',
+      'http://127.1:1234/v1',
+      'http://[::1]:1234/v1',
+      'http://localhost:1234/v1',
       'http://ollama.localhost:11434/v1',
     ]) {
       const fetchMock = vi.fn(async () => streamResponse(['data: [DONE]\n\n']));

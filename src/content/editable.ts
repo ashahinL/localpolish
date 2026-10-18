@@ -50,7 +50,7 @@ export function isIdleField(el: HTMLElement): boolean {
   if (!isIdleHost(el)) return false;
   const role = el.getAttribute('role');
   if (role === 'searchbox' || role === 'combobox') return false;
-  if (el.getAttribute('spellcheck') === 'false') return false;
+  if (!el.spellcheck) return false;
   return el.closest('.cm-editor, .CodeMirror, .monaco-editor') === null;
 }
 

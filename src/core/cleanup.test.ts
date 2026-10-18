@@ -20,6 +20,13 @@ describe('cleanOutput', () => {
     expect(cleanOutput('<text>\nI went home.\n</text>', 'i go home')).toBe('I went home.');
   });
 
+  it('keeps text tags the input already had', () => {
+    expect(cleanOutput('<text>hello</text>', '<text>hello</text>')).toBe('<text>hello</text>');
+    expect(cleanOutput('<text>hello</text>', '  <text>hello</text>\n')).toBe(
+      '  <text>hello</text>\n',
+    );
+  });
+
   it('removes a code fence', () => {
     expect(cleanOutput('```\nI went home.\n```', 'i go home')).toBe('I went home.');
   });

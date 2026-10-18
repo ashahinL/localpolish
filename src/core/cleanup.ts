@@ -10,7 +10,7 @@ const QUOTE_PAIRS = [
 
 export function cleanOutput(raw: string, input: string): string {
   let out = raw.trim();
-  out = stripTextTags(out);
+  out = stripTextTags(out, input);
   out = stripFence(out, input);
   out = stripPreamble(out, input);
   out = stripWrappingQuotes(out, input);
@@ -20,7 +20,8 @@ export function cleanOutput(raw: string, input: string): string {
   return lead + out + trailingWhitespace(input.slice(lead.length));
 }
 
-function stripTextTags(out: string): string {
+function stripTextTags(out: string, input: string): string {
+  if (input.trim().startsWith('<text>') && input.trim().endsWith('</text>')) return out;
   if (out.startsWith('<text>') && out.endsWith('</text>')) {
     return out.slice('<text>'.length, -'</text>'.length).trim();
   }

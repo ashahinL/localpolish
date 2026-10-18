@@ -8,7 +8,7 @@ function isLoopbackHost(hostname: string): boolean {
   return (
     hostname === 'localhost' ||
     hostname.endsWith('.localhost') ||
-    hostname.startsWith('127.') ||
+    /^127(\.\d{1,3}){3}$/.test(hostname) ||
     hostname === '[::1]'
   );
 }
@@ -26,6 +26,9 @@ export const openaiProvider: StreamFn = async (prompt, settings, onText, signal)
       url = new URL(baseUrl);
     } catch {
       throw new Error(`The base URL is not valid: ${baseUrl}`);
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('The base URL must start with http:// or https://.');
     }
     if (url.protocol === 'http:' && !isLoopbackHost(url.hostname)) {
       throw new Error(
@@ -91,7 +94,14 @@ export const openaiProvider: StreamFn = async (prompt, settings, onText, signal)
     if (choice?.finish_reason === 'length') {
       throw new Error('The answer was cut off. Try a shorter text.');
     }
-    if (choice?.finish_reason === 'stop') sawStop = true;
+    const reason = choice?.finish_reason;
+    if (reason === 'content_filter') {
+      throw new Error('The provider blocked this answer.');
+    }
+    if (reason != null && reason !== 'stop') {
+      throw new Error(`The answer ended early (${reason}). Try again.`);
+    }
+    if (reason === 'stop') sawStop = true;
   }
   if (!sawStop) {
     throw new Error('The answer was cut off. Try again.');

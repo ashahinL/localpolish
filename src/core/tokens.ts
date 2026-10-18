@@ -20,7 +20,7 @@ function codeRe(): RegExp {
 }
 
 function emojiRe(): RegExp {
-  return /\p{Extended_Pictographic}(\uFE0F|\u200D\p{Extended_Pictographic})*/gu;
+  return new RegExp('\\p{RGI_Emoji}', 'gv');
 }
 
 function stripUrlTrailingPunctuation(url: string): string {

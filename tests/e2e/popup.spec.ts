@@ -497,6 +497,24 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
+  test('inherited spellcheck off sends nothing', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta-nospell').click();
+    await page.keyboard.type('i went home today');
+    await pause(page);
+    expect(await requests(page)).toBe(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('explicit spellcheck on overrides its parent for idle Fix', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta-spell-on').click();
+    await page.keyboard.type('i went home today');
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+    await expect(page.locator('.lp-mark')).toHaveCount(1);
+  });
+
   test('a single-line input sends nothing', async ({ page }) => {
     await startIdle(page, [[{ type: 'done', text: 'This has more than five words.' }]]);
     await page.locator('#inp').click();
@@ -711,6 +729,7 @@ test.describe('idle fix', () => {
     await page.locator('#draft .public-DraftEditor-content').click();
     await page.keyboard.type('ايوه عايوه ايه يعني مني');
     await pause(page);
+    expect(await requests(page)).toBe(1);
 
     await page.locator('.lp-mark').click();
     await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
