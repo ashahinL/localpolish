@@ -66,6 +66,8 @@ function start(): void {
   };
   const isEnabled = (): boolean =>
     settings !== null && !isBlocked(location.hostname, settings.blocklist);
+  const isIdleEnabled = (): boolean =>
+    settings !== null && settings.idleFix && !isBlocked(location.hostname, settings.blocklist);
 
   const controller = createController({
     connect,
@@ -76,7 +78,7 @@ function start(): void {
 
   const idle = createIdleFix({
     connect,
-    isEnabled,
+    isEnabled: isIdleEnabled,
     isPopupOpen: controller.isOpen,
     isFixDefault: () => (settings ?? DEFAULT_SETTINGS).defaultMode === 'fix',
     openPopup: controller.open,

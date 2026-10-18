@@ -224,7 +224,7 @@ test('server error can be retried', async ({ page, mock }) => {
 });
 
 test('blocklist hides the button but the shortcut still opens', async ({ page, mock, sw }) => {
-  await writeSettings(sw, `${mock.url}/v1`, ['localhost']);
+  await writeSettings(sw, `${mock.url}/v1`, { blocklist: ['localhost'] });
   await openFixture(page);
 
   await selectAllIn(page, '#ta');
@@ -254,17 +254,48 @@ test('Esc does not reach the page', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as PageApi).__keys)).not.toContain('Escape');
 });
 
+test.describe('idle Fix', () => {
+  test('a pause sends one Fix and shows the marker', async ({ page, mock, sw }) => {
+    await writeSettings(sw, `${mock.url}/v1`);
+    await openFixture(page);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await expect.poll(() => mock.requests.length, { timeout: 10_000 }).toBe(1);
+    await expect(page.locator('.lp-mark')).toBeVisible();
+  });
+
+  test('idle Fix off: a pause sends nothing', async ({ page, mock, sw }) => {
+    await writeSettings(sw, `${mock.url}/v1`, { idleFix: false });
+    await openFixture(page);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.waitForTimeout(4500);
+    expect(mock.requests).toHaveLength(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('a blocklisted site gets no idle Fix', async ({ page, mock, sw }) => {
+    await writeSettings(sw, `${mock.url}/v1`, { blocklist: ['localhost'] });
+    await openFixture(page);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await page.waitForTimeout(4500);
+    expect(mock.requests).toHaveLength(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+});
+
 async function writeSettings(
   sw: Worker,
   openaiBaseUrl: string,
-  blocklist?: string[],
+  extra: Record<string, unknown> = {},
 ): Promise<void> {
   const settings: Record<string, unknown> = {
     provider: 'openai-compatible',
     openaiBaseUrl,
     models: { 'openai-compatible': 'mock-model' },
+    ...extra,
   };
-  if (blocklist) settings.blocklist = blocklist;
   await sw.evaluate((stored) => {
     const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
     return chrome.storage.local.set({ settings: stored });

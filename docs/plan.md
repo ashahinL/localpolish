@@ -61,6 +61,7 @@ interface Settings {
   anthropicApiKey: string;              // default ''
   temperature: number;                  // default 0.3, HTTP providers only
   defaultMode: 'fix' | 'rephrase' | 'shorter'; // default 'fix'; 'rephrase' keeps the tone
+  idleFix: boolean;                     // default true; the idle Fix after a 3 s pause
   blocklist: string[];                  // hostnames, default []
 }
 ```
@@ -162,7 +163,8 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
   - New setting `idleFix` (default on). A blocklisted site turns off the button and the idle Fix; the shortcut still works there.
   - The this-site switch adds or removes the exact hostname of the active tab in the blocklist. When a broader entry (such as `google.com` for `mail.google.com`) hides the site, the switch is disabled and says which entry, with a link to Sites.
   - Usage stats stay out of scope. The mockup's "Usage today" card with example data is **left out** of the build (fake numbers should not ship); it stays in Later.
-  - [ ] **T14a.** `idleFix` setting and the content script reads it. Brief: [T14a](briefs/T14a-idle-setting.md).
+  - [x] **T14a.** `idleFix` setting and the content script reads it. Brief: [T14a](briefs/T14a-idle-setting.md).
+  - Built: `idleFix` (default `true`; a stored non-boolean loads as `true`). The idle Fix runs only when it is on and the site is not blocklisted; the button and shortcut ignore it. e2e: a pause sends one Fix; off or blocklisted sends nothing.
   - [ ] **T14b.** Popup entrypoint, shared tokens, header, the two switches, tabs. Brief: [T14b](briefs/T14b-popup-shell.md).
   - [ ] **T14c.** Home tab. Brief: [T14c](briefs/T14c-popup-home.md).
   - [ ] **T14d.** Provider tab with all five provider forms. Brief: [T14d](briefs/T14d-popup-provider.md).

@@ -18,6 +18,7 @@ export interface Settings {
   anthropicApiKey: string;
   temperature: number;
   defaultMode: DefaultMode;
+  idleFix: boolean;
   blocklist: string[];
 }
 
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   anthropicApiKey: '',
   temperature: 0.3,
   defaultMode: 'fix',
+  idleFix: true,
   blocklist: [],
 };
 
@@ -67,7 +69,7 @@ function isDefaultMode(value: unknown): value is DefaultMode {
 
 function storedPatch(value: unknown): Partial<Settings> {
   if (!isRecord(value)) return {};
-  const { models, efforts, defaultMode, ...rest } = value;
+  const { models, efforts, defaultMode, idleFix, ...rest } = value;
   const patch = { ...rest } as Partial<Settings> & { defaultTone?: unknown };
   // Older versions stored a default tone and allowed 'tone' as the default mode.
   delete patch.defaultTone;
@@ -76,6 +78,7 @@ function storedPatch(value: unknown): Partial<Settings> {
   if (defaultMode !== undefined) {
     patch.defaultMode = isDefaultMode(defaultMode) ? defaultMode : 'fix';
   }
+  if (typeof idleFix === 'boolean') patch.idleFix = idleFix;
   return patch;
 }
 

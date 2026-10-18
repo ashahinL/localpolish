@@ -31,7 +31,18 @@ describe('loadSettings', () => {
     loaded.models['claude-cli'] = 'changed';
     expect(DEFAULT_SETTINGS.blocklist).toEqual([]);
     expect(DEFAULT_SETTINGS.models['claude-cli']).toBe('haiku');
+    expect(DEFAULT_SETTINGS.idleFix).toBe(true);
     expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('loads a stored idleFix of false', async () => {
+    memory.set('settings', { idleFix: false });
+    expect((await loadSettings()).idleFix).toBe(false);
+  });
+
+  it('falls back to true when stored idleFix is not a boolean', async () => {
+    memory.set('settings', { idleFix: 'no' });
+    expect((await loadSettings()).idleFix).toBe(true);
   });
 
   it('merges partial stored data and fills missing model keys', async () => {
@@ -97,6 +108,11 @@ describe('saveSettings', () => {
     expect(settings).not.toHaveProperty('defaultTone');
     expect(settings.models['claude-cli']).toBe('haiku');
     expect(settings.openaiBaseUrl).toBe(DEFAULT_SETTINGS.openaiBaseUrl);
+  });
+
+  it('saves idleFix off and keeps the other defaults', async () => {
+    await saveSettings({ idleFix: false });
+    expect(await loadSettings()).toEqual({ ...DEFAULT_SETTINGS, idleFix: false });
   });
 });
 
