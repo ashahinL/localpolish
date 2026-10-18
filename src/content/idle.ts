@@ -22,9 +22,9 @@ export interface IdleDeps {
   openPopup(target: Target, preset: Preset): void;
 }
 
-const IDLE_MS = 5000;
+const IDLE_MS = 3000;
 const WHOLE_LIMIT = 3000;
-const MIN_WORDS = 5;
+const MIN_WORDS = 4;
 const MARK_INSET = 14;
 const SMALL_FIELD = 32;
 const STOPPED = 'LocalPolish stopped before the new text was ready. Try again.';

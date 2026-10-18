@@ -133,9 +133,9 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
 
 - [x] **T13. Idle Fix with a badge**. T13a logic and a plain marker (Grok, feature lane); T13b marker look and placement (Claude Opus, art lane). Decided with the user on 2026-10-18:
   - No dictionary of our own. The browser's spellcheck already underlines typos; our value is grammar.
-  - When the user stops typing for 5 seconds and the field still has focus, run one Fix in the background. Send nothing if the text did not change since the last idle Fix.
+  - When the user stops typing for 3 seconds and the field still has focus, run one Fix in the background. Send nothing if the text did not change since the last idle Fix.
   - On everywhere, with a block list (the Sites list, or its own list; decide at build time).
-  - Only multi-line message fields: `<textarea>` and contenteditable. Never single-line `<input>` (search, login, email, URL, name). Also skip `role="searchbox"` or `role="combobox"`, `spellcheck="false"` and code editors (CodeMirror, Monaco). Skip text under 5 words.
+  - Only multi-line message fields: `<textarea>` and contenteditable. Never single-line `<input>` (search, login, email, URL, name). Also skip `role="searchbox"` or `role="combobox"`, `spellcheck="false"` and code editors (CodeMirror, Monaco). Skip text under 4 words.
   - Send the whole field up to about 3,000 characters. Above that, send only the paragraph being written.
   - One idle request per field; different fields and tabs run in parallel. A new pause in the same field waits for that field's request.
   - Typing on while a request runs does not cancel it. The answer applies to the part that was sent. Track that part as it moves: offsets in a textarea, a live Range in a rich editor.
@@ -146,14 +146,15 @@ Each task is one commit. `[ ]` pending, `[~]` in progress, `[x]` done.
     - Request failed (bridge down, timeout, quota): a small red dot at the field's corner (like Grammarly; bottom right unless the user says otherwise). Click opens a popup with the error and how to fix it.
   - The manual flow (select, then button or shortcut) always works, whether or not the idle Fix ran.
   - [x] **T13a.** Logic and a plain marker.
-  - Built: a 5 second pause in a message field runs one Fix, and a corner marker opens the popup with that diff or the error.
+  - Built: a 3 second pause in a message field runs one Fix, and a corner marker opens the popup with that diff or the error.
   - [x] **T13b.** Marker look and placement.
-  - Built: an 18 px yellow count badge ("9+" above 9) and a 14 px red "!" dot, with a theme ring, shadow, hover, focus ring and a pop-in that reduced motion turns off. The marker sits 14 px in from the corner, left of a visible scrollbar, centered in fields under 32 px tall, hides when the corner is off screen or the field has no size, and follows a field that grows while typing.
+  - Built: a 16 px yellow count badge ("9+" above 9) and a 12 px red "!" dot, with a theme ring, shadow, hover, focus ring and a pop-in that reduced motion turns off. The marker sits 14 px in from the corner, left of a visible scrollbar, centered in fields under 32 px tall, hides when the corner is off screen or the field has no size, and follows a field that grows while typing.
 
 ## Later (not MVP, keep the design open)
 
 - Underlines on the fixed words, after the T13 badge (start with plain textareas).
 - Linux bridge installer (nice to have, low priority).
+- Usage stats in the extension UI: how many requests ran today with each model, and their average speed.
 - Dropped on 2026-10-18: per-site default tone (Keep tone is the default; the user picks a chip) and a rewrite history (not a polishing feature).
 
 ## Handoff (2026-10-17, 12:15 Cairo, now done: see T10 progress below)

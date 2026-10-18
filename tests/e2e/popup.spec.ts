@@ -356,7 +356,7 @@ test.describe('idle fix', () => {
   }
 
   async function pause(page: Page): Promise<void> {
-    await page.clock.fastForward(5000);
+    await page.clock.fastForward(3000);
     await page.clock.fastForward(FAKE_REPLY_MS);
   }
 
@@ -388,10 +388,10 @@ test.describe('idle fix', () => {
     await expect(popup).toHaveCount(0);
   });
 
-  test('fewer than 5 words sends nothing', async ({ page }) => {
+  test('fewer than 4 words sends nothing', async ({ page }) => {
     await startIdle(page, [[{ type: 'done', text: 'Hello there friend of mine.' }]]);
     await page.locator('#ta').click();
-    await page.keyboard.type('only four words here');
+    await page.keyboard.type('only three words');
     await pause(page);
     expect(await requests(page)).toBe(0);
     await expect(page.locator('.lp-mark')).toHaveCount(0);
