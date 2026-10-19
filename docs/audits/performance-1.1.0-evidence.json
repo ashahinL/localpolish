@@ -1,0 +1,696 @@
+{
+  "schema": "localpolish.performance-review.v1",
+  "dateCairo": "2026-10-20",
+  "baselineCommit": "3638cb03036bb675a8923a99dd715146a66b9dc1",
+  "release": "1.1.0",
+  "scope": "Review and fake-data probes only. No production changes or implementation.",
+  "environment": {
+    "node": "v26.10.0",
+    "os": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "browser": "156.0.8078.4"
+  },
+  "grok": {
+    "requestedModel": "grok-4.7",
+    "reportedModel": "grok-4.7-build",
+    "effort": "xhigh",
+    "contextWindowOverride": 500000,
+    "cliVersion": "grok 1.0.62 (1474f9cbdd91) [stable]",
+    "sessionId": "01a1561a-eb76-77a2-9bb3-6c8760deeaeb",
+    "status": "completed",
+    "touchedFiles": [],
+    "featureLaneDefault": {
+      "implementer": "grok",
+      "model": "grok-4.7",
+      "effort": "high"
+    },
+    "note": "Initial plan-mode attempt could not execute a command. The executable inspection lost its runner when Grok deleted the shared temporary directory. The saved session was recovered; the final report was produced in that same session without further tool calls. The first benchmark stopped on ESM parsing; printed results were recovered."
+  },
+  "verdicts": [
+    {
+      "id": "G01",
+      "decision": "accept-with-corrections"
+    },
+    {
+      "id": "G02",
+      "decision": "accept-narrower-scope"
+    },
+    {
+      "id": "G03",
+      "decision": "accept-direction-require-hidden-browser-proof"
+    },
+    {
+      "id": "G04",
+      "decision": "defer-do-not-implement-as-proposed"
+    },
+    {
+      "id": "G05",
+      "decision": "accept-with-corrections"
+    },
+    {
+      "id": "G06",
+      "decision": "accept"
+    },
+    {
+      "id": "G07",
+      "decision": "accept-idle-chunk-suppression-measure-manual-batching"
+    },
+    {
+      "id": "G08",
+      "decision": "accept-with-projection-filtering-and-ordering"
+    }
+  ],
+  "additionalFindings": [
+    "S01 bounded bytes and efficient fragmentation",
+    "S02 early disabled-idle exit",
+    "S03 cancellable connection tests",
+    "S04 filter irrelevant settings broadcasts",
+    "S05 actual-path runtime baseline and CI build duplication"
+  ],
+  "bundle": [
+    {
+      "file": "dist/content-scripts/content.js",
+      "bytes": 58426,
+      "gzipBytes": 20876,
+      "sha256": "d6914f43dbe61904bacb0cf45ca03a4b0cd3eb0e533601d0dc0d243f0dfcb905"
+    },
+    {
+      "file": "dist/background.js",
+      "bytes": 17004,
+      "gzipBytes": 6278,
+      "sha256": "40763ad8b314d8eac4fb8533bc133033b345be0aad7560f660d9e1c4c9fdc3ab"
+    }
+  ],
+  "probes": {
+    "browser-probe": {
+      "sha256": "6bca936b3ae2befcee2cb95437f81f4cdde2b4d8f99b3d00bd3074269399be46",
+      "source": "import fs from 'node:fs';\nimport http from 'node:http';\nimport { chromium } from '/Users/ashahin/code/projects/web/AI-Companion/node_modules/@playwright/test/index.mjs';\nconst root = '/Users/ashahin/code/projects/web/AI-Companion';\nconst out = new URL('.', import.meta.url).pathname;\nconst id = 'ealpmjmaclnlpelpcacmbicmdipmbeei';\nconst profile = fs.mkdtempSync('/tmp/localpolish-perf-profile-');\nconst requests = [];\nlet holdNext=false;\nlet heldResponse;\nlet heldClosed=false;\nconst server = http.createServer(async (req, res) => {\n  if (req.method === 'OPTIONS') {\n    res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' });\n    res.end();\n  } else if (req.method === 'POST') {\n    let raw = '';\n    for await (const chunk of req) raw += chunk;\n    requests.push(JSON.parse(raw));\n    res.writeHead(200, { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' });\n    if(holdNext){holdNext=false;heldResponse=res;heldClosed=false;res.on('close',()=>{heldClosed=true;});res.write(`data: ${JSON.stringify({choices:[{delta:{content:'Still working'}}]})}\\n\\n`);return;}\n    res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: 'I went home yesterday with my friend.' }, finish_reason: 'stop' }] })}\\n\\ndata: [DONE]\\n\\n`);\n  } else {\n    res.writeHead(200, { 'content-type': 'text/html' });\n    if(req.url==='/frames'){res.end('<!doctype html><title>Fake audit frames</title><iframe src=\"/child\"></iframe><iframe src=\"/child\"></iframe><iframe src=\"/child\"></iframe>');return;}\n    res.end('<!doctype html><title>Fake draft for performance audit</title><style>textarea{width:600px;height:150px}body{min-height:5000px}</style><textarea id=\"draft\"></textarea>');\n  }\n});\nlet context;\nconst report = { mockOnly: true, baseline: '3638cb0', samples: [] };\ntry {\n  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));\n  const base = `http://127.0.0.1:${server.address().port}`;\n  context = await chromium.launchPersistentContext(profile, {\n    channel: 'chromium', headless: true,\n    args: [`--disable-extensions-except=${root}/dist`, `--load-extension=${root}/dist`],\n  });\n  let worker;\n  for (let i = 0; i < 100; i++) {\n    worker = context.serviceWorkers().find(w => w.url().includes(id));\n    if (worker) break;\n    await new Promise(resolve => setTimeout(resolve, 100));\n  }\n  if (!worker) throw new Error('No extension worker');\n  await worker.evaluate(async base => {\n    globalThis.__perfNativeCalls = 0;\n    chrome.runtime.connectNative = () => { globalThis.__perfNativeCalls++; throw new Error('Mock-only audit'); };\n    await chrome.storage.local.set({ settings: { provider: 'openai-compatible', openaiBaseUrl: base + '/v1', openaiApiKey: 'fake-audit-key', idleFix: true, blocklist: [], models: { 'openai-compatible': 'fake-audit-model' } } });\n  }, base);\n  for(const initial of context.pages()) await initial.close();\n  await new Promise(resolve=>setTimeout(resolve,300));\n  await worker.evaluate(()=>{__perfNativeCalls=0;});\n  const options = await context.newPage();\n  await options.goto(`chrome-extension://${id}/options.html`);\n  await options.waitForTimeout(500);\n  report.apiOptionsNativeCalls = await worker.evaluate(() => __perfNativeCalls);\n  const popup = await context.newPage();\n  await popup.goto(`chrome-extension://${id}/popup.html`);\n  await popup.waitForTimeout(500);\n  report.apiPopupNativeCalls = (await worker.evaluate(() => __perfNativeCalls)) - report.apiOptionsNativeCalls;\n  await options.close(); await popup.close();\n  const page = await context.newPage();\n  const cdp = await context.newCDPSession(page);\n  const contexts = [];\n  cdp.on('Runtime.executionContextCreated', ({ context }) => contexts.push(context));\n  await cdp.send('Runtime.enable');\n  await cdp.send('Performance.enable');\n  await page.goto(base + '/edit');\n  await page.waitForTimeout(500);\n  const world = contexts.findLast(c => c.origin === `chrome-extension://${id}`);\n  if (!world) throw new Error('No extension isolated world');\n  const evaluate = async expression => {\n    const r = await cdp.send('Runtime.evaluate', { contextId: world.id, expression, returnByValue: true, awaitPromise: true });\n    if (r.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails));\n    return r.result.value;\n  };\n  await evaluate(`(() => {\n    globalThis.__perf = { calls: {} };\n    for (const [proto, name] of [[Element.prototype,'getBoundingClientRect'],[Document.prototype,'querySelectorAll'],[globalThis,'getComputedStyle']]) {\n      const original = proto[name];\n      proto[name] = function(...args) { __perf.calls[name] = (__perf.calls[name] || 0) + 1; return Reflect.apply(original,this,args); };\n    }\n    for (const [proto,name] of [[HTMLElement.prototype,'innerText'],[HTMLTextAreaElement.prototype,'value']]) {\n      const d = Object.getOwnPropertyDescriptor(proto,name);\n      Object.defineProperty(proto,name,{...d,get(){__perf.calls[name]=(__perf.calls[name]||0)+1;return Reflect.apply(d.get,this,[]);}});\n    }\n    const schedule=globalThis.setTimeout;\n    globalThis.setTimeout=function(fn,delay,...args){if(delay===3000)__perf.calls.idleTimers=(__perf.calls.idleTimers||0)+1;return schedule(fn,delay,...args);};\n  })()`);\n  const sample = async (name, ms = 3000) => {\n    await evaluate('__perf = { calls: {} }');\n    const before = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m => [m.name,m.value]));\n    await page.waitForTimeout(ms);\n    const after = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m => [m.name,m.value]));\n    report.samples.push({ name, durationMs:ms, visible:await page.evaluate(()=>!document.hidden), ...(await evaluate('__perf')), requests:requests.length, rendererMs:Object.fromEntries(['TaskDuration','ScriptDuration','LayoutDuration','RecalcStyleDuration'].map(k=>[k,(after[k]-before[k])*1000])) });\n  };\n  await sample('no-marker');\n  await page.locator('#draft').pressSequentially('i has went home yesterday with my friend');\n  await page.locator('.lp-mark').waitFor({ timeout:10000 });\n  await sample('visible-marker');\n  await page.evaluate(()=>scrollTo(0,2000));\n  await sample('offscreen-marker');\n  await page.evaluate(()=>scrollTo(0,0));\n  const other=await context.newPage(); await other.goto('about:blank'); await other.bringToFront();\n  await sample('other-tab-front');\n  await other.close(); await page.bringToFront();\n  await page.evaluate(()=>document.querySelector('#draft').remove());\n  await sample('detached-editor');\n  await page.evaluate(()=>{\n    const rich=document.createElement('div');rich.id='rich';rich.contentEditable='true';rich.style.cssText='width:600px;min-height:150px;border:1px solid black';document.body.append(rich);scrollTo(0,0);\n  });\n  await page.locator('#rich').pressSequentially('i has went home yesterday with my friend');\n  await page.locator('.lp-mark').waitFor({timeout:10000});\n  await sample('rich-marker');\n  await worker.evaluate(async()=>{const {settings}=await chrome.storage.local.get('settings');await chrome.storage.local.set({settings:{...settings,idleFix:false}});});\n  await page.waitForTimeout(500);\n  await page.evaluate(()=>{\n    document.querySelector('#rich').remove();const f=document.createElement('textarea');f.id='probe';document.body.append(f);scrollTo(0,0);f.focus();f.value='word '.repeat(2000);f.setSelectionRange(1,5000);\n  });\n  await page.waitForTimeout(300);\n  await evaluate('__perf={calls:{}}');\n  report.selectionBurst=await evaluate(`(()=>{const start=performance.now();for(let i=0;i<100;i++)document.dispatchEvent(new Event('selectionchange'));return {events:100,ms:performance.now()-start,calls:{...__perf.calls}};})()`);\n  await page.waitForTimeout(250);\n  report.selectionAfterDebounce=await evaluate('__perf.calls');\n  await page.locator('#probe').fill('');\n  await page.waitForTimeout(250);\n  await evaluate('__perf={calls:{}}');\n  const beforeDisabled=requests.length;\n  await page.locator('#probe').pressSequentially('abcdefghij');\n  report.disabledTyping={characters:10,calls:await evaluate('__perf.calls')};\n  await page.waitForTimeout(3300);\n  report.disabledTyping.providerRequests=requests.length-beforeDisabled;\n  holdNext=true;\n  const testPopup=await context.newPage();await testPopup.goto(`chrome-extension://${id}/popup.html`);\n  await testPopup.getByRole('button',{name:'Test connection',exact:true}).click();\n  for(let i=0;i<100&&!heldResponse;i++)await page.waitForTimeout(50);\n  if(!heldResponse)throw new Error('Held test request did not start');\n  report.testConnectionLifecycle={activeBeforeClose:!heldClosed};\n  await testPopup.close();await page.waitForTimeout(500);\n  report.testConnectionLifecycle.active500msAfterPopupClosed=!heldClosed;\n  heldResponse.end('data: [DONE]\\n\\n');\n  await page.waitForTimeout(250);\n  const frames=await context.newPage();await frames.goto(base+'/frames');await page.close();await frames.waitForTimeout(500);\n  await worker.evaluate(()=>{globalThis.__pageReads=0;chrome.runtime.onMessage.addListener(message=>{if(message?.type==='page-settings')globalThis.__pageReads++;});});\n  await worker.evaluate(async()=>{const {settings}=await chrome.storage.local.get('settings');await chrome.storage.local.set({settings:{...settings,models:{...settings.models,'openai-compatible':'fake-audit-model-2'}}});});\n  await frames.waitForTimeout(500);\n  report.modelOnlySettingsChange={currentFrameCount:frames.frames().length,pageSettingsQueries:await worker.evaluate(()=>__pageReads)};\n  report.browser=context.browser()?.version();\n  report.result='passed';\n} catch(error) { report.result='failed';report.error=error.stack;throw error; }\nfinally {\n  heldResponse?.end();\n  await context?.close(); await new Promise(resolve=>server.close(resolve));\n  fs.rmSync(profile,{recursive:true,force:true});\n  fs.writeFileSync(out+'browser-probe.json',JSON.stringify(report,null,2)+'\\n');\n  console.log(JSON.stringify(report,null,2));\n}\n",
+      "result": {
+        "mockOnly": true,
+        "baseline": "3638cb0",
+        "samples": [
+          {
+            "name": "no-marker",
+            "durationMs": 3000,
+            "visible": true,
+            "calls": {},
+            "requests": 0,
+            "rendererMs": {
+              "TaskDuration": 1.2889999999999984,
+              "ScriptDuration": 0,
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0
+            }
+          },
+          {
+            "name": "visible-marker",
+            "durationMs": 3000,
+            "visible": true,
+            "calls": {
+              "value": 24,
+              "getBoundingClientRect": 12,
+              "getComputedStyle": 12,
+              "querySelectorAll": 12
+            },
+            "requests": 1,
+            "rendererMs": {
+              "TaskDuration": 8.240000000000004,
+              "ScriptDuration": 4.173,
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0
+            }
+          },
+          {
+            "name": "offscreen-marker",
+            "durationMs": 3000,
+            "visible": true,
+            "calls": {
+              "value": 12,
+              "getBoundingClientRect": 12,
+              "getComputedStyle": 12,
+              "querySelectorAll": 12
+            },
+            "requests": 1,
+            "rendererMs": {
+              "TaskDuration": 4.834999999999992,
+              "ScriptDuration": 1.9220000000000002,
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0
+            }
+          },
+          {
+            "name": "other-tab-front",
+            "durationMs": 3000,
+            "visible": true,
+            "calls": {
+              "value": 24,
+              "getBoundingClientRect": 12,
+              "getComputedStyle": 12,
+              "querySelectorAll": 12
+            },
+            "requests": 1,
+            "rendererMs": {
+              "TaskDuration": 8.257,
+              "ScriptDuration": 3.313999999999999,
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0.3879999999999999
+            }
+          },
+          {
+            "name": "detached-editor",
+            "durationMs": 3000,
+            "visible": true,
+            "calls": {
+              "querySelectorAll": 1
+            },
+            "requests": 1,
+            "rendererMs": {
+              "TaskDuration": 0.7069999999999993,
+              "ScriptDuration": 0.2739999999999999,
+              "LayoutDuration": 0.041000000000001105,
+              "RecalcStyleDuration": 0.005999999999999929
+            }
+          },
+          {
+            "name": "rich-marker",
+            "durationMs": 3000,
+            "visible": true,
+            "calls": {
+              "innerText": 24,
+              "getBoundingClientRect": 12,
+              "getComputedStyle": 12,
+              "querySelectorAll": 12
+            },
+            "requests": 2,
+            "rendererMs": {
+              "TaskDuration": 7.885000000000003,
+              "ScriptDuration": 3.8940000000000015,
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0
+            }
+          }
+        ],
+        "apiOptionsNativeCalls": 1,
+        "apiPopupNativeCalls": 1,
+        "selectionBurst": {
+          "events": 100,
+          "ms": 42,
+          "calls": {
+            "getComputedStyle": 100,
+            "value": 100,
+            "getBoundingClientRect": 100
+          }
+        },
+        "selectionAfterDebounce": {
+          "getComputedStyle": 101,
+          "value": 101,
+          "getBoundingClientRect": 101,
+          "querySelectorAll": 1
+        },
+        "disabledTyping": {
+          "characters": 10,
+          "calls": {
+            "idleTimers": 20
+          },
+          "providerRequests": 0
+        },
+        "testConnectionLifecycle": {
+          "activeBeforeClose": true,
+          "active500msAfterPopupClosed": true
+        },
+        "modelOnlySettingsChange": {
+          "currentFrameCount": 4,
+          "pageSettingsQueries": 4
+        },
+        "browser": "156.0.8078.4",
+        "result": "passed"
+      }
+    },
+    "core-probe": {
+      "sha256": "efc8b45b726f08d38f731f2d7e45763d84a82fbf360f10bc40d8a81c6b6cb64c",
+      "source": "import fs from 'node:fs';\nimport path from 'node:path';\nimport { createRequire } from 'node:module';\nimport { performance } from 'node:perf_hooks';\nimport ts from '/Users/ashahin/code/projects/web/AI-Companion/node_modules/typescript/lib/typescript.js';\nimport { createDecoder, encodeMessage } from '/Users/ashahin/code/projects/web/AI-Companion/bridge/lib.mjs';\nimport { readSSE } from '/Users/ashahin/code/projects/web/AI-Companion/src/background/sse.ts';\nimport { wordDiff } from '/Users/ashahin/code/projects/web/AI-Companion/src/core/diff.ts';\nconst root='/Users/ashahin/code/projects/web/AI-Companion';\nconst out=new URL('.',import.meta.url).pathname;\nconst report={baseline:'3638cb0',mockOnly:true,node:process.version,diff:[],nativeFrames:[],sse:[]};\nfor(const words of [300,1200,1500]) {\n  const before=Array.from({length:words},(_,i)=>'alpha'+i).join(' ');\n  const after=Array.from({length:words},(_,i)=>(words===300?i%20===0:words===1200?i%3===0:true)?'beta'+i:'alpha'+i).join(' ');\n  const samples=[];let parts;\n  for(let i=0;i<3;i++){const start=performance.now();parts=wordDiff(before,after);samples.push(performance.now()-start);}\n  report.diff.push({words,change:words===300?'every20th':words===1200?'every3rd':'all',samplesMs:samples,parts:parts.length});\n}\nconst frame=encodeMessage({type:'rewrite',cli:'claude',user:'x'.repeat(2*1024*1024)});\nfor(const chunkBytes of [1024,65536]) {\n  let copied=0,concats=0,received=0;\n  const original=Buffer.concat;\n  Buffer.concat=function(list,...args){copied+=list.reduce((s,b)=>s+b.length,0);concats++;return original.call(this,list,...args);};\n  const decode=createDecoder(()=>received++);const start=performance.now();\n  try{for(let i=0;i<frame.length;i+=chunkBytes)decode(frame.subarray(i,i+chunkBytes));}\n  finally{Buffer.concat=original;}\n  report.nativeFrames.push({frameBytes:frame.length,chunkBytes,copiedBytes:copied,concats,received,ms:performance.now()-start});\n}\nfor(const chunkBytes of [1024,65536]) {\n  const bytes=new TextEncoder().encode('data: '+ 'x'.repeat(2*1024*1024));\n  let offset=0,events=0,maxEventChars=0;\n  const body=new ReadableStream({pull(c){if(offset>=bytes.length){c.close();return;}c.enqueue(bytes.subarray(offset,offset+chunkBytes));offset+=chunkBytes;}});\n  const start=performance.now();\n  for await(const event of readSSE(body)){events++;maxEventChars=Math.max(maxEventChars,event.data.length);}\n  report.sse.push({inputBytes:bytes.length,chunkBytes,events,maxEventChars,ms:performance.now()-start,note:'Single incomplete data line until EOF. No JSON parser/provider involved.'});\n}\nconst compiled=path.join(out,'compiled-core');fs.mkdirSync(compiled,{recursive:true});fs.writeFileSync(path.join(compiled,'package.json'),'{\"type\":\"commonjs\"}');\nfor(const name of ['background/rewrite','background/providers/cli','core/cleanup','core/messages','core/settings','core/prompts','core/usage']) {\n  const source=fs.readFileSync(path.join(root,'src',name+'.ts'),'utf8');\n  const result=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}});\n  const file=path.join(compiled,name+'.js');fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,result.outputText);\n}\nconst require=createRequire(path.join(compiled,'package.json'));\nconst {runRewrite}=require(path.join(compiled,'background/rewrite.js'));\nconst {DEFAULT_SETTINGS}=require(path.join(compiled,'core/settings.js'));\nconst storage={};globalThis.chrome={storage:{local:{get:async key=>({[key]:storage[key]}),set:async value=>Object.assign(storage,value)}}};\nfor(const trigger of [undefined,'idle']) {\n  const counts={};let finalLength=0;\n  await runRewrite({text:'fake draft text only',mode:'fix',tone:'polite',trigger},DEFAULT_SETTINGS,async(_p,_s,onText)=>{for(let i=0;i<1000;i++)onText('x');},event=>{counts[event.type]=(counts[event.type]||0)+1;if(event.type==='done')finalLength=event.text.length;},new AbortController().signal);\n  (report.streamMessages??=[]).push({trigger:trigger||'manual',counts,finalLength});\n}\nconst controller=new AbortController();const late=[];\nawait runRewrite({text:'fake draft text only',mode:'fix',tone:'polite'},DEFAULT_SETTINGS,async(_p,_s,onText)=>{onText('first ');controller.abort();onText('late');},event=>late.push(event.type),controller.signal);\nreport.providerResolvesAfterAbort={events:late,note:'Contract stress only. Fake provider resolves after abort rather than rejecting. Not proof of a live provider race.'};\nfs.writeFileSync(out+'core-probe.json',JSON.stringify(report,null,2)+'\\n');console.log(JSON.stringify(report,null,2));\n",
+      "result": {
+        "baseline": "3638cb0",
+        "mockOnly": true,
+        "node": "v26.10.0",
+        "diff": [
+          {
+            "words": 300,
+            "change": "every20th",
+            "samplesMs": [
+              0.6216670000000022,
+              0.20437499999999886,
+              0.13708299999998985
+            ],
+            "parts": 45
+          },
+          {
+            "words": 1200,
+            "change": "every3rd",
+            "samplesMs": [
+              27.284832999999992,
+              24.96883299999996,
+              24.51574999999997
+            ],
+            "parts": 1200
+          },
+          {
+            "words": 1500,
+            "change": "all",
+            "samplesMs": [
+              200.45550000000003,
+              200.990541,
+              200.955416
+            ],
+            "parts": 2
+          }
+        ],
+        "nativeFrames": [
+          {
+            "frameBytes": 2097199,
+            "chunkBytes": 1024,
+            "copiedBytes": 2150628399,
+            "concats": 2048,
+            "received": 1,
+            "ms": 109.39491599999997
+          },
+          {
+            "frameBytes": 2097199,
+            "chunkBytes": 65536,
+            "copiedBytes": 36634671,
+            "concats": 32,
+            "received": 1,
+            "ms": 1.9690839999998389
+          }
+        ],
+        "sse": [
+          {
+            "inputBytes": 2097158,
+            "chunkBytes": 1024,
+            "events": 1,
+            "maxEventChars": 2097152,
+            "ms": 212.9855,
+            "note": "Single incomplete data line until EOF. No JSON parser/provider involved."
+          },
+          {
+            "inputBytes": 2097158,
+            "chunkBytes": 65536,
+            "events": 1,
+            "maxEventChars": 2097152,
+            "ms": 4.203500000000076,
+            "note": "Single incomplete data line until EOF. No JSON parser/provider involved."
+          }
+        ],
+        "streamMessages": [
+          {
+            "trigger": "manual",
+            "counts": {
+              "chunk": 1000,
+              "done": 1
+            },
+            "finalLength": 1000
+          },
+          {
+            "trigger": "idle",
+            "counts": {
+              "chunk": 1000,
+              "done": 1
+            },
+            "finalLength": 1000
+          }
+        ],
+        "providerResolvesAfterAbort": {
+          "events": [
+            "chunk",
+            "chunk",
+            "done"
+          ],
+          "note": "Contract stress only. Fake provider resolves after abort rather than rejecting. Not proof of a live provider race."
+        }
+      }
+    },
+    "bridge-probe": {
+      "sha256": "0781436ce8c1ee7c706da8cc92cfeb01d37e5fa38a5c166498a9e4ccadf2ea30",
+      "source": "import fs from 'node:fs';\nimport path from 'node:path';\nimport {spawn} from 'node:child_process';\nimport {performance} from 'node:perf_hooks';\nimport {encodeMessage,createDecoder} from '/Users/ashahin/code/projects/web/AI-Companion/bridge/lib.mjs';\nconst root='/Users/ashahin/code/projects/web/AI-Companion';\nconst out=new URL('.',import.meta.url).pathname;\nconst bin=fs.mkdtempSync('/tmp/localpolish-fake-versions-');\nconst log=path.join(bin,'calls.jsonl');\ntry {\n  fs.symlinkSync(process.execPath,path.join(bin,'node'));\n  for(const name of ['claude','codex','grok']) {\n    const file=path.join(bin,name);\n    fs.writeFileSync(file,`#!/usr/bin/env node\\nconst fs=require('node:fs');fs.appendFileSync(${JSON.stringify(log)},JSON.stringify({name:${JSON.stringify(name)},args:process.argv.slice(2),at:Date.now()})+'\\\\n');setTimeout(()=>console.log(${JSON.stringify(name+' fake-version')}),150);\\n`,{mode:0o755});\n  }\n  const start=performance.now();let pong;\n  const child=spawn(process.execPath,[root+'/bridge/host.mjs'],{env:{...process.env,PATH:bin},stdio:['pipe','pipe','pipe']});\n  child.stdout.on('data',createDecoder(message=>{pong=message;}));let stderr='';child.stderr.on('data',c=>{stderr+=c;});\n  child.stdin.write(encodeMessage({type:'ping'}));\n  const timer=setTimeout(()=>child.kill('SIGKILL'),5000);\n  const exit=await new Promise(resolve=>child.once('close',(code,signal)=>resolve({code,signal})));\n  clearTimeout(timer);\n  const calls=fs.readFileSync(log,'utf8').trim().split('\\n').map(JSON.parse);\n  const first=calls[0].at;\n  const report={mockOnly:true,fakeVersionDelayMs:150,ms:performance.now()-start,exit,stderr,pong,calls:calls.map(c=>({name:c.name,args:c.args,startAfterFirstMs:c.at-first}))};\n  if(calls.length!==3||calls.some(c=>JSON.stringify(c.args)!=='[\"--version\"]')||pong?.type!=='pong'||exit.code!==0)throw new Error('Fake-only ping proof failed');\n  fs.writeFileSync(out+'bridge-probe.json',JSON.stringify(report,null,2)+'\\n');console.log(JSON.stringify(report,null,2));\n}finally{fs.rmSync(bin,{recursive:true,force:true});}\n",
+      "result": {
+        "mockOnly": true,
+        "fakeVersionDelayMs": 150,
+        "ms": 1616.411875,
+        "exit": {
+          "code": 0,
+          "signal": null
+        },
+        "stderr": "",
+        "pong": {
+          "type": "pong",
+          "clis": {
+            "claude": {
+              "version": "claude fake-version"
+            },
+            "codex": {
+              "version": "codex fake-version"
+            },
+            "grok": {
+              "version": "grok fake-version"
+            }
+          }
+        },
+        "calls": [
+          {
+            "name": "claude",
+            "args": [
+              "--version"
+            ],
+            "startAfterFirstMs": 0
+          },
+          {
+            "name": "codex",
+            "args": [
+              "--version"
+            ],
+            "startAfterFirstMs": 490
+          },
+          {
+            "name": "grok",
+            "args": [
+              "--version"
+            ],
+            "startAfterFirstMs": 993
+          }
+        ]
+      }
+    },
+    "visibility-probe": {
+      "sha256": "3d04a0fdece57f97fa4ba7b92890cf3bddcf0d575c0c44fa4ed4ff280b3d037e",
+      "source": "import fs from 'node:fs';\nimport http from 'node:http';\nimport {chromium} from '/Users/ashahin/code/projects/web/AI-Companion/node_modules/@playwright/test/index.mjs';\nconst out=new URL('.',import.meta.url).pathname;\nconst root='/Users/ashahin/code/projects/web/AI-Companion';\nconst id='ealpmjmaclnlpelpcacmbicmdipmbeei';\nlet requests=0;\nconst server=http.createServer(async(req,res)=>{if(req.method==='POST'){for await(const _ of req){}requests++;res.writeHead(200,{'content-type':'text/event-stream','access-control-allow-origin':'*'});res.end('data: '+JSON.stringify({choices:[{delta:{content:'I went home yesterday with my friend.'},finish_reason:'stop'}]})+'\\n\\ndata: [DONE]\\n\\n');}else{res.end('<!doctype html><title>LocalPolish fake visibility check</title><textarea style=\"width:600px;height:150px\"></textarea>');}});\nconst profile=fs.mkdtempSync('/tmp/localpolish-visibility-');let context;const report={mockOnly:true};\ntry {\n  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+server.address().port;\n  context=await chromium.launchPersistentContext(profile,{channel:'chromium',headless:false,args:[`--disable-extensions-except=${root}/dist`,`--load-extension=${root}/dist`]});\n  let worker;for(let i=0;i<100;i++){worker=context.serviceWorkers().find(w=>w.url().includes(id));if(worker)break;await new Promise(r=>setTimeout(r,100));}\n  if(!worker)throw new Error('No worker');\n  await worker.evaluate(async base=>{chrome.runtime.connectNative=()=>{throw new Error('No native bridge in audit');};await chrome.storage.local.set({settings:{provider:'openai-compatible',openaiBaseUrl:base+'/v1',models:{'openai-compatible':'fake-audit-model'},idleFix:true,blocklist:[]}});},base);\n  for(const p of context.pages())await p.close();\n  const page=await context.newPage();await page.goto(base);await page.waitForTimeout(300);\n  const cdp=await context.newCDPSession(page);const {windowId}=await cdp.send('Browser.getWindowForTarget');\n  await cdp.send('Emulation.setFocusEmulationEnabled',{enabled:false});\n  report.focusEmulationDisabled=true;\n  await page.locator('textarea').pressSequentially('i has went home yesterday with my friend');\n  await cdp.send('Browser.setWindowBounds',{windowId,bounds:{windowState:'minimized'}});\n  await page.waitForTimeout(300);\n  report.minimizedHidden=await page.evaluate(()=>document.hidden);\n  await page.waitForTimeout(4500);\n  report.requestsWhileMinimized=requests;\n  await cdp.send('Browser.setWindowBounds',{windowId,bounds:{windowState:'normal'}});\n  await page.bringToFront();await page.waitForTimeout(500);\n  report.restoredHidden=await page.evaluate(()=>document.hidden);report.requestsAfterRestore=requests;\n  report.result=report.minimizedHidden?'measured':'visibility-not-hidden';\n}catch(error){report.result='unavailable';report.error=error.message;}\nfinally{await context?.close();await new Promise(r=>server.close(r));fs.rmSync(profile,{recursive:true,force:true});fs.writeFileSync(out+'visibility-probe.json',JSON.stringify(report,null,2)+'\\n');console.log(JSON.stringify(report,null,2));}\n",
+      "result": {
+        "mockOnly": true,
+        "focusEmulationDisabled": true,
+        "minimizedHidden": false,
+        "requestsWhileMinimized": 1,
+        "restoredHidden": false,
+        "requestsAfterRestore": 1,
+        "result": "visibility-not-hidden"
+      }
+    },
+    "diff-browser-probe": {
+      "sha256": "ddc0507f4b4034cb799ab46ae422c5ce82dd6df6ee75dc22b4eb1696ee787dc0",
+      "source": "import fs from 'node:fs';\nimport http from 'node:http';\nimport {performance} from 'node:perf_hooks';\nimport {chromium,expect} from '/Users/ashahin/code/projects/web/AI-Companion/node_modules/@playwright/test/index.mjs';\nconst root='/Users/ashahin/code/projects/web/AI-Companion';const out=new URL('.',import.meta.url).pathname;\nconst id='ealpmjmaclnlpelpcacmbicmdipmbeei';\nconst before=Array.from({length:1500},(_,i)=>'alpha'+i).join(' ');const after=Array.from({length:1500},(_,i)=>'beta'+i).join(' ');\nlet requests=0;const server=http.createServer(async(req,res)=>{if(req.method==='POST'){for await(const _ of req){}requests++;res.writeHead(200,{'content-type':'text/event-stream','access-control-allow-origin':'*'});res.end('data: '+JSON.stringify({choices:[{delta:{content:after},finish_reason:'stop'}]})+'\\n\\ndata: [DONE]\\n\\n');}else{res.end('<!doctype html><title>Fake heavy diff</title><textarea style=\"width:600px;height:150px\"></textarea>');}});\nconst profile=fs.mkdtempSync('/tmp/localpolish-diff-perf-');let context;const report={mockOnly:true,words:1500,samples:[]};\ntry{\n await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;\n context=await chromium.launchPersistentContext(profile,{channel:'chromium',headless:true,args:[`--disable-extensions-except=${root}/dist`,`--load-extension=${root}/dist`]});\n let worker;for(let i=0;i<100;i++){worker=context.serviceWorkers().find(w=>w.url().includes(id));if(worker)break;await new Promise(r=>setTimeout(r,100));}if(!worker)throw new Error('No worker');\n await worker.evaluate(async base=>{chrome.runtime.connectNative=()=>{throw new Error('Mock only');};await chrome.storage.local.set({settings:{provider:'openai-compatible',openaiBaseUrl:base+'/v1',models:{'openai-compatible':'fake'},idleFix:false,blocklist:[]}});},base);\n for(const p of context.pages())await p.close();const page=await context.newPage();await page.goto(base);await page.waitForTimeout(300);await page.locator('textarea').fill(before);\n const cdp=await context.newCDPSession(page);await cdp.send('Performance.enable');\n await worker.evaluate(async url=>{const tabs=await chrome.tabs.query({});const tab=tabs.find(t=>t.url===url+'/');if(!tab)throw new Error('No fake editor tab');await chrome.tabs.sendMessage(tab.id,{type:'open-popup'});},base);\n await expect(page.getByRole('button',{name:'Accept',exact:true})).toBeEnabled({timeout:10000});\n for(let i=0;i<3;i++)for(const view of ['Final','Changes']){\n   const a=Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));const start=performance.now();\n   await page.getByRole('button',{name:view,exact:true}).click();\n   const b=Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));\n   report.samples.push({view,wallMs:performance.now()-start,scriptMs:(b.ScriptDuration-a.ScriptDuration)*1000});\n }\n report.requests=requests;report.result='passed';\n}catch(error){report.result='failed';report.error=error.stack;throw error;}\nfinally{await context?.close();await new Promise(r=>server.close(r));fs.rmSync(profile,{recursive:true,force:true});fs.writeFileSync(out+'diff-browser-probe.json',JSON.stringify(report,null,2)+'\\n');console.log(JSON.stringify(report,null,2));}\n",
+      "result": {
+        "mockOnly": true,
+        "words": 1500,
+        "samples": [
+          {
+            "view": "Final",
+            "wallMs": 27.872791000000007,
+            "scriptMs": 0.9890000000000176
+          },
+          {
+            "view": "Changes",
+            "wallMs": 236.65816599999994,
+            "scriptMs": 200.84099999999998
+          },
+          {
+            "view": "Final",
+            "wallMs": 27.159167000000025,
+            "scriptMs": 0.5189999999999917
+          },
+          {
+            "view": "Changes",
+            "wallMs": 240.359958,
+            "scriptMs": 201.651
+          },
+          {
+            "view": "Final",
+            "wallMs": 25.15325000000007,
+            "scriptMs": 0.5910000000000082
+          },
+          {
+            "view": "Changes",
+            "wallMs": 238.26679099999978,
+            "scriptMs": 201.557
+          }
+        ],
+        "requests": 1,
+        "result": "passed"
+      }
+    }
+  },
+  "probeSnapshotNote": "These are one-off review probes with local checkout paths. They require Node26.10.0 and installed project dependencies. Promote into portable benchmark tooling under P00 before using as CI gates. Instrumentation overhead and sample limitations are documented in the report.",
+  "grokMeasurements": {
+    "note": "Recovered from native Grok tool-result messages. The main script exited1 while vm.Script parsed an ES module. Prior printed measurements and separate host EOF command survive; no whole-suite success claim.",
+    "rows": [
+      {
+        "kind": "meta",
+        "node": "v26.10.0",
+        "cairo": "Tue Oct 20 2026 00:49:11 GMT+0300 (Eastern European Summer Time)"
+      },
+      {
+        "case": "diff-email-300w-few-edits",
+        "chars": 2290,
+        "words": 300,
+        "times": 20,
+        "totalMs": 4.1,
+        "perMs": 0.205,
+        "parts": 60,
+        "fallback": false
+      },
+      {
+        "case": "diff-2000w-scattered",
+        "chars": 16890,
+        "words": 2000,
+        "times": 10,
+        "totalMs": 17.97,
+        "perMs": 1.797,
+        "parts": 300,
+        "fallback": false
+      },
+      {
+        "case": "diff-8000w-scattered",
+        "chars": 70890,
+        "words": 8000,
+        "times": 3,
+        "totalMs": 21.21,
+        "perMs": 7.073,
+        "parts": 600,
+        "fallback": false
+      },
+      {
+        "case": "diff-1500w-all-different",
+        "chars": 13890,
+        "words": 1500,
+        "times": 1,
+        "totalMs": 201.18,
+        "perMs": 201.184,
+        "parts": 2,
+        "fallback": true
+      },
+      {
+        "case": "diff-3000w-all-different",
+        "chars": 28890,
+        "words": 3000,
+        "times": 1,
+        "totalMs": 200.92,
+        "perMs": 200.92,
+        "parts": 2,
+        "fallback": true
+      },
+      {
+        "case": "diff-arabic-mixed-800w",
+        "chars": 6289,
+        "words": 800,
+        "times": 10,
+        "totalMs": 2.37,
+        "perMs": 0.237,
+        "parts": 72,
+        "fallback": false
+      },
+      {
+        "case": "diff-100k-no-space-one-edit",
+        "chars": 100000,
+        "words": 1,
+        "times": 5,
+        "totalMs": 0.59,
+        "perMs": 0.118,
+        "parts": 2,
+        "fallback": true
+      },
+      {
+        "case": "diff-identical-5000w-short-circuit",
+        "chars": 43890,
+        "words": 5000,
+        "times": 50,
+        "totalMs": 0.01,
+        "perMs": 0,
+        "parts": 1,
+        "fallback": false
+      },
+      {
+        "case": "diff-2000w-repeated-30",
+        "chars": 16890,
+        "words": 2000,
+        "times": 30,
+        "totalMs": 53.42,
+        "perMs": 1.781,
+        "parts": 300,
+        "fallback": false
+      },
+      {
+        "case": "tokens-200-each",
+        "chars": 14359,
+        "times": 20,
+        "totalMs": 37.45,
+        "perMs": 1.872,
+        "missing": 2,
+        "extracted": 801
+      },
+      {
+        "case": "tokens-plain-5000w",
+        "chars": 48890,
+        "times": 10,
+        "totalMs": 2.5,
+        "perMs": 0.25,
+        "missing": 0
+      },
+      {
+        "case": "arabic-script-check",
+        "times": 50,
+        "totalMs": 1.68,
+        "perMs": 0.034,
+        "lost": true
+      },
+      {
+        "case": "shorter-char-count",
+        "chars": 40001,
+        "spreadPerMs": 0.121,
+        "lengthPerMs": 0,
+        "codePoints": 20001
+      },
+      {
+        "case": "cleanup-2000w",
+        "times": 20,
+        "totalMs": 1.39,
+        "perMs": 0.07
+      },
+      {
+        "case": "blocklist-40-rules-3-hosts",
+        "naivePerCallMs": 0.0116,
+        "cachedPerCallMs": 0.0009,
+        "calls": 2000
+      },
+      {
+        "case": "sse",
+        "events": 1000,
+        "perChunk": 1,
+        "parsed": 1001,
+        "dataChars": 61006,
+        "ms": 3.27
+      },
+      {
+        "case": "sse",
+        "events": 1000,
+        "perChunk": 50,
+        "parsed": 1001,
+        "dataChars": 61006,
+        "ms": 0.66
+      },
+      {
+        "case": "sse",
+        "events": 5000,
+        "perChunk": 20,
+        "parsed": 5001,
+        "dataChars": 305006,
+        "ms": 2.63
+      },
+      {
+        "case": "stream-concat",
+        "count": 2000,
+        "size": 4,
+        "chars": 8000,
+        "ms": 0.02
+      },
+      {
+        "case": "stream-concat",
+        "count": 200,
+        "size": 80,
+        "chars": 16000,
+        "ms": 0
+      },
+      {
+        "case": "stream-concat",
+        "count": 50,
+        "size": 2000,
+        "chars": 100000,
+        "ms": 0
+      },
+      {
+        "case": "findOnPath-3-names-80-missing-dirs",
+        "times": 20,
+        "totalMs": 14.11,
+        "perMs": 0.705
+      },
+      {
+        "case": "three-80ms-probes-structural",
+        "sequentialMs": 243.7,
+        "parallelMs": 80.9,
+        "note": "fake timers, not real CLI --version"
+      },
+      {
+        "case": "bundle",
+        "file": "dist/content-scripts/content.js",
+        "bytes": 58426,
+        "gzip": 20876,
+        "compileMs": 3.18
+      },
+      {
+        "case": "bundle",
+        "file": "dist/background.js",
+        "bytes": 17004,
+        "gzip": 6278,
+        "compileMs": 0.74
+      },
+      {
+        "case": "diff-1200w-every-third",
+        "ms": 27.29,
+        "parts": 1200,
+        "fallback": false
+      },
+      {
+        "case": "host-process-start-stdin-end",
+        "samples": [
+          {
+            "ms": 46.7,
+            "code": 0,
+            "stderr": ""
+          },
+          {
+            "ms": 43.64,
+            "code": 0,
+            "stderr": ""
+          },
+          {
+            "ms": 42.58,
+            "code": 0,
+            "stderr": ""
+          },
+          {
+            "ms": 42.31,
+            "code": 0,
+            "stderr": ""
+          },
+          {
+            "ms": 43.81,
+            "code": 0,
+            "stderr": ""
+          }
+        ]
+      }
+    ]
+  },
+  "localArtifacts": "/Users/ashahin/.codex/visualizations/2026/10/20/localpolish-performance-review",
+  "reusableSkill": {
+    "grok": "none",
+    "orchestrator": "none; a project runtime benchmark is the useful next reusable artifact"
+  }
+}
