@@ -5,6 +5,9 @@ import 'draft-js/dist/Draft.css';
 import { $getRoot, createEditor } from 'lexical';
 import { createEmptyHistoryState, registerHistory } from '@lexical/history';
 import { registerRichText } from '@lexical/rich-text';
+import { createEditor as createSlateEditor, Node as SlateNode } from 'slate';
+import { withHistory } from 'slate-history';
+import { Editable, Slate, withReact } from 'slate-react';
 import { applyReplacement, captureTarget } from '../../../src/content/editable.ts';
 import { createButton } from '../../../src/content/button.ts';
 import { createController } from '../../../src/content/controller.ts';
@@ -139,6 +142,7 @@ function DraftBox() {
     captureTarget,
     applyReplacement,
     draftText: () => editorState.getCurrentContent().getPlainText(),
+    slateText: () => slate.children.map((block) => SlateNode.string(block)).join('\n'),
     lexicalBlocks: () =>
       lexical.getEditorState().read(() =>
         $getRoot()
@@ -157,3 +161,17 @@ function DraftBox() {
 const root = document.getElementById('draft');
 if (!root) throw new Error('missing #draft');
 ReactDOM.render(React.createElement(DraftBox), root);
+
+// Discord's composer is Slate.
+const slate = withHistory(withReact(createSlateEditor()));
+
+function SlateBox() {
+  const [value] = React.useState(() => [{ type: 'paragraph', children: [{ text: '' }] }]);
+  return React.createElement(
+    Slate,
+    { editor: slate, initialValue: value },
+    React.createElement(Editable, { id: 'slate', spellCheck: true }),
+  );
+}
+
+ReactDOM.render(React.createElement(SlateBox), document.getElementById('slate-root'));

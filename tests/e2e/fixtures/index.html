@@ -9,6 +9,7 @@
       #ce,
       #other,
       #draft,
+      #slate,
       #lexical {
         display: block;
         width: 400px;
@@ -18,12 +19,14 @@
       #ce,
       #other,
       #lexical,
+      #slate,
       #draft .public-DraftEditor-content {
         min-height: 48px;
       }
       #ce,
       #other,
       #draft,
+      #slate,
       #lexical {
         border: 1px solid #ccc;
       }
@@ -37,6 +40,7 @@
     <input id="email" type="email" />
     <div id="ce" contenteditable="true"></div>
     <div id="draft"></div>
+    <div id="slate-root"></div>
     <div id="lexical" contenteditable="true"></div>
     <div id="other" contenteditable="true">Other editor original text</div>
     <button id="outside" type="button">Outside</button>

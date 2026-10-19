@@ -26,6 +26,7 @@ type PageApi = {
     captureTarget: (opts: { wholeFieldIfEmpty: boolean }) => { text: string } | null;
     applyReplacement: (target: { text: string } | null, text: string) => Promise<ApplyResult>;
     draftText: () => string;
+    slateText: () => string;
     lexicalBlocks: () => string[];
   };
 };
@@ -101,6 +102,24 @@ test('Draft.js updates its editor state', async ({ page }) => {
   await expect.poll(draftText).toBe('I went home');
 });
 
+test('Slate updates its value and Backspace still works', async ({ page }) => {
+  await page.locator('#slate').click();
+  await page.keyboard.type('i has went home');
+  await page.keyboard.press('ControlOrMeta+a');
+
+  expect(await captureText(page, false)).toBe('i has went home');
+  await page.locator('#outside').click();
+  expect(await apply(page, 'I went home.')).toEqual({ ok: true });
+  const slateText = () => page.evaluate(() => (window as unknown as PageApi).__lp.slateText());
+  await expect.poll(slateText).toBe('I went home.');
+
+  await page.locator('#slate').click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Backspace');
+  await expect.poll(slateText).toBe('I went home');
+  await expect(page.locator('#slate')).toHaveText('I went home');
+});
+
 test('Lexical keeps line breaks and undoes the change', async ({ page }) => {
   const blocks = () => page.evaluate(() => (window as unknown as PageApi).__lp.lexicalBlocks());
   await page.locator('#lexical').click();
@@ -143,6 +162,7 @@ test('apply reports changed when the field text moved', async ({ page }) => {
 for (const [name, selector] of [
   ['Lexical', '#lexical'],
   ['Draft.js', '#draft .public-DraftEditor-content'],
+  ['Slate', '#slate'],
 ] as const) {
   test(`${name} does not paste into another editor during the wait`, async ({ page }) => {
     await page.locator(selector).click();

@@ -35,6 +35,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **Fixes**
 
+- Discord (Slate): Accept now updates the editor itself, so Backspace and editing keep working afterwards. The fixture page has a Slate editor to test it.
+
 - The options idle checkbox sits beside its label and no longer stretches across its column (T19c).
 
 - Sites labels now cover both the button and Fix while I type.

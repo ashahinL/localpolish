@@ -219,10 +219,15 @@ async function applyRich(
   const before = normalize(root.innerText);
 
   // Lexical (Facebook) drops the line breaks from insertText but splits pasted text into paragraphs.
-  // insertText also drops Draft.js's (X) leaf spans, and then Backspace stops working.
-  if (root.dataset.lexicalEditor === 'true' || root.closest('.DraftEditor-root')) {
-    // Both editors read the new selection on the next selectionchange.
-    await waitForRender();
+  // insertText also drops Draft.js's (X) leaf spans, and Slate (Discord) never sees it, so its
+  // value keeps the old text. Either way Backspace stops working.
+  if (
+    root.dataset.lexicalEditor === 'true' ||
+    root.dataset.slateEditor === 'true' ||
+    root.closest('.DraftEditor-root')
+  ) {
+    // These editors read the new selection on the next selectionchange. Slate throttles it to 100ms.
+    await waitForRender(root.dataset.slateEditor === 'true' ? 150 : 50);
     return paste(root, selection, text, before, target.text);
   }
 
@@ -293,8 +298,8 @@ function normalize(value: string): string {
     .trim();
 }
 
-function waitForRender(): Promise<void> {
+function waitForRender(ms = 50): Promise<void> {
   return new Promise((resolve) => {
-    setTimeout(resolve, 50);
+    setTimeout(resolve, ms);
   });
 }
