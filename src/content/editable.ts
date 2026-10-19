@@ -226,6 +226,9 @@ async function applyRich(
   const pasted = await paste(root, selection, text, before, target.text);
   if (pasted) return pasted;
 
+  if (!selectionMatches(root, selection, target.text)) {
+    return { ok: false, reason: 'changed' };
+  }
   document.execCommand('insertText', false, text);
   await waitForRender();
   return replaced(root, before, text, target.text)
@@ -241,10 +244,7 @@ async function paste(
   before: string,
   original: string,
 ): Promise<ApplyResult | null> {
-  if (!root.contains(selection.anchorNode) || !root.contains(selection.focusNode)) {
-    return { ok: false, reason: 'changed' };
-  }
-  if (normalize(selection.toString()) !== normalize(original)) {
+  if (!selectionMatches(root, selection, original)) {
     return { ok: false, reason: 'changed' };
   }
   const anchor = selection.anchorNode;
@@ -258,6 +258,14 @@ async function paste(
   if (!event.defaultPrevented) return null;
   await waitForRender();
   return replaced(root, before, text, original) ? { ok: true } : { ok: false, reason: 'rejected' };
+}
+
+function selectionMatches(root: HTMLElement, selection: Selection, original: string): boolean {
+  return (
+    root.contains(selection.anchorNode) &&
+    root.contains(selection.focusNode) &&
+    normalize(selection.toString()) === normalize(original)
+  );
 }
 
 function contentsOf(root: HTMLElement): Range {

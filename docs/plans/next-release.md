@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: T15-T19 are implemented and locally verified. T19 adds the owner-requested per-model request stats and fixes the options checkbox alignment. The owner's diff review and manual release checks remain.
+Status: T15-T20 are implemented and locally verified. The fleet's plan review found one Accept fallback regression, fixed in T20. All local gates pass. The owner's diff review and manual release checks remain.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -84,6 +84,12 @@ Changes to the plan, compared with Sol's draft:
 - [x] **T19a. Record local per-provider/model request attempts.** Sol medium. Brief: [T19a-usage-tracking.md](../briefs/T19a-usage-tracking.md). This includes connection tests and failed attempts. Cached answers do not count. Earlier usage cannot be recovered.
 - [x] **T19b. Show Usage in Home and options.** Art lane, Claude Opus. Brief: [T19b-usage-ui.md](../briefs/T19b-usage-ui.md). Depends on T19a's data contract. No draft history, keys, or site details are stored in stats.
 - [x] **T19c. Align the options idle checkbox.** Small inline fix. Brief: [T19c-checkbox-layout.md](../briefs/T19c-checkbox-layout.md). Owner reported the stretched checkbox on 19 October 2026.
+
+## T20: safe Accept fallback after page paste handlers
+
+- [x] **Implemented.** Sol high. Brief: [T20-safe-accept-fallback.md](../briefs/T20-safe-accept-fallback.md). Recheck both selection endpoints and selected text before native `insertText`. Preserve paste-first behavior, line-break normalization, and waits.
+- [x] **Targeted verified.** The orchestrator reproduced both failures in Chromium against the old source: the rewrite overwrote `#other` or replaced text changed during paste. All 30 editor tests pass with the fix. The implementer's sandbox blocked port 5179, so the orchestrator ran the browser checks.
+- [x] **Orchestrator full gates.** Lint, typecheck, 302 unit tests, formatting, build, and 136 browser tests passed. Two platform-specific unit tests were skipped on macOS. Full CI and platform checks run again after push.
 
 ## Backlog (not in this release)
 

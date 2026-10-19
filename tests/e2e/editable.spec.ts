@@ -192,6 +192,59 @@ for (const [name, selector] of [
   });
 }
 
+test('plain contenteditable keeps both editors when a paste handler moves selection', async ({
+  page,
+}) => {
+  await page.locator('#ce').click();
+  await page.keyboard.type('i has went home');
+  await page.keyboard.press('ControlOrMeta+a');
+  expect(await captureText(page, false)).toBe('i has went home');
+  await page.locator('#outside').click();
+  await page.locator('#ce').evaluate((el) => {
+    el.addEventListener(
+      'paste',
+      () => {
+        const other = document.getElementById('other') as HTMLElement;
+        other.focus();
+        const range = document.createRange();
+        range.selectNodeContents(other);
+        getSelection()?.removeAllRanges();
+        getSelection()?.addRange(range);
+      },
+      { once: true },
+    );
+  });
+
+  expect.soft(await apply(page, 'I went home.')).toEqual({ ok: false, reason: 'changed' });
+  await expect.soft(page.locator('#other')).toHaveText('Other editor original text');
+  await expect.soft(page.locator('#ce')).toHaveText('i has went home');
+});
+
+test('plain contenteditable keeps edits made by a paste handler', async ({ page }) => {
+  await page.locator('#ce').click();
+  await page.keyboard.type('i has went home');
+  await page.keyboard.press('ControlOrMeta+a');
+  expect(await captureText(page, false)).toBe('i has went home');
+  await page.locator('#outside').click();
+  await page.locator('#ce').evaluate((el) => {
+    el.addEventListener(
+      'paste',
+      () => {
+        el.textContent = 'edited during paste';
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        getSelection()?.removeAllRanges();
+        getSelection()?.addRange(range);
+      },
+      { once: true },
+    );
+  });
+
+  expect.soft(await apply(page, 'I went home.')).toEqual({ ok: false, reason: 'changed' });
+  await expect.soft(page.locator('#other')).toHaveText('Other editor original text');
+  await expect.soft(page.locator('#ce')).toHaveText('edited during paste');
+});
+
 test('Lexical keeps edits made during the paste wait', async ({ page }) => {
   await page.locator('#lexical').click();
   await page.keyboard.type('i has went home');
