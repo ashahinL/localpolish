@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: T15-T20 are implemented and locally verified. The fleet's plan review found one Accept fallback regression, fixed in T20. All local gates pass. The owner's diff review and manual release checks remain.
+Status: T15-T20 are implemented and locally verified. The fleet's plan review found one Accept fallback regression, fixed in T20. All local gates pass. The owner reports that the requested provider and editor checks passed. The owner's diff review and remaining release checks are open.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -111,7 +111,8 @@ Changes to the plan, compared with Sol's draft:
 - [x] All gates pass: lint, typecheck, unit tests, Prettier, build, e2e (91 tests at 1.0.0, plus the new ones).
 - [x] `npm audit` (full and `--omit=dev`) has no unreviewed high finding.
 - [ ] CI is green at the release commit, including the new macOS, Windows and Node 22 jobs.
-- [ ] Owner, by hand on macOS and Windows: one rewrite each with Claude CLI, Codex CLI and one API provider, using fixed sample text. Block a site and check that an editor in an iframe on it sends nothing. Never submit a draft.
+- [x] Owner's requested provider and editor checks: rewrite fixed sample text with the configured Claude CLI, Codex CLI, and API provider in Discord and a plain text box; Accept inserts the correction and Backspace works. Owner reported "passed" on 19 October 2026. Individual platform and provider results were not listed.
+- [ ] Owner, by hand: block a site and check that an editor in an iframe on it sends nothing. This separate check was not included in the instructions the owner confirmed above. Automated blocked-frame regressions pass. Never submit a draft.
 - [ ] Follow the corrected `RELEASING.md`. Download the published zip, check its SHA-256, load it in a fresh profile, and press Test connection.
 
 ## Implementation notes
