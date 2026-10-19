@@ -10,6 +10,8 @@
       #other,
       #draft,
       #slate,
+      #prosemirror,
+      #quill,
       #lexical {
         display: block;
         width: 400px;
@@ -20,6 +22,8 @@
       #other,
       #lexical,
       #slate,
+      #prosemirror .ProseMirror,
+      #quill .ql-editor,
       #draft .public-DraftEditor-content {
         min-height: 48px;
       }
@@ -27,6 +31,8 @@
       #other,
       #draft,
       #slate,
+      #prosemirror,
+      #quill,
       #lexical {
         border: 1px solid #ccc;
       }
@@ -41,6 +47,8 @@
     <div id="ce" contenteditable="true"></div>
     <div id="draft"></div>
     <div id="slate-root"></div>
+    <div id="prosemirror"></div>
+    <div id="quill"></div>
     <div id="lexical" contenteditable="true"></div>
     <div id="other" contenteditable="true">Other editor original text</div>
     <button id="outside" type="button">Outside</button>

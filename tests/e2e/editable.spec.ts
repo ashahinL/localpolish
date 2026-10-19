@@ -27,6 +27,9 @@ type PageApi = {
     applyReplacement: (target: { text: string } | null, text: string) => Promise<ApplyResult>;
     draftText: () => string;
     slateText: () => string;
+    proseMirrorText: () => string;
+    quillText: () => string;
+    plainText: () => string;
     lexicalBlocks: () => string[];
   };
 };
@@ -85,40 +88,36 @@ test('plain contenteditable replaces the selection', async ({ page }) => {
   expect((await page.locator('#ce').innerText()).trim()).toBe('I went home.');
 });
 
-test('Draft.js updates its editor state', async ({ page }) => {
-  await page.locator('#draft .public-DraftEditor-content').click();
-  await page.keyboard.type('i has went home');
-  await page.keyboard.press('ControlOrMeta+a');
+type TextReader = 'draftText' | 'slateText' | 'proseMirrorText' | 'quillText' | 'plainText';
 
-  expect(await captureText(page, false)).toBe('i has went home');
-  await page.locator('#outside').click();
-  expect(await apply(page, 'I went home.')).toEqual({ ok: true });
-  const draftText = () => page.evaluate(() => (window as unknown as PageApi).__lp.draftText());
-  expect(await draftText()).toBe('I went home.');
+// Each editor keeps its own copy of the text. If Accept changes only the page, that copy goes
+// stale and Backspace stops working, so check the editor's copy after both steps.
+for (const [name, selector, reader] of [
+  ['plain contenteditable', '#ce', 'plainText'],
+  ['Draft.js (X)', '#draft .public-DraftEditor-content', 'draftText'],
+  ['Slate (Discord)', '#slate', 'slateText'],
+  ['ProseMirror (ChatGPT, Jira)', '#prosemirror .ProseMirror', 'proseMirrorText'],
+  ['Quill (Slack)', '#quill .ql-editor', 'quillText'],
+] as const satisfies readonly (readonly [string, string, TextReader])[]) {
+  test(`${name} takes the fix and Backspace still works`, async ({ page }) => {
+    const editorText = () =>
+      page.evaluate((key) => (window as unknown as PageApi).__lp[key](), reader);
+    await page.locator(selector).click();
+    await page.keyboard.type('i has went home');
+    await page.keyboard.press('ControlOrMeta+a');
 
-  await page.locator('#draft .public-DraftEditor-content').click();
-  await page.keyboard.press('End');
-  await page.keyboard.press('Backspace');
-  await expect.poll(draftText).toBe('I went home');
-});
+    expect(await captureText(page, false)).toBe('i has went home');
+    await page.locator('#outside').click();
+    expect(await apply(page, 'I went home.')).toEqual({ ok: true });
+    await expect.poll(editorText).toBe('I went home.');
 
-test('Slate updates its value and Backspace still works', async ({ page }) => {
-  await page.locator('#slate').click();
-  await page.keyboard.type('i has went home');
-  await page.keyboard.press('ControlOrMeta+a');
-
-  expect(await captureText(page, false)).toBe('i has went home');
-  await page.locator('#outside').click();
-  expect(await apply(page, 'I went home.')).toEqual({ ok: true });
-  const slateText = () => page.evaluate(() => (window as unknown as PageApi).__lp.slateText());
-  await expect.poll(slateText).toBe('I went home.');
-
-  await page.locator('#slate').click();
-  await page.keyboard.press('End');
-  await page.keyboard.press('Backspace');
-  await expect.poll(slateText).toBe('I went home');
-  await expect(page.locator('#slate')).toHaveText('I went home');
-});
+    await page.locator(selector).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Backspace');
+    await expect.poll(editorText).toBe('I went home');
+    await expect(page.locator(selector)).toHaveText('I went home');
+  });
+}
 
 test('Lexical keeps line breaks and undoes the change', async ({ page }) => {
   const blocks = () => page.evaluate(() => (window as unknown as PageApi).__lp.lexicalBlocks());
@@ -163,6 +162,9 @@ for (const [name, selector] of [
   ['Lexical', '#lexical'],
   ['Draft.js', '#draft .public-DraftEditor-content'],
   ['Slate', '#slate'],
+  ['ProseMirror', '#prosemirror .ProseMirror'],
+  ['Quill', '#quill .ql-editor'],
+  ['plain contenteditable', '#ce'],
 ] as const) {
   test(`${name} does not paste into another editor during the wait`, async ({ page }) => {
     await page.locator(selector).click();

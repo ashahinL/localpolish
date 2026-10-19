@@ -8,6 +8,13 @@ import { registerRichText } from '@lexical/rich-text';
 import { createEditor as createSlateEditor, Node as SlateNode } from 'slate';
 import { withHistory } from 'slate-history';
 import { Editable, Slate, withReact } from 'slate-react';
+import { EditorState as PmState } from 'prosemirror-state';
+import { EditorView } from 'prosemirror-view';
+import { schema } from 'prosemirror-schema-basic';
+import { keymap } from 'prosemirror-keymap';
+import { baseKeymap } from 'prosemirror-commands';
+import { history, redo, undo } from 'prosemirror-history';
+import Quill from 'quill';
 import { applyReplacement, captureTarget } from '../../../src/content/editable.ts';
 import { createButton } from '../../../src/content/button.ts';
 import { createController } from '../../../src/content/controller.ts';
@@ -130,6 +137,18 @@ lexical.setRootElement(document.getElementById('lexical'));
 registerRichText(lexical);
 registerHistory(lexical, createEmptyHistoryState(), 0);
 
+// ChatGPT, Claude.ai, Jira and Confluence use ProseMirror (some through Tiptap).
+const proseMirror = new EditorView(document.getElementById('prosemirror'), {
+  state: PmState.create({
+    schema,
+    plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap)],
+  }),
+  attributes: { spellcheck: 'true' },
+});
+
+// Slack's composer is built on Quill.
+const quill = new Quill('#quill');
+
 document.getElementById('other').addEventListener('paste', (event) => {
   event.preventDefault();
   document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
@@ -143,6 +162,10 @@ function DraftBox() {
     applyReplacement,
     draftText: () => editorState.getCurrentContent().getPlainText(),
     slateText: () => slate.children.map((block) => SlateNode.string(block)).join('\n'),
+    proseMirrorText: () =>
+      proseMirror.state.doc.textBetween(0, proseMirror.state.doc.content.size, '\n'),
+    quillText: () => quill.getText().replace(/\n$/, ''),
+    plainText: () => document.getElementById('ce').innerText.trim(),
     lexicalBlocks: () =>
       lexical.getEditorState().read(() =>
         $getRoot()

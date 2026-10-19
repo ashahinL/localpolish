@@ -35,7 +35,7 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **Fixes**
 
-- Discord (Slate): Accept now updates the editor itself, so Backspace and editing keep working afterwards. The fixture page has a Slate editor to test it.
+- Accept pastes into every rich text box first, so editors that keep their own copy of the text (Discord, X, Facebook, Slack, ChatGPT and others) stay in sync and Backspace keeps working. Plain boxes fall back to typing the text in. Tests cover plain, Lexical, Draft.js, Slate, ProseMirror and Quill boxes.
 
 - The options idle checkbox sits beside its label and no longer stretches across its column (T19c).
 

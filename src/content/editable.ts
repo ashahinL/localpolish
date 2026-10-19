@@ -218,37 +218,29 @@ async function applyRich(
   }
   const before = normalize(root.innerText);
 
-  // Lexical (Facebook) drops the line breaks from insertText but splits pasted text into paragraphs.
-  // insertText also drops Draft.js's (X) leaf spans, and Slate (Discord) never sees it, so its
-  // value keeps the old text. Either way Backspace stops working.
-  if (
-    root.dataset.lexicalEditor === 'true' ||
-    root.dataset.slateEditor === 'true' ||
-    root.closest('.DraftEditor-root')
-  ) {
-    // These editors read the new selection on the next selectionchange. Slate throttles it to 100ms.
-    await waitForRender(root.dataset.slateEditor === 'true' ? 150 : 50);
-    return paste(root, selection, text, before, target.text);
-  }
+  // Editors that keep their own copy of the text (Lexical, Draft.js, Slate, ProseMirror, Quill)
+  // all handle paste themselves. insertText changes only the page, so their copy goes stale and
+  // Backspace stops working. Paste first, and insert only when nothing handled the paste.
+  // Slate reads the new selection on a selectionchange throttled to 100ms.
+  await waitForRender(150);
+  const pasted = await paste(root, selection, text, before, target.text);
+  if (pasted) return pasted;
 
-  const inserted = document.execCommand('insertText', false, text);
+  document.execCommand('insertText', false, text);
   await waitForRender();
-  if (replaced(root, before, text, target.text)) return { ok: true };
-
-  // A true result means the page already ran the command. Pasting would insert twice.
-  if (inserted) return { ok: false, reason: 'rejected' };
-  selection.removeAllRanges();
-  selection.addRange(range);
-  return paste(root, selection, text, before, target.text);
+  return replaced(root, before, text, target.text)
+    ? { ok: true }
+    : { ok: false, reason: 'rejected' };
 }
 
+/** The paste result, or null when no page script handled the paste. */
 async function paste(
   root: HTMLElement,
   selection: Selection,
   text: string,
   before: string,
   original: string,
-): Promise<ApplyResult> {
+): Promise<ApplyResult | null> {
   if (!root.contains(selection.anchorNode) || !root.contains(selection.focusNode)) {
     return { ok: false, reason: 'changed' };
   }
@@ -260,13 +252,10 @@ async function paste(
   if (!anchorEl) return { ok: false, reason: 'rejected' };
   const clipboardData = new DataTransfer();
   clipboardData.setData('text/plain', text);
-  anchorEl.dispatchEvent(
-    new ClipboardEvent('paste', {
-      clipboardData,
-      bubbles: true,
-      cancelable: true,
-    }),
-  );
+  const event = new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true });
+  anchorEl.dispatchEvent(event);
+  // A made-up paste event has no default action, so a field nothing handled stays as it was.
+  if (!event.defaultPrevented) return null;
   await waitForRender();
   return replaced(root, before, text, original) ? { ok: true } : { ok: false, reason: 'rejected' };
 }
