@@ -35,6 +35,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **Fixes**
 
+- The options idle checkbox sits beside its label and no longer stretches across its column (T19c).
+
 - Sites labels now cover both the button and Fix while I type.
 
 - Accept stops before pasting if the selection moves to another editor or the selected text changes during the wait (A04).

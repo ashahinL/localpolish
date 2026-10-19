@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: T15-T18 are complete and verified. T19 is in progress after the owner requested LocalPolish per-model request stats on 19 October 2026. Manual release checks remain.
+Status: T15-T19 are implemented and locally verified. T19 adds the owner-requested per-model request stats and fixes the options checkbox alignment. The owner's diff review and manual release checks remain.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -83,7 +83,7 @@ Changes to the plan, compared with Sol's draft:
 
 - [x] **T19a. Record local per-provider/model request attempts.** Sol medium. Brief: [T19a-usage-tracking.md](../briefs/T19a-usage-tracking.md). This includes connection tests and failed attempts. Cached answers do not count. Earlier usage cannot be recovered.
 - [x] **T19b. Show Usage in Home and options.** Art lane, Claude Opus. Brief: [T19b-usage-ui.md](../briefs/T19b-usage-ui.md). Depends on T19a's data contract. No draft history, keys, or site details are stored in stats.
-- [ ] **T19c. Align the options idle checkbox.** Small inline fix. Brief: [T19c-checkbox-layout.md](../briefs/T19c-checkbox-layout.md). Owner reported the stretched checkbox on 19 October 2026.
+- [x] **T19c. Align the options idle checkbox.** Small inline fix. Brief: [T19c-checkbox-layout.md](../briefs/T19c-checkbox-layout.md). Owner reported the stretched checkbox on 19 October 2026.
 
 ## Backlog (not in this release)
 
@@ -152,3 +152,5 @@ Changes to the plan, compared with Sol's draft:
 - T19a: added local all-time attempt counts by provider and exact selected model, with a serialized writer and recovery after storage failures. Only the background records usage. Already-aborted requests do not count; cancellation during the count save still counts but does not start the provider. Both provider timeouts start after the count save. Counts saturate at the largest safe integer. Added a built-extension regression for manual requests, cached mode answers, retry, model separation, and trusted-page persistence. Updated privacy and changelog. Passed `npx vitest run src/core/usage.test.ts src/background/rewrite.test.ts src/background/entrypoint.test.ts` with 35 tests across 3 files, `npm run lint`, `npm run typecheck`, and changed-file Prettier checks. Integration gates passed with T19b and T19c present: lint, typecheck, 302 unit tests, 2 platform-specific skips, formatting, build, and 126 browser tests. The real counter and content-world privacy regressions passed. The implementer used no real provider, rewrite CLI, or bridge install. The orchestrator ran the browser checks and owns the commit. Version unchanged. Reusable skill: none.
 
 - T19b: Home and options show provider, exact selected model, request count, and a total. An empty model is labelled Provider default. The shared hook refreshes after usage changes and shows read errors rather than a false zero. All integration gates passed: 302 unit tests, 2 platform-specific skips, and 126 browser tests, including 8 usage-display regressions. Options and popup were checked in light and dark mode at 360 pixels, with a long custom model name. These screenshots use seeded test counts. Lint, typecheck, formatting, and build passed. Reusable skill: none.
+
+- T19c: reproduced the checkbox stretched to 312 pixels by the shared input rule. Checkboxes are now excluded from text-input styling, and the 16-pixel checkbox sits beside its clickable label with an accessible description. Checked the built Defaults card at desktop and 360-pixel widths in light and dark mode. Existing toggle-save browser tests pass both stored states and both save directions. The shared integration gates passed, with 302 unit tests, 2 platform-specific skips, and 126 browser tests. Version unchanged. This small fix was done inline; no reusable skill was needed.

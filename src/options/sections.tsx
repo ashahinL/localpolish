@@ -133,18 +133,21 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
             ))}
           </select>
         </Field>
-        <Field
-          id="idle-fix"
-          label="Fix while I type"
-          help="Fixes a field after a 3 s pause. Off: the button and the shortcut still work."
-        >
-          <input
-            id="idle-fix"
-            type="checkbox"
-            checked={settings.idleFix}
-            onChange={() => change({ idleFix: !settings.idleFix })}
-          />
-        </Field>
+        <div class="field">
+          <label class="check-option" for="idle-fix">
+            <input
+              id="idle-fix"
+              type="checkbox"
+              checked={settings.idleFix}
+              aria-describedby="idle-fix-help"
+              onChange={() => change({ idleFix: !settings.idleFix })}
+            />
+            <span>Fix while I type</span>
+          </label>
+          <p class="help" id="idle-fix-help">
+            Fixes a field after a 3 s pause. Off: the button and the shortcut still work.
+          </p>
+        </div>
       </div>
     </section>
   );

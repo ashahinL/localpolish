@@ -176,6 +176,21 @@ p {
   font-weight: 500;
 }
 
+.check-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+
+.check-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -201,7 +216,7 @@ button {
   color: inherit;
 }
 
-input,
+input:not([type='checkbox']),
 select,
 textarea {
   width: 100%;
