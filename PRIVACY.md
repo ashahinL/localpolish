@@ -1,6 +1,6 @@
 # Privacy policy — LocalPolish
 
-_Effective 18 October 2026._
+_Effective 19 October 2026._
 
 LocalPolish is a browser extension for Chrome. It talks to no server of
 ours, has no account and no analytics. Your text goes to the AI provider you
@@ -15,7 +15,11 @@ browser, on your device:
   mode, and whether Fix while I type is on;
 - the API keys and base URL you enter for the OpenAI-compatible and Anthropic
   providers;
-- the list of sites where LocalPolish stays hidden.
+- the list of sites where LocalPolish stays hidden;
+- all-time request attempt counts for each provider and selected model. These
+  include failed requests, retries, and Test connection. Cached answers do not count.
+  An attempt starts before saving its count, so cancellation during that save
+  still counts even if the provider has not been called.
 
 Chrome does not sync this storage to your other devices, and LocalPolish
 does not log it. Removing the extension deletes all of it.
@@ -24,7 +28,9 @@ Only trusted extension contexts, including the background, toolbar popup,
 and options page, can read this storage. Content scripts receive only the
 site list, idle Fix switch, and default mode. They cannot read stored API keys.
 
-LocalPolish writes no text or answer to disk. While a tab is open, Fix while
+Usage stores only provider names, selected model names, and request counts. It
+stores no prompts, answers, keys, sites, URLs, dates, or per-request logs.
+LocalPolish keeps no draft history and writes no text or answer to disk. While a tab is open, Fix while
 I type keeps the last text it sent from each field and the answer in that
 tab's memory, so the marker and the popup can reuse them. Closing or reloading
 the tab clears them. What each CLI keeps is under "What it sends, and where"
@@ -83,7 +89,7 @@ field only when you press **Accept**, or accept a fix.
 
 | Permission        | Used for                                                                                                                          |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`         | Keeping the settings, keys and site list above on your device.                                                                    |
+| `storage`         | Keeping settings, keys, site lists, and request counts on your device.                                                            |
 | `nativeMessaging` | Talking to the bridge, `com.localpolish.bridge`, which runs the CLI you picked. Chrome lets only this extension's ID use it.      |
 | `<all_urls>`      | Showing the button and Fix while I type in text fields on any site, and reaching the API base URL you set, which can be any host. |
 

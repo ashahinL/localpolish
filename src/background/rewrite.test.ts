@@ -1,9 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
+import { recordUsage } from '../core/usage';
 import { BridgeMissingError } from './providers/cli';
 import { REWRITE_TIMEOUT_MS, runRewrite, testConnection } from './rewrite';
 import { type StreamFn } from './providers/types';
+
+vi.mock('../core/usage', () => ({ recordUsage: vi.fn() }));
+beforeEach(() => vi.mocked(recordUsage).mockReset().mockResolvedValue(undefined));
 
 function settings(
   patch: Partial<Omit<Settings, 'models'>> & { models?: Partial<Settings['models']> } = {},
@@ -34,6 +38,7 @@ describe('runRewrite', () => {
       new AbortController().signal,
     );
 
+    expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
     expect(events).toEqual([
       { type: 'chunk', text: 'Here is the text:\n' },
       { type: 'chunk', text: 'I went home.' },
@@ -55,6 +60,7 @@ describe('runRewrite', () => {
       new AbortController().signal,
     );
 
+    expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
     expect(events).toEqual([{ type: 'error', message: 'The model is offline.' }]);
   });
 
@@ -80,14 +86,14 @@ describe('runRewrite', () => {
   it('posts nothing when the signal is already aborted', async () => {
     const controller = new AbortController();
     controller.abort();
-    const stream: StreamFn = async () => {
-      throw new Error('socket closed');
-    };
+    const stream = vi.fn<StreamFn>();
     const events: RewriteEvent[] = [];
 
     await runRewrite(request, settings(), stream, (event) => events.push(event), controller.signal);
 
     expect(events).toEqual([]);
+    expect(recordUsage).not.toHaveBeenCalled();
+    expect(stream).not.toHaveBeenCalled();
   });
 
   it('posts a timeout error when the stream is still running after 60 seconds', async () => {
@@ -120,8 +126,13 @@ describe('runRewrite', () => {
 
   it('posts nothing when the caller aborts while the stream is running', async () => {
     const controller = new AbortController();
+    let started!: () => void;
+    const providerStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     const stream: StreamFn = (_prompt, _settings, _onText, signal) =>
       new Promise((_resolve, reject) => {
+        started();
         signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
       });
     const events: RewriteEvent[] = [];
@@ -133,6 +144,7 @@ describe('runRewrite', () => {
       controller.signal,
     );
 
+    await providerStarted;
     controller.abort();
     await pending;
     expect(events).toEqual([]);
@@ -165,6 +177,7 @@ describe('testConnection', () => {
 
     const result = await testConnection(settings(), stream);
 
+    expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.sample).toBe('This is a test sentence.');
@@ -180,6 +193,7 @@ describe('testConnection', () => {
       ok: false,
       message: 'no key',
     });
+    expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
   });
 
   it('fails when the provider does not answer within 45 seconds', async () => {
@@ -196,4 +210,69 @@ describe('testConnection', () => {
       vi.useRealTimers();
     }
   });
+});
+
+it('does not start a provider cancelled during the count save or leave a timeout', async () => {
+  vi.useFakeTimers();
+  try {
+    let saved!: () => void;
+    vi.mocked(recordUsage).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          saved = resolve;
+        }),
+    );
+    const controller = new AbortController();
+    const stream = vi.fn<StreamFn>();
+    const post = vi.fn();
+    const pending = runRewrite(request, settings(), stream, post, controller.signal);
+    controller.abort();
+    saved();
+    await pending;
+    expect(recordUsage).toHaveBeenCalledTimes(1);
+    expect(stream).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('still rewrites if saving usage fails', async () => {
+  vi.mocked(recordUsage).mockRejectedValueOnce(new Error('disk full'));
+  const post = vi.fn();
+  await runRewrite(
+    request,
+    settings(),
+    async (_prompt, _settings, onText) => {
+      onText('I went home.');
+    },
+    post,
+    new AbortController().signal,
+  );
+  expect(post).toHaveBeenLastCalledWith({ type: 'done', text: 'I went home.' });
+});
+
+it('starts the connection timeout only when the provider starts', async () => {
+  vi.useFakeTimers();
+  try {
+    let saved!: () => void;
+    vi.mocked(recordUsage).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          saved = resolve;
+        }),
+    );
+    const stream = vi.fn<StreamFn>(() => new Promise(() => undefined));
+    const pending = testConnection(settings(), stream);
+    await vi.advanceTimersByTimeAsync(90_000);
+    expect(stream).not.toHaveBeenCalled();
+    saved();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stream).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(45_000);
+    await expect(pending).resolves.toEqual({ ok: false, message: 'Timed out after 45 seconds.' });
+  } finally {
+    vi.useRealTimers();
+  }
 });

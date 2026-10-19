@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: implementation complete. All 13 tasks are verified and committed. All local gates, both dependency audits, and CI at the implementation commit pass. The owner's diff review and manual release checks remain.
+Status: T15-T18 are complete and verified. T19 is in progress after the owner requested LocalPolish per-model request stats on 19 October 2026. Manual release checks remain.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -79,6 +79,12 @@ Changes to the plan, compared with Sol's draft:
 - [x] **T18b. First-run setup** (F01). Art lane (Claude Opus). Brief: [T18b-first-run.md](../briefs/T18b-first-run.md). Fix while I type stays on by default (owner, 18 October 2026). Depends on: T16b.
 - [x] **T18c. Keep API keys out of content scripts** (F03). Sol high. Brief: [T18c-key-isolation.md](../briefs/T18c-key-isolation.md). Depends on: T15a, T15b, T16a.
 
+## T19: usage stats (owner request, 19 October 2026)
+
+- [x] **T19a. Record local per-provider/model request attempts.** Sol medium. Brief: [T19a-usage-tracking.md](../briefs/T19a-usage-tracking.md). This includes connection tests and failed attempts. Cached answers do not count. Earlier usage cannot be recovered.
+- [ ] **T19b. Show Usage in Home and options.** Art lane, Claude Opus. Brief: [T19b-usage-ui.md](../briefs/T19b-usage-ui.md). Depends on T19a's data contract. No draft history, keys, or site details are stored in stats.
+- [ ] **T19c. Align the options idle checkbox.** Small inline fix. Brief: [T19c-checkbox-layout.md](../briefs/T19c-checkbox-layout.md). Owner reported the stretched checkbox on 19 October 2026.
+
 ## Backlog (not in this release)
 
 | Item                    | Work                                                                                                             |
@@ -141,3 +147,6 @@ Changes to the plan, compared with Sol's draft:
 - Fleet skill reports: all delegates said none, except T18b suggested a note for sandboxed worktrees with linked node_modules, using wxt prepare and vitest --configLoader runner. The orchestrator agrees this is a short operating note, not enough for a new skill.
 
 - Final implementation verification at `f1b6c4c`: [full CI](https://github.com/ashahinL/localpolish/actions/runs/39158863446) and [macOS, Windows, and Node 22](https://github.com/ashahinL/localpolish/actions/runs/39158871142) passed. All task worktrees are archived, the dev server is stopped, and the working tree is clean. The release checklist stays open for the owner's manual provider checks, release version, and published-package verification.
+
+
+- T19a: added local all-time attempt counts by provider and exact selected model, with a serialized writer and recovery after storage failures. Only the background records usage. Already-aborted requests do not count; cancellation during the count save still counts but does not start the provider. Both provider timeouts start after the count save. Counts saturate at the largest safe integer. Added a built-extension regression for manual requests, cached mode answers, retry, model separation, and trusted-page persistence. Updated privacy and changelog. Passed `npx vitest run src/core/usage.test.ts src/background/rewrite.test.ts src/background/entrypoint.test.ts` with 35 tests across 3 files, `npm run lint`, `npm run typecheck`, and changed-file Prettier checks. Integration gates passed with T19b and T19c present: lint, typecheck, 302 unit tests, 2 platform-specific skips, formatting, build, and 126 browser tests. The real counter and content-world privacy regressions passed. The implementer used no real provider, rewrite CLI, or bridge install. The orchestrator ran the browser checks and owns the commit. Version unchanged. Reusable skill: none.

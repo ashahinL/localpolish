@@ -162,6 +162,76 @@ test('textarea via the floating button', async ({ page, mock }) => {
   await expect(page.locator('#ta')).toHaveValue(REWRITE);
 });
 
+test('local usage counts provider attempts, skips cached answers, and persists across extension pages', async ({
+  page,
+  mock,
+  sw,
+  extensionContext,
+}) => {
+  await writeSettings(sw, `${mock.url}/v1`, { idleFix: false });
+  await sw.evaluate(() => {
+    const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
+    return chrome.storage.local.set({ usage: [] });
+  });
+  await openFixture(page);
+  await openRewrite(page, '#ta');
+  expect(mock.requests).toHaveLength(1);
+
+  await page.getByRole('button', { name: 'Shorter', exact: true }).click();
+  await expect.poll(() => mock.requests.length).toBe(2);
+  await expect(page.getByRole('button', { name: 'Accept' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Fix', exact: true }).click();
+  await expect.poll(() => shownRewrite(page)).toBe(REWRITE);
+  expect(mock.requests).toHaveLength(2);
+
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect.poll(() => mock.requests.length).toBe(3);
+  await expect(page.getByRole('button', { name: 'Accept' })).toBeEnabled();
+  expect(mock.requests.map((request) => request.body.model)).toEqual([
+    'mock-model',
+    'mock-model',
+    'mock-model',
+  ]);
+  const expected = [{ provider: 'openai-compatible', model: 'mock-model', requests: 3 }];
+  const readUsage = () =>
+    sw.evaluate(async () => {
+      const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
+      return (await chrome.storage.local.get('usage')).usage;
+    });
+  expect(await readUsage()).toEqual(expected);
+
+  await page.keyboard.press('Escape');
+  await writeSettings(sw, `${mock.url}/v1`, {
+    idleFix: false,
+    models: { 'openai-compatible': 'other-mock-model' },
+  });
+  await sendOpenPopup(page, sw, '#ta');
+  await expect.poll(() => mock.requests.length).toBe(4);
+  await expect(page.getByRole('button', { name: 'Accept' })).toBeEnabled();
+  expect(mock.requests[3]?.body.model).toBe('other-mock-model');
+  expected.push({ provider: 'openai-compatible', model: 'other-mock-model', requests: 1 });
+  expect(await readUsage()).toEqual(expected);
+  expect(expected.reduce((sum, row) => sum + row.requests, 0)).toBe(mock.requests.length);
+
+  const trustedUrl = `chrome-extension://${EXTENSION_ID}/options.html`;
+  const first = await extensionContext.newPage();
+  await first.goto(trustedUrl);
+  await first.close();
+  const reopened = await extensionContext.newPage();
+  try {
+    await reopened.goto(trustedUrl);
+    expect(
+      await reopened.evaluate(async () => {
+        const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
+        return (await chrome.storage.local.get('usage')).usage;
+      }),
+    ).toEqual(expected);
+    expect(mock.requests).toHaveLength(4);
+  } finally {
+    await reopened.close();
+  }
+});
+
 test('content scripts cannot read local storage or receive stored keys', async ({
   page,
   mock,
