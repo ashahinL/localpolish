@@ -66,7 +66,8 @@
     "S02 early disabled-idle exit",
     "S03 cancellable connection tests",
     "S04 filter irrelevant settings broadcasts",
-    "S05 actual-path runtime baseline and CI build duplication"
+    "S05 actual-path runtime baseline and CI build duplication",
+    "S06 follow-up: inherited Codex prompt/context overhead, historical input and reasoning corrections"
   ],
   "bundle": [
     {
@@ -692,5 +693,371 @@
   "reusableSkill": {
     "grok": "none",
     "orchestrator": "none; a project runtime benchmark is the useful next reusable artifact"
+  },
+  "codexInputFollowUp": {
+    "dateCairo": "2026-10-20",
+    "sourceDateCairo": "2026-10-17",
+    "method": "Recount saved JSONL usage. Current CLI debug prompt-input used auth-free temporary CODEX_HOME, minimal environment, local catalog, project feature flags and actual Fix instruction. No inference requests.",
+    "historical": {
+      "lunaNone": {
+        "runs": 20,
+        "inputTokens": {
+          "min": 13024,
+          "max": 13052,
+          "mean": 13040.8
+        },
+        "reasoningTokens": {
+          "zeroRuns": 20,
+          "nonzeroValues": []
+        }
+      },
+      "solLow": {
+        "runs": 20,
+        "inputTokens": {
+          "min": 13718,
+          "max": 13744,
+          "mean": 13733.4
+        },
+        "reasoningTokens": {
+          "zeroRuns": 16,
+          "nonzeroValues": [
+            17,
+            54,
+            27,
+            33
+          ]
+        }
+      },
+      "lunaNoneLowMedium": {
+        "runs": 63,
+        "inputTokens": {
+          "min": 9358,
+          "max": 9398,
+          "mean": 9378.492063492064
+        },
+        "reasoningTokens": {
+          "zeroRuns": 63,
+          "nonzeroValues": []
+        }
+      },
+      "lunaEffortGroups": [
+        {
+          "label": "GPT-6 Luna none (v2 prompt)",
+          "runs": 21,
+          "inputTokens": {
+            "min": 9358,
+            "max": 9396,
+            "mean": 9378.142857142857
+          },
+          "reasoningTokens": {
+            "zeroRuns": 21,
+            "nonzeroValues": []
+          }
+        },
+        {
+          "label": "GPT-6 Luna low (v2 prompt)",
+          "runs": 21,
+          "inputTokens": {
+            "min": 9358,
+            "max": 9398,
+            "mean": 9378.714285714286
+          },
+          "reasoningTokens": {
+            "zeroRuns": 21,
+            "nonzeroValues": []
+          }
+        },
+        {
+          "label": "GPT-6 Luna medium (v2 prompt)",
+          "runs": 21,
+          "inputTokens": {
+            "min": 9358,
+            "max": 9397,
+            "mean": 9378.619047619048
+          },
+          "reasoningTokens": {
+            "zeroRuns": 21,
+            "nonzeroValues": []
+          }
+        }
+      ],
+      "basePromptProbe": [
+        {
+          "variant": "Luna none",
+          "input": "past tense",
+          "inputTokens": 12851
+        },
+        {
+          "variant": "Luna none + own base prompt",
+          "input": "past tense",
+          "inputTokens": 9359
+        },
+        {
+          "variant": "Luna none",
+          "input": "tokens",
+          "inputTokens": 12861
+        },
+        {
+          "variant": "Luna none + own base prompt",
+          "input": "tokens",
+          "inputTokens": 9377
+        },
+        {
+          "variant": "Luna none",
+          "input": "email",
+          "inputTokens": 12860
+        },
+        {
+          "variant": "Luna none + own base prompt",
+          "input": "email",
+          "inputTokens": 9372
+        },
+        {
+          "variant": "Luna none",
+          "input": "past tense",
+          "inputTokens": 12849
+        },
+        {
+          "variant": "Luna none + own base prompt",
+          "input": "past tense",
+          "inputTokens": 9357
+        },
+        {
+          "variant": "Luna none",
+          "input": "tokens",
+          "inputTokens": 12861
+        },
+        {
+          "variant": "Luna none + own base prompt",
+          "input": "tokens",
+          "inputTokens": 9373
+        },
+        {
+          "variant": "Luna none",
+          "input": "email",
+          "inputTokens": 12862
+        },
+        {
+          "variant": "Luna none + own base prompt",
+          "input": "email",
+          "inputTokens": 9372
+        }
+      ]
+    },
+    "currentPromptComponents": [
+      {
+        "model": "gpt-6-luna",
+        "source": "codex0.162.1 debug prompt-input; no inference; clean env and temporary auth-free CODEX_HOME; real Fix prompt and bridge feature flags",
+        "writingPromptCharacters": 391,
+        "messages": [
+          {
+            "index": 0,
+            "role": "developer",
+            "characters": 18934,
+            "skillCatalogCharacters": 13951,
+            "skillNames": [
+              "imagegen",
+              "openai-docs",
+              "skill-creator",
+              "skill-installer",
+              "bro",
+              "claude-delegate",
+              "clean-code-guard",
+              "codex-delegate",
+              "create-pr",
+              "cursor-delegate",
+              "debate-review",
+              "delegate-setup",
+              "docs-guard",
+              "find-skills",
+              "frontend-design",
+              "grok-delegate",
+              "how",
+              "implement-plan",
+              "no-comments",
+              "opencode-delegate",
+              "principle-fix-root-causes",
+              "principle-laziness-protocol",
+              "principle-prove-it-works",
+              "principle-subtract-before-you-add",
+              "principle-test-behavior-not-implementation",
+              "teach",
+              "technical-writing",
+              "test-guard",
+              "unattended-windows",
+              "unslop",
+              "weekly-writeup",
+              "why"
+            ],
+            "headings": [
+              "<skills_instructions>",
+              "## Skills",
+              "### Skill roots",
+              "### Available skills",
+              "<permissions instructions>",
+              "# Escalation Requests",
+              "## How to request escalation",
+              "## When to request escalation",
+              "## prefix_rule guidance",
+              "### Banned prefix_rules ",
+              "### Examples",
+              "<collaboration_mode># Collaboration Mode: Default",
+              "## request_user_input availability"
+            ]
+          },
+          {
+            "index": 1,
+            "role": "developer",
+            "characters": 2400,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<multi_agent_role>You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.",
+              "<payload text>"
+            ]
+          },
+          {
+            "index": 2,
+            "role": "developer",
+            "characters": 271,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>"
+            ]
+          },
+          {
+            "index": 3,
+            "role": "user",
+            "characters": 573,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<environment_context>"
+            ]
+          },
+          {
+            "index": 4,
+            "role": "user",
+            "characters": 27,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<text>i has an apple</text>"
+            ]
+          }
+        ]
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "source": "codex0.162.1 debug prompt-input; no inference; clean env and temporary auth-free CODEX_HOME; real Fix prompt and bridge feature flags",
+        "writingPromptCharacters": 391,
+        "messages": [
+          {
+            "index": 0,
+            "role": "developer",
+            "characters": 18934,
+            "skillCatalogCharacters": 13951,
+            "skillNames": [
+              "imagegen",
+              "openai-docs",
+              "skill-creator",
+              "skill-installer",
+              "bro",
+              "claude-delegate",
+              "clean-code-guard",
+              "codex-delegate",
+              "create-pr",
+              "cursor-delegate",
+              "debate-review",
+              "delegate-setup",
+              "docs-guard",
+              "find-skills",
+              "frontend-design",
+              "grok-delegate",
+              "how",
+              "implement-plan",
+              "no-comments",
+              "opencode-delegate",
+              "principle-fix-root-causes",
+              "principle-laziness-protocol",
+              "principle-prove-it-works",
+              "principle-subtract-before-you-add",
+              "principle-test-behavior-not-implementation",
+              "teach",
+              "technical-writing",
+              "test-guard",
+              "unattended-windows",
+              "unslop",
+              "weekly-writeup",
+              "why"
+            ],
+            "headings": [
+              "<skills_instructions>",
+              "## Skills",
+              "### Skill roots",
+              "### Available skills",
+              "<permissions instructions>",
+              "# Escalation Requests",
+              "## How to request escalation",
+              "## When to request escalation",
+              "## prefix_rule guidance",
+              "### Banned prefix_rules ",
+              "### Examples",
+              "<collaboration_mode># Collaboration Mode: Default",
+              "## request_user_input availability"
+            ]
+          },
+          {
+            "index": 1,
+            "role": "developer",
+            "characters": 2400,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<multi_agent_role>You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.",
+              "<payload text>"
+            ]
+          },
+          {
+            "index": 2,
+            "role": "developer",
+            "characters": 271,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>"
+            ]
+          },
+          {
+            "index": 3,
+            "role": "user",
+            "characters": 573,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<environment_context>"
+            ]
+          },
+          {
+            "index": 4,
+            "role": "user",
+            "characters": 27,
+            "skillCatalogCharacters": 0,
+            "skillNames": [],
+            "headings": [
+              "<text>i has an apple</text>"
+            ]
+          }
+        ]
+      }
+    ],
+    "limits": [
+      "No fresh inference token count was measured.",
+      "debug prompt-input shows input messages; it is not a complete wire request including separate base instructions and tool schemas.",
+      "Characters are not tokens.",
+      "The 32-skills and multi-agent disable experiment did not remove those blocks in this debug rendering, so a removal method is not yet proven."
+    ],
+    "localArtifacts": "/Users/ashahin/.codex/visualizations/2026/10/20/localpolish-token-review"
   }
 }

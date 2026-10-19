@@ -210,6 +210,32 @@ There is also a small CI-only saving: `.github/workflows/test.yml:29` builds, th
 
 Done means before/after reports measure the actual ready event, can run without paid calls, and are stored as CI artifacts. Keep model-quality benchmarks and runtime benchmarks clearly separate.
 
+### S06. Follow-up: inspect and reduce Codex's inherited context
+
+**Include as a request-speed investigation. Priority: high. Effort: medium.**
+
+The owner's follow-up asked whether Luna and Sol use zero reasoning tokens but start with about 13,000 input tokens. Recounting the October 17 raw logs confirms the large historical input, but not the whole reasoning claim:
+
+| Saved setup | Runs | Mean input tokens | Reported reasoning |
+| --- | --- | --- | --- |
+| Luna, none, before base-prompt replacement | 20 | 13,041 | Zero in all 20. |
+| GPT-6.1 Sol, low, before replacement | 20 | 13,733 | Zero in 16. The other four used 17, 54, 27, and 33 tokens. |
+| Luna, none, low, and medium, after replacement | 63, 21 per effort | 9,378 | Zero in all 63. |
+
+Sources: `bench/results/2026-10-17-win-round0.jsonl`, `2026-10-17-win-rounds1-3.jsonl`, and `2026-10-17-mac-luna-effort.jsonl`. These logs do not establish Sol's behavior at medium or none. GPT-6.1 Sol does not support none in the [official reasoning documentation](https://developers.openai.com/api/docs/guides/reasoning). Zero reported reasoning on simple requests does not mean a supported effort always produces zero reasoning.
+
+These are input-context tokens. Codex adds coding-agent context around the writing task. The separate six-pair probe in `2026-10-17-mac-probe.jsonl` showed about 12,857 input tokens with the default base prompt and 9,368 with our replacement. The roughly 3,489-token reduction is already reflected in `bridge/host.mjs:123` and `bridge/lib.mjs:163`. Calling the whole 13k the built-in base prompt was too broad.
+
+An offline `codex debug prompt-input` check with CLI 0.162.1 used an auth-free temporary home, a minimal environment, a local model catalog, the project's disabled-feature arguments, and its actual Fix instruction. For both selected models it still rendered a 13,951-character skill-catalog block, permission and collaboration instructions, a 2,400-character agent-role block, a 271-character agent-mode block, and environment information. Our Fix instruction is 391 characters. These character counts are not token counts. The debug command omits separate base instructions and tool schemas, so it does not provide a complete token breakdown of the wire request.
+
+Why the extra context exists: the bridge starts a general coding agent for each rewrite. Replacing its base instruction does not necessarily remove its other generated context. The exact historical 13k request bodies were not saved. Current offline rendering identifies real extra context, but does not prove the precise composition of those older requests or a fresh current input-token total.
+
+Inspect the actual `exec` request against a local capture endpoint before selecting a removal method. Test supported controls for skill discovery, agent instructions, and unused tool definitions in isolation. A diagnostic attempt to disable the 32 listed skills and multi-agent support did not remove their blocks from the debug rendering; those flags are not yet a verified fix. Do not change the user's global skills or coding fleet. Keep any reduced configuration confined to LocalPolish's bridge process.
+
+Also separate cached from uncached input. One saved Luna request reported 13,040 input tokens with 12,032 cached. Cached tokens are part of that input total, not additional tokens. Do not infer request latency directly from the total. See the [official cache accounting](https://developers.openai.com/api/docs/guides/prompt-caching).
+
+Done means a captured request contains only the context required for rewriting, no unintended global skill or agent catalog, and unchanged tool restrictions and text quality. Measure actual input tokens and ready-result latency on the same inputs before claiming a speedup. No new inference calls were made for this confirmation. Full recounts and debug summaries are in the evidence file under `codexInputFollowUp`.
+
 ## Proposed next-release order
 
 Each row is a separate implementation task and commit. None is started. Small follow-ups stay within their owning task.
@@ -217,6 +243,7 @@ Each row is a separate implementation task and commit. None is started. Small fo
 | Order | Work | Required proof |
 | --- | --- | --- |
 | P00 | S05: portable offline runtime baseline and performance budgets | Reproduce the current work counts and ready-event timings. Preserve raw results. |
+| P11 | S06: inspect and reduce Codex request context, added after the owner's token-count question | Capture the actual request, verify a LocalPolish-only reduction, then measure tokens, latency, and quality. |
 | P01 | S01: resource limits and fragmented buffers | Bounded bytes and work, valid split text preserved, clean aborts, no silent truncation. |
 | P02 | S02: early disabled-idle exit | Zero new idle timers when off or blocked; manual tools still work. |
 | P03 | G01: provider-gated, shared, parallel health checks | Zero automatic API probes; one shared CLI probe; force refresh and deadlines work. |

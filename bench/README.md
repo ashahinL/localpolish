@@ -33,7 +33,7 @@ The full table is in `results/2026-10-17-win-report.md`. It has 4 rounds, so 20 
 Findings so far:
 
 - **The bridge sends `done` only when the CLI exits** (`bridge/host.mjs`, `child.on('close')`). Haiku's API time is about 1.6 s. Its answer shows at about 1.6 s, but the process runs 2 to 3 s more before it exits. The diff and Accept wait for that exit.
-- **Codex sends about 13,000 input tokens for a one-line fix.** That is its built-in prompt. `model_instructions_file` exists in codex 0.162 and may replace it. This is untested.
+- **Early Codex runs used about 13,000 input tokens for a one-line fix.** That total includes the base prompt and other coding-agent context. It is not all the base prompt. The later own-base-prompt probe below reduced Luna to about 9,400 input tokens. See the [follow-up context investigation](../docs/audits/performance-1.1.0.md#s06-follow-up-inspect-and-reduce-codexs-inherited-context).
 - **Grok sends about 9,600 to 10,800 input tokens** and costs about $0.007 per fix, about 30 times Haiku. Grok loads `~/.claude` rules. `GROK_CLAUDE_RULES_ENABLED=0` and the other `GROK_{CLAUDE,CODEX,CURSOR}_{AGENTS,HOOKS,MCPS,RULES,SKILLS,SESSIONS}_ENABLED` switches are in the binary. This is untested.
 - **Haiku missed the email test 4 of 4 times.** It left "hi" lowercase and wrote "reports are". Luna turns the Arabic part of mixed Arabic into Franco-Arabic.
 - Prices: Luna is about $0.10 per 1M input tokens and $0.50 per 1M output. Sol is $2 and $10. These come from secondary sites, not OpenAI.
