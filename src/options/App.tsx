@@ -7,6 +7,7 @@ import {
   SitesSection,
   TestSection,
 } from './sections';
+import { UsageSection } from '../usage/UsageSection';
 import { SettingsContext, useSettings, type SaveStatus } from './useSettings';
 
 const SAVED_VISIBLE_MS = 1500;
@@ -30,6 +31,7 @@ export function App() {
             <BridgeSection />
             <TestSection />
             <DefaultsSection settings={settings} />
+            <UsageSection />
             <SitesSection settings={settings} />
             <ShortcutSection />
           </>

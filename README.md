@@ -205,7 +205,7 @@ To hide LocalPolish on the site you are on, turn off the **Show on** switch for 
 Click the pen nib icon in the toolbar (pin it from the puzzle-piece menu). Every setting is here, and changes save as you make them. A short **Saved** note shows in the header. The gear opens the full options page, which has the same settings.
 
 - **Fix while I type** and **Show on** _this site_ sit above the tabs, so they are always one click away.
-- **Home** shows the provider, model and effort you use, with a status pill (Bridge ready, No bridge, Key saved, No API key or Local server). **Change** jumps to the Provider tab. **Test connection** sends a short sample and shows the answer and how long it took. The default mode is Fix, Rephrase or Shorter.
+- **Home** shows the provider, model and effort you use, with a status pill (Bridge ready, No bridge, Key saved, No API key or Local server). **Change** jumps to the Provider tab. **Test connection** sends a short sample and shows the answer and how long it took. The default mode is Fix, Rephrase or Shorter. **Usage** lists each provider and model you have used, with its request count and a total. The options page shows the same card.
 - **Provider** has the five providers in two groups, _Your subscription · via the bridge_ and _API_. CLI providers have Model and Thinking effort pickers, and the Bridge card with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
 - **Sites** lists the hidden sites, with remove buttons and an Add field. The current host is tagged _This tab_, and **Hide on** _host_ adds it in one click.
 - **About** shows the shortcut, **Change shortcut** (opens `chrome://extensions/shortcuts`), **All options**, a short How it works, and the version.
@@ -312,6 +312,7 @@ Match the message on screen, then do the fix that follows it.
 - Your text goes only to the provider you chose: the CLI on this computer, which sends it on to its own service under your subscription, or the API URL you set.
 - Fix while I type sends a field's text after you pause, only in message fields and never on a site in **Sites**. Turn it off with its switch.
 - Settings and API keys stay in `chrome.storage.local` on this browser. Chrome does not sync them. LocalPolish does not log them.
+- Usage counts stay in `chrome.storage.local` too, under `usage`. Each row is a provider, the model name you picked (empty means the provider default), and a number. No text, answers, keys, sites or dates are saved. A request is any started attempt: failed and cancelled ones and Test connection count, cached answers do not. Counting started with this update, so earlier use cannot be recovered.
 - The bridge runs the CLI in an empty temp folder that is deleted afterwards, with its tools off. Grok can still search X and keeps its session history in `~/.grok`.
 
 The full policy is in [PRIVACY.md](PRIVACY.md). To report a security problem, see [SECURITY.md](SECURITY.md).
@@ -320,7 +321,7 @@ The full policy is in [PRIVACY.md](PRIVACY.md). To report a security problem, se
 
 | Permission        | Why                                                                                                                         |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `storage`         | Keep your settings, API keys and site list on this browser.                                                                 |
+| `storage`         | Keep your settings, API keys, site list and usage counts on this browser.                                                   |
 | `nativeMessaging` | Talk to the bridge, `com.localpolish.bridge`, which runs the CLI you picked.                                                |
 | `<all_urls>`      | Show the button and Fix while I type in text fields on any site, and reach the API base URL you set, which can be any host. |
 

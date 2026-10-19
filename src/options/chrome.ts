@@ -57,8 +57,12 @@ export function openShortcutsPage(): void {
 }
 
 export function onSettingsChanged(cb: () => void): () => void {
+  return onStorageKeyChanged('settings', cb);
+}
+
+export function onStorageKeyChanged(key: string, cb: () => void): () => void {
   const listener: StorageListener = (changes, areaName) => {
-    if (areaName === 'local' && 'settings' in changes) cb();
+    if (areaName === 'local' && key in changes) cb();
   };
   extension().storage.onChanged.addListener(listener);
   return () => extension().storage.onChanged.removeListener(listener);

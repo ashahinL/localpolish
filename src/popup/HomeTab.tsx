@@ -1,6 +1,7 @@
 import { type DefaultMode, type Settings } from '../core/settings';
 import { isCli } from '../options/ProviderSection';
 import { useSettingsApi } from '../options/useSettings';
+import { UsageSection } from '../usage/UsageSection';
 import { BridgeErrorNote } from './BridgeErrorNote';
 import { connection, providerSummary, type Connection } from './summary';
 import { TestConnection } from './TestConnection';
@@ -88,6 +89,7 @@ export function HomeTab({ settings, bridge, test, onOpenProvider }: HomeTabProps
         </div>
         <p class="help">{MODE_HELP[settings.defaultMode]}</p>
       </section>
+      <UsageSection />
     </>
   );
 }

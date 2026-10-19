@@ -8,6 +8,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **New**
 
+- Home and the options page show **Usage**: request counts for each provider and model, with a total. Counts start with this update.
+
 - Request attempts are counted locally by provider and selected model, including failures and Test connection, without storing draft history (T19a).
 
 - First-run setup opens on install with provider, connection test, and Fix while I type controls. Missing-bridge errors stay quiet for idle Fix (F01).

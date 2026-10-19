@@ -1,0 +1,59 @@
+/* Shared by the options page and the popup, which each style .card and the heading. */
+
+.usage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.usage .card-head {
+  margin-bottom: 0;
+}
+
+.usage > .help {
+  margin: 0;
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.usage-table th,
+.usage-table td {
+  padding: 6px 0;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--border);
+}
+
+.usage-table th + th,
+.usage-table th + td,
+.usage-table td + td {
+  padding-left: 12px;
+}
+
+.usage-table thead th {
+  border-top: none;
+  padding-top: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.usage-table tfoot th,
+.usage-table tfoot td {
+  font-weight: 600;
+}
+
+.usage-table .usage-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-model {
+  overflow-wrap: anywhere;
+}
