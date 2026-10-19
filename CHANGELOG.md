@@ -6,6 +6,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+## 1.1.0 — 2026-10-20
+
 **New**
 
 - Home and the options page show **Usage**: request counts for each provider and model, with a total. Counts start with this update.

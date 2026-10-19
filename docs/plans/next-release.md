@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: T15-T20 are implemented and locally verified. Local and remote gates pass, and the owner reports that the requested provider and editor checks passed. The orchestrator verified blocked embedded editors and Test connection using the extracted local package in a fresh browser profile. Release notes and refreshed screenshots are ready. The owner's final review, release version, publication, and published-package verification remain.
+Status: the owner authorized release 1.1.0 on 20 October 2026. T15-T20 and the local package preflight are complete. Version, changelog, install instructions, release notes, and screenshots are finalized. All local release gates pass: 302 unit tests and 136 browser tests, with two platform-specific unit skips. CI at the release commit and verification of the published zip remain.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -13,7 +13,7 @@ The original [T0-T14 plan](../plan.md) stays as the first-release record. This p
 - One commit per task. Tick the task's box in this file in the same commit. Then move to the next ready task, unless it needs the owner.
 - Run `git pull --rebase` before every push. Stop if it conflicts.
 - Never use real drafts. Never press Send, Post, Reply or Comment. Do not call paid providers or the real CLIs in tests. Use the mock OpenAI server and fake CLI scripts that the tests already have.
-- Do not change the version in `package.json`.
+- Keep the version unchanged during implementation. The owner authorized the 1.1.0 release version change on 20 October 2026.
 - Lanes: Sol medium for normal tasks, Sol high for the tasks marked "high". UI-heavy tasks (T18a, T18b) are marked for the art lane (Claude Opus), because Sol is weak at UI.
 
 ## Review of the audit
@@ -113,11 +113,13 @@ Changes to the plan, compared with Sol's draft:
 - [ ] CI is green at the release commit, including the new macOS, Windows and Node 22 jobs.
 - [x] Owner's requested provider and editor checks: rewrite fixed sample text with the configured Claude CLI, Codex CLI, and API provider in Discord and a plain text box; Accept inserts the correction and Backspace works. Owner reported "passed" on 19 October 2026. Individual platform and provider results were not listed.
 - [x] Blocked embedded-editor check, completed by the orchestrator in Chromium instead of asking the owner to construct a test page. Loaded the extracted local zip in a fresh profile, blocked the parent through the real options page, and typed fixed sample text into cross-host, `srcdoc`, and `about:blank` frames. Each sent zero requests and showed no marker or selection button after 4.5 seconds. Unblocking produced one request and its marker. The provider was the local mock; no real drafts or providers were used.
-- [x] Local package preflight: zip integrity and contents passed; the extracted extension installed in a fresh profile, Test connection reached the local mock with the fake key, and Usage recorded both the test and the unblocked rewrite. The repository version remains 1.0.0; this is an unpublished preflight, not the 1.1.0 release asset.
-- [x] Refreshed toolbar screenshots with `npm run shots` and opened all five images. Prepared [1.1.0 release notes](../releases/1.1.0-draft.md) for owner review. Version, changelog release heading, and install zip name remain unchanged until release day.
+- [x] Local package preflight: zip integrity and contents passed; the extracted extension installed in a fresh profile, Test connection reached the local mock with the fake key, and Usage recorded both the test and the unblocked rewrite. That preflight used version 1.0.0; it is not the 1.1.0 release asset.
+- [x] Refreshed toolbar screenshots with `npm run shots` and opened all five images. Finalized [1.1.0 release notes](../releases/1.1.0.md) after the owner authorized publication. Version, changelog release heading, and install zip name are set for 1.1.0.
 - [ ] Follow the corrected `RELEASING.md`. Download the published zip, check its SHA-256, load it in a fresh profile, and press Test connection.
 
 ## Implementation notes
+
+- Release day, 20 October 2026: all local gates and both dependency audits passed at version 1.1.0. The release commit is pushed to `main` before tagging so full CI and the manually dispatched platform jobs can verify that exact commit. The tag and public release follow those checks. No real rewrite CLI or paid provider is used in automated verification.
 
 - Release preflight, 19 October 2026: full CI passed at `d1cda7a` ([run](https://github.com/ashahinL/localpolish/actions/runs/39317793313)); macOS, Windows, and Node 22 passed at the unchanged implementation commit `889daba` ([run](https://github.com/ashahinL/localpolish/actions/runs/39314908124)). The local zip contains 21 built-extension files and no source, tests, bridge, dependencies, or source maps. SHA-256: `ac9ce6dcac5abbeb17558eb88762da7ac68cbe96742b5cc7b49b61062e25eacc`. Browser and package reports, the reproducible check script, and screenshots are saved in the task's `release-preflight` artifact folder. This replaces only the remaining owner iframe check; published-package verification still requires an actual release.
 
