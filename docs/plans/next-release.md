@@ -1,6 +1,6 @@
 # LocalPolish next-release plan
 
-Status: the owner authorized release 1.1.0 on 20 October 2026. T15-T20 and the local package preflight are complete. Version, changelog, install instructions, release notes, and screenshots are finalized. All local release gates pass: 302 unit tests and 136 browser tests, with two platform-specific unit skips. CI at the release commit and verification of the published zip remain.
+Status: released as [LocalPolish 1.1.0](https://github.com/ashahinL/localpolish/releases/tag/v1.1.0) on 20 October 2026. T15-T20 and all release checks are complete. The published zip was downloaded, its SHA-256 verified, and the extracted extension tested in a fresh browser profile. The deferred backlog stays outside this release.
 Based on: [the 1.0.0 audit](../audits/1.0.0.md) (Sol, 18 October 2026) and Claude's review of it below.
 Baseline: `v1.0.0`, commit `71d5cbf`.
 
@@ -108,16 +108,18 @@ Changes to the plan, compared with Sol's draft:
 
 ## Release checks
 
-- [x] All gates pass: lint, typecheck, unit tests, Prettier, build, e2e (91 tests at 1.0.0, plus the new ones).
+- [x] All gates pass: lint, typecheck, 302 unit tests with two platform-specific skips on macOS, Prettier, build, and 136 browser tests.
 - [x] `npm audit` (full and `--omit=dev`) has no unreviewed high finding.
-- [ ] CI is green at the release commit, including the new macOS, Windows and Node 22 jobs.
+- [x] CI is green at release commit `564575b`: [full gates](https://github.com/ashahinL/localpolish/actions/runs/39327447448) and [macOS, Windows, and Node 22](https://github.com/ashahinL/localpolish/actions/runs/39327466074).
 - [x] Owner's requested provider and editor checks: rewrite fixed sample text with the configured Claude CLI, Codex CLI, and API provider in Discord and a plain text box; Accept inserts the correction and Backspace works. Owner reported "passed" on 19 October 2026. Individual platform and provider results were not listed.
 - [x] Blocked embedded-editor check, completed by the orchestrator in Chromium instead of asking the owner to construct a test page. Loaded the extracted local zip in a fresh profile, blocked the parent through the real options page, and typed fixed sample text into cross-host, `srcdoc`, and `about:blank` frames. Each sent zero requests and showed no marker or selection button after 4.5 seconds. Unblocking produced one request and its marker. The provider was the local mock; no real drafts or providers were used.
 - [x] Local package preflight: zip integrity and contents passed; the extracted extension installed in a fresh profile, Test connection reached the local mock with the fake key, and Usage recorded both the test and the unblocked rewrite. That preflight used version 1.0.0; it is not the 1.1.0 release asset.
 - [x] Refreshed toolbar screenshots with `npm run shots` and opened all five images. Finalized [1.1.0 release notes](../releases/1.1.0.md) after the owner authorized publication. Version, changelog release heading, and install zip name are set for 1.1.0.
-- [ ] Follow the corrected `RELEASING.md`. Download the published zip, check its SHA-256, load it in a fresh profile, and press Test connection.
+- [x] Published `v1.1.0` under the corrected `RELEASING.md`. Downloaded the public zip and `SHA256SUMS`, matched both to the build and GitHub asset digest, loaded the extracted zip in a fresh Chromium profile, confirmed manifest version 1.1.0, and pressed Test connection using the local mock. Usage recorded the test; three blocked frame types sent no requests; an unblocked frame sent one. No merged task branches or extra worktrees remain.
 
 ## Implementation notes
+
+- Published 1.1.0 on 20 October 2026, tag `v1.1.0`, commit `564575b`. Zip SHA-256: `c6e0ea772b9417c794f46cab7c089f579f045cd6ae0b30b8eeb758e9a6c37ed4`. The published download and browser verification reports, screenshots, and reproducible script are saved in the task's `release-1.1.0` artifact folder. All release checks passed; no real rewrite CLI or paid provider was used in automated checks.
 
 - Release day, 20 October 2026: all local gates and both dependency audits passed at version 1.1.0. The release commit is pushed to `main` before tagging so full CI and the manually dispatched platform jobs can verify that exact commit. The tag and public release follow those checks. No real rewrite CLI or paid provider is used in automated verification.
 
