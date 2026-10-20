@@ -116,7 +116,7 @@ process.stdin.on('end', () => {
     fs.writeFileSync(path.join(bin, 'claude.js'), cli);
     fs.writeFileSync(
       path.join(bin, 'claude.cmd'),
-      '@echo off\r\n"%~dp0node.exe" "%~dp0claude.js" %*\r\n',
+      '@echo off\r\n"%~dp0node.exe" "%~dp0\\claude.js" %*\r\n',
     );
   } else {
     fs.symlinkSync(process.execPath, path.join(bin, 'node'));

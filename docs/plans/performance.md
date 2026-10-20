@@ -45,9 +45,10 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P09](#p09-stop-posting-unused-idle-chunks)                   | Suppress idle preview messages at the worker boundary                  | feature      | P01d                    |
 | [x]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
 | [x]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
-| [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
+| [x]    | [P13a](#p13a-correct-the-windows-lifecycle-fixture) | Make the fake CLI wrapper match the native host parser | Orchestrator | P06 |
+| [~]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: twenty-one completed and P13 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 23 tasks: twenty-two implemented tasks including the P13a fixture correction, and P13 verification in progress. P13a was added after Windows CI found a test setup defect. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -329,7 +330,15 @@ Done: a fake CLI that emits stop and then stays alive reports ready before exit;
 
 Live Luna/Sol runs are optional, require an explicit run budget and use synthetic inputs only. Prepare an exact command and call count when proposing that experiment. Do not make live calls part of CI or silently rerun them to obtain a favorable result. Existing P11 measurements already prove token reduction and do not prove a general speedup.
 
+## P13a. Correct the Windows lifecycle fixture
+
+Status: implemented in this task commit, with the targeted macOS lifecycle test, lint and formatting checked. Exact-commit Windows CI is part of P13 and is still required.
+
+The P06 fake `claude.cmd` omitted the literal path separator required by `resolveCommand`'s npm-shim parser. Windows CI on `f8828d4` failed before creating the fake child PID file. Add that separator, matching the working wrapper in the P12 harness. Keep the real host parser and production behavior unchanged.
+
 ## P13. Verify the release candidate
+
+Status: in progress. Local browser rerun owns its fixture server. Full runtime, extracted package and corrected-candidate platform verification remain.
 
 Owner: orchestrator. Files: this plan, performance evidence/results, release documentation when a release version is later authorized.
 
@@ -425,3 +434,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - Required checks: P13 full gates, full runtime comparison, exact-commit platform CI and extracted package checks. P12 complete lifecycle report and core cases passed locally on macOS.
 - Active processes: none. No delegates are running.
 - Session override: complex implementation uses Grok 4.7 xhigh. No Sol delegates and no saved fleet/config changes. Wait quietly during each delegate run.
+
+- P13a: Windows CI `39482491040` found a fake-wrapper path that did not match the real host's npm-shim parser. The parent corrected one separator in `bridge/test-lifecycle.test.mjs`. This is test setup, with no production change. The targeted lifecycle test, lint and formatting passed locally. The corrected Windows run is required before P13 completes. Linux Node 22 passed on the earlier candidate; macOS bridge tests passed before the failing Windows matrix job cancelled the run. Both dependency audits reported zero vulnerabilities.
