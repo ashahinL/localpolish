@@ -33,6 +33,7 @@ async function startBackground() {
   const onRuntimeMessage = vi.fn();
   const onStorageChanged = vi.fn();
   const setAccessLevel = vi.fn().mockResolvedValue(undefined);
+  const get = vi.fn().mockResolvedValue({});
   const query = vi.fn().mockResolvedValue([]);
   const sendMessage = vi.fn().mockResolvedValue(undefined);
   const nativePorts: Array<ReturnType<typeof nativePort>> = [];
@@ -52,7 +53,7 @@ async function startBackground() {
     },
     commands: { onCommand: { addListener: vi.fn() } },
     storage: {
-      local: { setAccessLevel },
+      local: { setAccessLevel, get },
       onChanged: { addListener: onStorageChanged },
     },
     tabs: { query, sendMessage, create },
@@ -69,6 +70,7 @@ async function startBackground() {
     message,
     storageChanged,
     setAccessLevel,
+    get,
     query,
     sendMessage,
     installed,
@@ -153,13 +155,34 @@ describe('background settings and rewrite ports', () => {
     const background = await startBackground();
     background.query.mockResolvedValue([{ id: 1 }, { id: 2 }, {}, { id: 3 }]);
     background.sendMessage.mockRejectedValueOnce(new Error('No content script'));
-    background.storageChanged({ settings: { newValue: { openaiApiKey: 'fake-secret' } } }, 'local');
+    background.storageChanged(
+      { settings: { newValue: { idleFix: false, openaiApiKey: 'fake-secret' } } },
+      'local',
+    );
     await vi.waitFor(() => expect(background.sendMessage).toHaveBeenCalledTimes(3));
     expect(background.query).toHaveBeenCalledExactlyOnceWith({});
     expect(background.sendMessage.mock.calls).toEqual([
-      [1, { type: 'page-settings-changed' }],
-      [2, { type: 'page-settings-changed' }],
-      [3, { type: 'page-settings-changed' }],
+      [
+        1,
+        {
+          type: 'page-settings-changed',
+          settings: { blocklist: ['blocked.example'], idleFix: true, defaultMode: 'fix' },
+        },
+      ],
+      [
+        2,
+        {
+          type: 'page-settings-changed',
+          settings: { blocklist: ['blocked.example'], idleFix: true, defaultMode: 'fix' },
+        },
+      ],
+      [
+        3,
+        {
+          type: 'page-settings-changed',
+          settings: { blocklist: ['blocked.example'], idleFix: true, defaultMode: 'fix' },
+        },
+      ],
     ]);
   });
 
@@ -462,6 +485,214 @@ describe('background bridge health', () => {
     expect(await pending).toEqual(success);
     expect(await restarted.request({ type: 'bridge-status' })).toEqual(success);
     expect(restarted.connectNative).toHaveBeenCalledOnce();
+  });
+});
+
+describe('page settings at the Chrome boundary', () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    const actual = await vi.importActual<typeof import('../core/settings')>('../core/settings');
+    vi.mocked(loadSettings).mockImplementation(actual.loadSettings);
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const changed = (
+    background: Awaited<ReturnType<typeof startBackground>>,
+    oldValue: unknown,
+    newValue: unknown,
+  ) => background.storageChanged({ settings: { oldValue, newValue } }, 'local');
+  const settled = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+  it.each([
+    [{}, { models: { 'codex-cli': 'other' } }],
+    [{}, { provider: 'anthropic-api' }],
+    [{}, { openaiApiKey: 'fake-secret', anthropicApiKey: 'another-fake-secret' }],
+    [{}, { efforts: { 'codex-cli': 'high' } }],
+    [{}, { temperature: 0.8, openaiBaseUrl: 'http://localhost:1234/v1' }],
+    [undefined, { idleFix: 'false', defaultMode: 'tone', blocklist: [null, 42] }],
+    [
+      { idleFix: null, defaultMode: 'bad', blocklist: false },
+      { idleFix: true, defaultMode: 'fix', blocklist: [] },
+    ],
+    [
+      { blocklist: ['B.example', null, 'a.example', 'B.example'] },
+      { blocklist: ['B.example', 'a.example', false, 'B.example'] },
+    ],
+  ])(
+    'does no storage or tab work for equivalent page settings: %j -> %j',
+    async (oldValue, newValue) => {
+      const background = await startBackground();
+      changed(background, oldValue, newValue);
+      await settled();
+      expect(loadSettings).not.toHaveBeenCalled();
+      expect(background.get).not.toHaveBeenCalled();
+      expect(background.query).not.toHaveBeenCalled();
+      expect(background.sendMessage).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    [{ idleFix: true }, { idleFix: false }],
+    [{ defaultMode: 'fix' }, { defaultMode: 'shorter' }],
+    [{ blocklist: ['a', 'b'] }, { blocklist: ['b', 'a'] }],
+    [{ blocklist: ['a'] }, undefined],
+  ])(
+    'reads one current sanitized snapshot for a relevant change: %j -> %j',
+    async (oldValue, newValue) => {
+      const background = await startBackground();
+      background.get.mockResolvedValue({
+        settings: {
+          provider: 'openai-compatible',
+          openaiApiKey: 'fake-secret',
+          anthropicApiKey: 'fake-secret-2',
+          models: { 'openai-compatible': 'private-model' },
+          blocklist: ['B.example', null, 'a.example', 'B.example'],
+          idleFix: false,
+          defaultMode: 'shorter',
+        },
+      });
+      background.query.mockResolvedValue([{ id: 10 }, {}, { id: 20 }]);
+      changed(background, oldValue, newValue);
+      await settled();
+      expect(background.get).toHaveBeenCalledExactlyOnceWith('settings');
+      expect(background.query).toHaveBeenCalledExactlyOnceWith({});
+      expect(background.sendMessage.mock.calls).toEqual([
+        [
+          10,
+          {
+            type: 'page-settings-changed',
+            settings: {
+              blocklist: ['B.example', 'a.example', 'B.example'],
+              idleFix: false,
+              defaultMode: 'shorter',
+            },
+          },
+        ],
+        [
+          20,
+          {
+            type: 'page-settings-changed',
+            settings: {
+              blocklist: ['B.example', 'a.example', 'B.example'],
+              idleFix: false,
+              defaultMode: 'shorter',
+            },
+          },
+        ],
+      ]);
+    },
+  );
+
+  it('serializes reads, queries, every send and initial replies through rapid block/unblock saves', async () => {
+    const background = await startBackground();
+    const blocked = { blocklist: ['site.example'], idleFix: false, defaultMode: 'shorter' };
+    const unblocked = { blocklist: [], idleFix: true, defaultMode: 'fix' };
+    const firstRead = deferred<Record<string, unknown>>();
+    const firstQuery = deferred<Array<{ id: number }>>();
+    const slowSend = deferred<unknown>();
+    background.get
+      .mockReturnValueOnce(firstRead.promise)
+      .mockResolvedValue({ settings: unblocked });
+    background.query.mockReturnValueOnce(firstQuery.promise).mockResolvedValue([{ id: 1 }]);
+    background.sendMessage
+      .mockRejectedValueOnce(new Error('Missing receiver'))
+      .mockReturnValueOnce(slowSend.promise);
+    changed(background, unblocked, blocked);
+    const initial = background.request({ type: 'page-settings' });
+    changed(background, blocked, unblocked);
+    await settled();
+    expect(background.get).toHaveBeenCalledTimes(1);
+    expect(background.query).not.toHaveBeenCalled();
+    firstRead.resolve({ settings: blocked });
+    await settled();
+    expect(background.query).toHaveBeenCalledTimes(1);
+    expect(background.get).toHaveBeenCalledTimes(1);
+    expect(background.sendMessage).not.toHaveBeenCalled();
+    firstQuery.resolve([{ id: 1 }, { id: 2 }]);
+    await settled();
+    expect(background.sendMessage.mock.calls).toEqual([
+      [1, { type: 'page-settings-changed', settings: blocked }],
+      [2, { type: 'page-settings-changed', settings: blocked }],
+    ]);
+    expect(background.get).toHaveBeenCalledTimes(1);
+    slowSend.resolve(undefined);
+    expect(await initial).toEqual(unblocked);
+    await settled();
+    expect(background.get).toHaveBeenCalledTimes(3);
+    expect(background.query).toHaveBeenCalledTimes(2);
+    expect(background.sendMessage.mock.calls.at(-1)).toEqual([
+      1,
+      { type: 'page-settings-changed', settings: unblocked },
+    ]);
+  });
+
+  it('keeps a pending initial read ahead of later broadcasts', async () => {
+    const background = await startBackground();
+    const first = deferred<Record<string, unknown>>();
+    background.get
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValue({ settings: { idleFix: false } });
+    background.query.mockResolvedValue([{ id: 1 }]);
+    const initial = background.request({ type: 'page-settings' });
+    changed(background, {}, { idleFix: false });
+    await settled();
+    expect(background.get).toHaveBeenCalledTimes(1);
+    expect(background.query).not.toHaveBeenCalled();
+    first.resolve({ settings: {} });
+    expect(await initial).toEqual({ blocklist: [], idleFix: true, defaultMode: 'fix' });
+    await settled();
+    expect(background.sendMessage.mock.calls).toEqual([
+      [
+        1,
+        {
+          type: 'page-settings-changed',
+          settings: { blocklist: [], idleFix: false, defaultMode: 'fix' },
+        },
+      ],
+    ]);
+  });
+
+  it.each(['read', 'query', 'send'] as const)(
+    'recovers after a rejected broadcast %s',
+    async (stage) => {
+      const background = await startBackground();
+      background.get.mockResolvedValue({ settings: { idleFix: false } });
+      background.query.mockResolvedValue([{ id: 1 }]);
+      const failure = new Error('Boundary failed');
+      if (stage === 'read') background.get.mockRejectedValueOnce(failure);
+      if (stage === 'query') background.query.mockRejectedValueOnce(failure);
+      if (stage === 'send') background.sendMessage.mockRejectedValueOnce(failure);
+      changed(background, {}, { idleFix: false });
+      changed(background, { idleFix: false }, {});
+      expect(await background.request({ type: 'page-settings' })).toEqual({
+        blocklist: [],
+        idleFix: false,
+        defaultMode: 'fix',
+      });
+      expect(background.sendMessage).toHaveBeenLastCalledWith(1, {
+        type: 'page-settings-changed',
+        settings: { blocklist: [], idleFix: false, defaultMode: 'fix' },
+      });
+      expect(background.get).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it('recovers after a failed initial read', async () => {
+    const background = await startBackground();
+    background.get
+      .mockRejectedValueOnce(new Error('Storage failed'))
+      .mockResolvedValue({ settings: { idleFix: false } });
+    background.query.mockResolvedValue([{ id: 1 }]);
+    const initial = background.request({ type: 'page-settings' });
+    changed(background, {}, { idleFix: false });
+    expect(await initial).toBeNull();
+    await settled();
+    expect(background.sendMessage).toHaveBeenCalledExactlyOnceWith(1, {
+      type: 'page-settings-changed',
+      settings: { blocklist: [], idleFix: false, defaultMode: 'fix' },
+    });
   });
 });
 

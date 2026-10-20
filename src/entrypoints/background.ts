@@ -6,12 +6,11 @@ import {
   TEST_PORT,
   type TestEvent,
   type BridgeStatus,
-  type PageSettings,
   type RewriteEvent,
   type RewriteRequest,
   type RuntimeMessage,
 } from '../core/messages';
-import { isBlocked, loadSettings, type Mode, type Tone } from '../core/settings';
+import { isBlocked, loadSettings, pageSettings, type Mode, type Tone } from '../core/settings';
 
 const MODES = new Set<Mode>(['fix', 'rephrase', 'shorter', 'tone']);
 const TONES = new Set<Tone>(['polite', 'formal', 'casual', 'angry-civil']);
@@ -55,7 +54,12 @@ interface ExtensionChrome {
       setAccessLevel(options: { accessLevel: 'TRUSTED_CONTEXTS' }): Promise<void>;
     };
     onChanged: {
-      addListener(cb: (changes: Record<string, unknown>, areaName: string) => void): void;
+      addListener(
+        cb: (
+          changes: Record<string, { oldValue?: unknown; newValue?: unknown }>,
+          areaName: string,
+        ) => void,
+      ): void;
     };
   };
 }
@@ -101,6 +105,12 @@ function errorMessage(err: unknown, fallback: string): string {
 }
 
 export default defineBackground(() => {
+  let pageSettingsQueue: Promise<void> = Promise.resolve();
+  const enqueuePageSettings = (work: () => Promise<void>): Promise<void> => {
+    const result = pageSettingsQueue.then(work);
+    pageSettingsQueue = result.catch(() => {});
+    return result;
+  };
   let healthCache: { status: Extract<BridgeStatus, { ok: true }>; expiresAt: number } | undefined;
   let healthInFlight: Promise<BridgeStatus> | undefined;
 
@@ -128,21 +138,18 @@ export default defineBackground(() => {
 
   extension().storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local' || !('settings' in changes)) return;
-    void extension()
-      .tabs.query({})
-      .then((tabs) =>
-        Promise.all(
-          tabs.map((tab) => {
-            if (tab.id === undefined) return;
-            return extension()
-              .tabs.sendMessage(tab.id, { type: 'page-settings-changed' })
-              .catch(() => {
-                // A tab without the content script rejects sendMessage.
-              });
-          }),
-        ),
-      )
-      .catch(() => {});
+    const { oldValue, newValue } = changes.settings!;
+    if (JSON.stringify(pageSettings(oldValue)) === JSON.stringify(pageSettings(newValue))) return;
+    void enqueuePageSettings(async () => {
+      const settings = pageSettings(await loadSettings());
+      const tabs = await extension().tabs.query({});
+      await Promise.allSettled(
+        tabs.map((tab) => {
+          if (tab.id === undefined) return;
+          return extension().tabs.sendMessage(tab.id, { type: 'page-settings-changed', settings });
+        }),
+      );
+    }).catch(() => {});
   });
 
   extension().runtime.onInstalled.addListener(({ reason }) => {
@@ -258,12 +265,9 @@ export default defineBackground(() => {
     };
 
     if (message.type === 'page-settings') {
-      void loadSettings()
-        .then(({ blocklist, idleFix, defaultMode }) => {
-          const settings: PageSettings = { blocklist, idleFix, defaultMode };
-          reply(settings);
-        })
-        .catch(() => reply(null));
+      void enqueuePageSettings(async () => {
+        reply(pageSettings(await loadSettings()));
+      }).catch(() => reply(null));
       return true;
     }
 

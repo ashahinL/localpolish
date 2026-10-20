@@ -376,7 +376,7 @@ chrome.runtime.onMessage.addListener((message) => {
           }, ++modelRevision);
           await pause(frames, 500);
           const pageSettingsQueries = await worker.evaluate(() => globalThis.__benchSettingsReads);
-          assert.ok(pageSettingsQueries <= 30);
+          assert.equal(pageSettingsQueries, 0);
           detail = {
             framedPageFrames: frames.frames().length,
             editorFrames: 1,

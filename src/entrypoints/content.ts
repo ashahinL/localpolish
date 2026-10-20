@@ -9,7 +9,7 @@ import { guarded } from '../content/guard';
 import { frameHosts } from '../content/site';
 import { showToast } from '../content/ui/toast';
 import { REWRITE_PORT, type PageSettings } from '../core/messages';
-import { DEFAULT_SETTINGS, isBlocked } from '../core/settings';
+import { DEFAULT_SETTINGS, isBlocked, pageSettings } from '../core/settings';
 
 interface ContentChrome {
   runtime: {
@@ -42,19 +42,24 @@ function start(): void {
   let settings: PageSettings | null = null;
   let idle: ReturnType<typeof createIdleFix> | undefined = undefined;
   let button: ReturnType<typeof createButton> | undefined = undefined;
+  let settingsGeneration = 0;
 
-  const refresh = () => {
-    ext.runtime.sendMessage({ type: 'page-settings' }).then(
-      (loaded) => {
-        if (!loaded) return;
-        settings = loaded;
-        idle?.refresh();
-        button?.refresh();
-      },
-      () => {},
-    );
+  const applySettings = (value: unknown): boolean => {
+    if (typeof value !== 'object' || value === null) return false;
+    const raw = value as Partial<PageSettings>;
+    const normalized = pageSettings(raw);
+    if (
+      !Array.isArray(raw.blocklist) ||
+      raw.blocklist.some((entry) => typeof entry !== 'string') ||
+      raw.idleFix !== normalized.idleFix ||
+      raw.defaultMode !== normalized.defaultMode
+    )
+      return false;
+    settings = normalized;
+    idle?.refresh();
+    button?.refresh();
+    return true;
   };
-  refresh();
 
   const connect = (): PortLike => {
     // runtime.id disappears once the extension reloads and this script is orphaned.
@@ -103,7 +108,7 @@ function start(): void {
         message !== null &&
         (message as { type?: unknown }).type === 'page-settings-changed'
       ) {
-        refresh();
+        if (applySettings((message as { settings?: unknown }).settings)) settingsGeneration += 1;
         return;
       }
       if (!isOpenPopup(message) || !document.hasFocus()) return;
@@ -114,6 +119,14 @@ function start(): void {
       else if (focusedEditable()) showToast('Type some text first.');
       else showToast('Click into a text field first.');
     }),
+  );
+
+  const initialGeneration = settingsGeneration;
+  void ext.runtime.sendMessage({ type: 'page-settings' }).then(
+    (loaded) => {
+      if (settingsGeneration === initialGeneration) applySettings(loaded);
+    },
+    () => {},
   );
 }
 

@@ -666,16 +666,13 @@ const SETTINGS_PROBE = `(() => {
   if (globalThis.__lpSettingsProbe) return;
   globalThis.__lpSettingsProbe = true;
   const runtime = chrome.runtime;
-  const original = runtime.sendMessage.bind(runtime);
-  runtime.sendMessage = function (message, ...args) {
-    const pending = original(message, ...args);
-    if (message && message.type === 'page-settings' && pending && typeof pending.then === 'function') {
-      globalThis.__lpPageSettings = pending.then((settings) => new Promise((resolve) => {
-        queueMicrotask(() => resolve(settings));
-      }));
+  runtime.onMessage.addListener((message) => {
+    if (message && message.type === 'page-settings-changed') {
+      globalThis.__lpPageSettings = new Promise((resolve) => {
+        queueMicrotask(() => resolve(message.settings));
+      });
     }
-    return pending;
-  };
+  });
 })()`;
 
 const READ_PROBE = `(() => {

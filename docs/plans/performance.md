@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. Tasks through P09, including P11, are complete. P10 is next. Its first browser run failed in the new fixture; that fixture is corrected and not yet rerun. The release version is not chosen.
+Status: implementation in progress. Tasks through P09, including P11, are complete. P10 is implemented pending parent verification and commit. The late-initial browser regression replaced the mock content unit test and has not been run here. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -43,11 +43,11 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P08a](#p08a-prove-hidden-document-state-in-a-browser)        | Establish a reliable hidden-page browser fixture                       | complex      | P00a                    |
 | [x]    | [P08b](#p08b-defer-new-idle-requests-while-hidden)            | Gate automatic request starts on visibility                            | feature      | P08a, P02, P07          |
 | [x]    | [P09](#p09-stop-posting-unused-idle-chunks)                   | Suppress idle preview messages at the worker boundary                  | feature      | P01d                    |
-| [ ]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
+| [x]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: nineteen completed and three pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: twenty completed and two pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -309,7 +309,9 @@ Done: a fake 1,000-chunk idle stream posts zero chunks and one final result; its
 
 ## P10. Filter and order sanitized settings updates
 
-Source: G08 and S04. Files: `src/entrypoints/background.ts` storage listener/page-settings handler, `src/core/messages.ts::PageSettings`, `src/entrypoints/content.ts::refresh`, `src/background/entrypoint.test.ts`, built-extension privacy/settings cases.
+Status: complete in this task commit. The normalized projection, serialized worker queue and content generation guard passed parent review and built-extension checks.
+
+Source: G08 and S04. Files: `src/entrypoints/background.ts` storage listener/page-settings handler, `src/core/messages.ts::PageSettings`, `src/entrypoints/content.ts::applySettings`, `src/background/entrypoint.test.ts`, built-extension privacy/settings cases.
 
 Compare normalized old/new projections of `blocklist`, `idleFix` and `defaultMode` before querying tabs. Skip irrelevant saves. For relevant changes, read one current sanitized snapshot and send it to all frames. Keep the initial page-settings request. Serialize or version asynchronous updates so neither old broadcasts nor a late initial read can overwrite newer state. Do not cache full settings for provider execution.
 
@@ -409,3 +411,13 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P08b: automatic idle starts wait while the actual document is hidden. Return rechecks the current focused field and text, using only the remaining pause. Accepted requests keep running; hidden marker polling and field reads stop. The new eight browser cases and the existing real-visibility proof all passed. Fixture review caught identical settings writes and incorrect frame-session discovery; both were corrected without weakening the assertions. The parent added a narrow fallback for frames that share their parent's CDP session. Lint, typecheck, formatting, build, and 478 unit tests passed, with two existing skips. Existing popup/extension regressions passed; the first overlapping browser invocation lost its shared server and was rerun with one server owner. All 30 runtime smoke samples passed, report `P08b-runtime/runtime-smoke-202610201802180300-69842.json` in the local fleet artifact directory. No provider calls were made. Clean-code, test and documentation review passed. Comment Sicko was unavailable, so comments were reviewed manually. Grok suggested no reusable skill; the reviewer agrees.
 
 - P09: `runRewrite` suppresses preview posts only for `trigger: 'idle'`. The 1,000-chunk regression checks zero idle previews and 1,000 manual previews with the same final text and one counted attempt. The runtime message check now requires those exact counts. All 30 runtime smoke samples passed, report `P09-runtime/runtime-smoke-202610201807020300-75427.json` in the local fleet artifacts. Lint, typecheck, formatting, build, 480 unit tests with two existing skips, and all 86 popup/extension browser checks passed, including idle adoption, errors, cancellation and retry. Code, test and docs review passed. Comment Sicko was unavailable; comments were checked manually. No delegate or reusable skill was needed.
+
+- P10: equivalent normalized page settings stop before storage reads or tab work. Relevant changes load one sanitized snapshot and send it directly to all frames. One worker queue orders reads, broadcasts and initial replies; a content generation guard rejects a late initial response after a newer broadcast. Trusted storage and fresh provider settings reads are preserved. Parent verification passed lint, typecheck, formatting, build, 498 unit tests with two existing skips, 45 built-extension/visibility browser checks, and all 30 runtime smoke samples. The model-only scenario now requires zero page-settings reads. Report: `P10-runtime/runtime-smoke-202610202154500300-31368.json` in local fleet artifacts. Test review replaced internal UI mocks with a real held-initial-response browser case. The parent fixed frame selection focus and scoped the native counter after first-run setup. Code, test and docs review passed. Comment Sicko was unavailable; comments were reviewed manually. Grok suggested no reusable skill; the reviewer agrees.
+
+## Handoff before request timing
+
+- Current source: P10 is included in this task commit, based on pushed `9c359dc`. Resolve the task hash with `git log -1 --format=%h`. P11 and P00a through P10 are complete.
+- Next task: P12, offline lifecycle measurement. Then P13, full candidate and package verification. No release version or publication is authorized.
+- Required checks: P12 controlled fake-delay cases, then the P13 full gates, runtime comparison, platform CI and packed-artifact checks.
+- Active processes: none from delegates. A task-owned Vite fixture may still be listening on 5179 after an interrupted parent browser run; stop it during cleanup.
+- Session override: complex implementation uses Grok 4.7 xhigh. No Sol delegates and no saved fleet/config changes. Wait quietly during each delegate run.

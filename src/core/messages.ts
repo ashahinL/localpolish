@@ -36,4 +36,4 @@ export type RuntimeMessage =
   | { type: 'bridge-status'; force?: boolean }
   | { type: 'open-popup' }
   | { type: 'page-settings' }
-  | { type: 'page-settings-changed' };
+  | { type: 'page-settings-changed'; settings: PageSettings };

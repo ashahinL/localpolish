@@ -251,6 +251,12 @@ test('content scripts cannot read local storage or receive stored keys', async (
       contextId,
       expression: `(async () => {
         globalThis.__lpStorageChanges = [];
+        globalThis.__lpSettingsRequests = 0;
+        const sendMessage = chrome.runtime.sendMessage.bind(chrome.runtime);
+        chrome.runtime.sendMessage = (message, ...args) => {
+          if (message?.type === 'page-settings') globalThis.__lpSettingsRequests++;
+          return sendMessage(message, ...args);
+        };
         chrome.storage.onChanged.addListener((...args) => globalThis.__lpStorageChanges.push(args));
         globalThis.__lpSettingsNotice = new Promise(resolve => {
           chrome.runtime.onMessage.addListener(message => {
@@ -284,7 +290,7 @@ test('content scripts cannot read local storage or receive stored keys', async (
         return {
           notice,
           storageChanges: globalThis.__lpStorageChanges,
-          settings: await chrome.runtime.sendMessage({ type: 'page-settings' }),
+          settingsRequests: globalThis.__lpSettingsRequests,
         };
       })()`,
       awaitPromise: true,
@@ -293,13 +299,197 @@ test('content scripts cannot read local storage or receive stored keys', async (
     });
     expect(refreshed.exceptionDetails).toBeUndefined();
     expect(refreshed.result.value).toEqual({
-      notice: { type: 'page-settings-changed' },
+      notice: {
+        type: 'page-settings-changed',
+        settings: { blocklist: ['blocked.example'], idleFix: false, defaultMode: 'shorter' },
+      },
       storageChanges: [],
-      settings: { blocklist: ['blocked.example'], idleFix: false, defaultMode: 'shorter' },
+      settingsRequests: 0,
     });
     expect(JSON.stringify(refreshed.result.value)).not.toContain(FAKE_API_KEY);
   } finally {
     await session.detach();
+  }
+});
+
+test('settings snapshots reach nested and cross-host frames without frame rereads', async ({
+  page,
+  mock,
+  sw,
+}) => {
+  await sw.evaluate(`(() => {
+    globalThis.__lpOriginalGet = chrome.storage.local.get.bind(chrome.storage.local);
+    globalThis.__lpOriginalNative = chrome.runtime.connectNative;
+    globalThis.__lpSettingsReads = 0;
+    globalThis.__lpNativeCalls = 0;
+    chrome.runtime.connectNative = () => {
+      globalThis.__lpNativeCalls++;
+      throw new Error('Offline settings fixture: native messaging is blocked');
+    };
+    chrome.storage.local.get = (key, ...args) => {
+      if (key === 'settings') globalThis.__lpSettingsReads++;
+      return globalThis.__lpOriginalGet(key, ...args);
+    };
+  })()`);
+  const sessions: import('@playwright/test').CDPSession[] = [];
+  const worlds: Array<
+    () => Promise<{
+      notices: unknown[];
+      reads: number;
+      storageChanges: unknown[];
+      storageError: string;
+    }>
+  > = [];
+  try {
+    await writeSettings(sw, `${mock.url}/v1`, { idleFix: false });
+    await openFixture(page, 'frames.html');
+    const crossHost = await page.locator('#cross-host').elementHandle();
+    const hostFrame = await crossHost?.contentFrame();
+    if (!hostFrame) throw new Error('Cross-host editor frame missing');
+    await hostFrame.evaluate(() => {
+      const frame = document.createElement('iframe');
+      frame.src = 'http://localhost:5179/frame-editor.html?nested-settings';
+      document.body.append(frame);
+    });
+    await expect
+      .poll(() => page.frames().some((frame) => frame.url().endsWith('?nested-settings')))
+      .toBe(true);
+    const nested = page.frames().find((frame) => frame.url().endsWith('?nested-settings'));
+    if (!nested) throw new Error('Nested editor frame missing');
+    const frames = [page.mainFrame(), hostFrame, nested];
+    for (const frame of frames) {
+      let session: import('@playwright/test').CDPSession;
+      try {
+        session = await page.context().newCDPSession(frame);
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes('part of the parent frame'))
+          throw error;
+        session = await page.context().newCDPSession(page);
+      }
+      sessions.push(session);
+      const contexts = new Set<number>();
+      session.on('Runtime.executionContextCreated', ({ context }) => contexts.add(context.id));
+      session.on('Runtime.executionContextDestroyed', ({ executionContextId }) =>
+        contexts.delete(executionContextId),
+      );
+      await session.send('Runtime.enable');
+      let world: number | undefined;
+      await expect
+        .poll(async () => {
+          for (const contextId of contexts) {
+            const result = await session.send('Runtime.evaluate', {
+              contextId,
+              expression: `chrome?.runtime?.id === ${JSON.stringify(EXTENSION_ID)} && location.href === ${JSON.stringify(frame.url())}`,
+              returnByValue: true,
+            });
+            if (result.result.value) {
+              world = contextId;
+              return true;
+            }
+          }
+          return false;
+        })
+        .toBe(true);
+      if (world === undefined) throw new Error('Frame content world missing');
+      const contextId = world;
+      const probe = await session.send('Runtime.evaluate', {
+        contextId,
+        expression: `(async () => {
+          await chrome.runtime.sendMessage({ type: 'page-settings' });
+          globalThis.__lpFrameSettings = { notices: [], reads: 0, storageChanges: [], storageError: '' };
+          chrome.runtime.onMessage.addListener((message) => {
+            if (message?.type === 'page-settings-changed') globalThis.__lpFrameSettings.notices.push(message);
+          });
+          chrome.storage.onChanged.addListener((...args) => globalThis.__lpFrameSettings.storageChanges.push(args));
+          const original = chrome.runtime.sendMessage.bind(chrome.runtime);
+          chrome.runtime.sendMessage = (message, ...args) => {
+            if (message?.type === 'page-settings') globalThis.__lpFrameSettings.reads++;
+            return original(message, ...args);
+          };
+          try { await chrome.storage.local.get('settings'); }
+          catch (error) { globalThis.__lpFrameSettings.storageError = error.message; }
+        })()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      expect(probe.exceptionDetails).toBeUndefined();
+      worlds.push(async () => {
+        const result = await session.send('Runtime.evaluate', {
+          contextId,
+          expression: 'globalThis.__lpFrameSettings',
+          returnByValue: true,
+        });
+        expect(result.exceptionDetails).toBeUndefined();
+        return result.result.value;
+      });
+    }
+    for (const frame of [hostFrame, nested]) {
+      await frame.locator('textarea').fill(SOURCE);
+      await frame.locator('textarea').selectText();
+      await expect(frame.locator('.lp-fab')).toBeVisible();
+    }
+    await sw.evaluate('globalThis.__lpSettingsReads = 0');
+    const blocked = { blocklist: ['localhost'], idleFix: false, defaultMode: 'shorter' };
+    await writeSettings(sw, `${mock.url}/v1`, blocked);
+    for (const read of worlds) {
+      await expect
+        .poll(async () => (await read()).notices)
+        .toEqual([{ type: 'page-settings-changed', settings: blocked }]);
+    }
+    for (const frame of [hostFrame, nested]) {
+      await expect(frame.locator('.lp-fab')).toHaveCount(0);
+    }
+    expect(await sw.evaluate('globalThis.__lpSettingsReads')).toBe(1);
+
+    await sw.evaluate('globalThis.__lpSettingsReads = 0');
+    await writeSettings(sw, `${mock.url}/v1`, {
+      ...blocked,
+      models: { 'openai-compatible': 'model-only-change' },
+    });
+    await page.waitForTimeout(200);
+    expect(await sw.evaluate('globalThis.__lpSettingsReads')).toBe(0);
+    for (const frame of [hostFrame, nested]) {
+      await expect(frame.locator('.lp-fab')).toHaveCount(0);
+    }
+    for (const read of worlds) {
+      expect(await read()).toEqual({
+        notices: [{ type: 'page-settings-changed', settings: blocked }],
+        reads: 0,
+        storageChanges: [],
+        storageError: 'Access to storage is not allowed from this context.',
+      });
+    }
+
+    const unblocked = { blocklist: [], idleFix: false, defaultMode: 'shorter' };
+    await writeSettings(sw, `${mock.url}/v1`, unblocked);
+    for (const read of worlds) {
+      await expect
+        .poll(async () => (await read()).notices)
+        .toEqual([
+          { type: 'page-settings-changed', settings: blocked },
+          { type: 'page-settings-changed', settings: unblocked },
+        ]);
+      const result = await read();
+      expect(result.reads).toBe(0);
+      expect(result.storageChanges).toEqual([]);
+      expect(JSON.stringify(result)).not.toContain(FAKE_API_KEY);
+    }
+    for (const frame of [hostFrame, nested]) {
+      await frame.locator('textarea').click();
+      await frame.locator('textarea').selectText();
+      await expect(frame.locator('.lp-fab')).toBeVisible();
+    }
+    expect(await sw.evaluate('globalThis.__lpSettingsReads')).toBe(1);
+    expect(await sw.evaluate('globalThis.__lpNativeCalls')).toBe(0);
+    expect(mock.requests).toHaveLength(0);
+  } finally {
+    for (const session of sessions) await session.detach();
+    await sw.evaluate(`(() => {
+      chrome.storage.local.get = globalThis.__lpOriginalGet;
+      chrome.runtime.connectNative = globalThis.__lpOriginalNative;
+      delete globalThis.__lpOriginalGet;
+      delete globalThis.__lpOriginalNative;
+    })()`);
   }
 });
 

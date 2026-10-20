@@ -1,3 +1,5 @@
+import type { PageSettings } from './messages';
+
 export type ProviderId =
   'claude-cli' | 'codex-cli' | 'grok-cli' | 'openai-compatible' | 'anthropic-api';
 
@@ -133,6 +135,11 @@ function mergeSettings(patch: Partial<Settings>): Settings {
 export async function loadSettings(): Promise<Settings> {
   const stored = await storageLocal().get(STORAGE_KEY);
   return mergeSettings(storedPatch(stored[STORAGE_KEY]));
+}
+
+export function pageSettings(value: unknown): PageSettings {
+  const { blocklist, idleFix, defaultMode } = mergeSettings(storedPatch(value));
+  return { blocklist, idleFix, defaultMode };
 }
 
 let settingsQueue: Promise<void> = Promise.resolve();
