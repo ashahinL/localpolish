@@ -292,10 +292,14 @@ chrome.runtime.onMessage.addListener((message) => {
         await reset();
         await pause(page, 900);
         const observed = await counters();
-        assert.ok((observed.calls.innerText ?? 0) <= 1000);
+        // Each periodic marker pass measures the one rich field once; timer phase sets the pass count.
+        const markerPasses = observed.calls.getBoundingClientRect ?? 0;
+        assert.ok(markerPasses >= 1 && markerPasses <= Math.ceil(900 / 250) + 1);
+        assert.equal(observed.calls.innerText ?? 0, markerPasses);
         detail = {
           ...sizes(fixture),
           observationMs: 900,
+          markerPasses,
           ...observed,
           renderInvocations: null,
           renderInvocationsReason:

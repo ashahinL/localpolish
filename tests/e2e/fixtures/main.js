@@ -18,8 +18,18 @@ import Quill from 'quill';
 import { applyReplacement, captureTarget } from '../../../src/content/editable.ts';
 import { createButton } from '../../../src/content/button.ts';
 import { createController } from '../../../src/content/controller.ts';
+import { options } from 'preact';
 import { createIdleFix } from '../../../src/content/idle.ts';
+import { IdleMark } from '../../../src/content/ui/IdleMark.tsx';
 import { DEFAULT_SETTINGS } from '../../../src/core/settings.ts';
+
+// Counts IdleMark VNode commits, not DOM mutations.
+let markCommits = 0;
+const diffed = options.diffed;
+options.diffed = (vnode) => {
+  if (vnode.type === IdleMark) markCommits += 1;
+  diffed?.(vnode);
+};
 
 // Each connect() replays the next script; the last one repeats.
 const fake = { scripts: [], settings: DEFAULT_SETTINGS, calls: 0, open: 0, maxOpen: 0, sent: [] };
@@ -120,6 +130,10 @@ const popupApi = {
     const target = captureTarget({ wholeFieldIfEmpty: true });
     if (!target) throw new Error('no target');
     idle.open(target);
+  },
+  markCommits: () => markCommits,
+  resetMarkCommits() {
+    markCommits = 0;
   },
   requests: () => fake.calls,
   maxOpen: () => fake.maxOpen,

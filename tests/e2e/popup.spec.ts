@@ -33,6 +33,8 @@ type PageApi = {
     startIdle: () => void;
     setEnabled: (on: boolean, refresh?: boolean) => void;
     manual: () => void;
+    markCommits: () => number;
+    resetMarkCommits: () => void;
     requests: () => number;
     maxOpen: () => number;
     sent: () => string[];
@@ -466,6 +468,22 @@ test.describe('idle fix', () => {
     return page.evaluate(() => (window as unknown as PageApi).__lp.maxOpen());
   }
 
+  function markCommits(page: Page): Promise<number> {
+    return page.evaluate(() => (window as unknown as PageApi).__lp.markCommits());
+  }
+
+  function resetMarkCommits(page: Page): Promise<void> {
+    return page.evaluate(() => (window as unknown as PageApi).__lp.resetMarkCommits());
+  }
+
+  async function markTextarea(page: Page): Promise<void> {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await pause(page);
+    await expect(page.locator('.lp-mark')).toHaveCount(1);
+  }
+
   test('a pause shows the fix count and Accept applies it without a new request', async ({
     page,
   }) => {
@@ -847,6 +865,108 @@ test.describe('idle fix', () => {
     });
     await page.clock.fastForward(300);
     await expect.poll(centerX).toBe(before + 80);
+  });
+
+  test('unchanged marker passes do not render, but script edits and removed editors do', async ({
+    page,
+  }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    for (const field of ['#ta', '#ce']) {
+      await page.locator(field).click();
+      await page.keyboard.type('i has went home today');
+      await pause(page);
+    }
+    const marks = page.locator('.lp-mark');
+    await expect(marks).toHaveCount(2);
+    await resetMarkCommits(page);
+    await page.clock.runFor(1000);
+    expect(await markCommits(page)).toBe(0);
+
+    // A script edit fires no input event; only the periodic pass sees it.
+    await page.locator('#ce').evaluate((el) => el.append(' now'));
+    await page.clock.runFor(300);
+    await expect(marks.nth(1)).toHaveClass(/lp-mark-stale/);
+    await expect(marks.nth(0)).not.toHaveClass(/lp-mark-stale/);
+    expect(await markCommits(page)).toBe(2);
+
+    await page.locator('#ce').evaluate((el) => el.remove());
+    await page.clock.runFor(300);
+    await expect(marks).toHaveCount(1);
+  });
+
+  test('a scroll, resize and typing burst shares one marker pass', async ({ page }) => {
+    type Counted = { __rects: number };
+    await markTextarea(page);
+    await page.locator('#ta').evaluate((field) => {
+      const counted = window as unknown as Counted;
+      counted.__rects = 0;
+      field.getBoundingClientRect = function () {
+        counted.__rects += 1;
+        return Element.prototype.getBoundingClientRect.call(this);
+      };
+    });
+    const rects = () => page.evaluate(() => (window as unknown as Counted).__rects);
+    const resetRects = () =>
+      page.evaluate(() => {
+        (window as unknown as Counted).__rects = 0;
+      });
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+    // Start just after a periodic pass, so the next one is about 240 ms away.
+    await resetRects();
+    for (let step = 0; step < 30 && (await rects()) === 0; step++) await page.clock.runFor(10);
+    expect(await rects()).toBe(1);
+    await resetRects();
+    await resetMarkCommits(page);
+
+    const immediate = await page.locator('#ta').evaluate((field) => {
+      for (let i = 0; i < 10; i++) {
+        window.dispatchEvent(new Event('scroll'));
+        window.dispatchEvent(new Event('resize'));
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      return (window as unknown as Counted).__rects;
+    });
+    expect(immediate).toBe(0);
+    await page.clock.runFor(50);
+    expect(await rects()).toBe(1);
+    expect(await markCommits(page)).toBe(0);
+
+    // A refresh renders at once and drops the frame the scroll queued.
+    await resetRects();
+    const refreshed = await page.evaluate(() => {
+      window.dispatchEvent(new Event('scroll'));
+      (window as unknown as PageApi).__lp.setEnabled(true);
+      return (window as unknown as Counted).__rects;
+    });
+    expect(refreshed).toBe(1);
+    await page.clock.runFor(50);
+    expect(await rects()).toBe(1);
+  });
+
+  test('an unchanged marker still moves into a dialog opened later', async ({ page }) => {
+    await markTextarea(page);
+    await resetMarkCommits(page);
+    await page.evaluate(() => {
+      const dialog = document.createElement('dialog');
+      dialog.id = 'later';
+      document.body.append(dialog);
+      dialog.showModal();
+    });
+    await page.clock.runFor(300);
+
+    expect(
+      await page.evaluate(() => document.querySelector('localpolish-root')?.parentElement?.id),
+    ).toBe('later');
+    await expect(page.locator('.lp-mark')).toHaveCount(1);
+    expect(await markCommits(page)).toBe(0);
+
+    await page.locator('localpolish-root').evaluate((root) => root.remove());
+    await page.clock.runFor(300);
+    await expect(page.locator('.lp-mark')).toHaveCount(1);
+    expect(await markCommits(page)).toBe(1);
+    expect(
+      await page.evaluate(() => document.querySelector('localpolish-root')?.parentElement?.id),
+    ).toBe('later');
   });
 
   test('Backspace still works in Draft.js after Accept', async ({ page }) => {

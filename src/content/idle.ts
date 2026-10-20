@@ -44,6 +44,17 @@ interface Slot {
   finish: ((outcome: Outcome | undefined) => void) | undefined;
 }
 
+interface MarkView {
+  el: HTMLElement;
+  top: number;
+  left: number;
+  tone: 'fixes' | 'error' | 'busy';
+  stale: boolean;
+  text: string;
+  title?: string;
+  ariaLabel: string;
+}
+
 export interface IdleFix {
   refresh(): void;
   open(target: Target): void;
@@ -57,14 +68,17 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   const waiting = new WeakSet<Slot>();
   let nextId = 1;
   let follow: ReturnType<typeof setInterval> | undefined;
+  let frame: number | undefined;
+  let shown: { container: HTMLElement; views: MarkView[] } | undefined;
 
   // Draft.js (X) handles Backspace, Delete and paste itself, so those edits fire no input event.
   for (const type of ['input', 'keyup', 'paste', 'cut', 'drop']) {
     document.addEventListener(type, guarded(onInput), true);
   }
+  // Closing the popup restores markers through focusin, so it stays immediate.
   document.addEventListener('focusin', guarded(reposition), true);
-  window.addEventListener('scroll', guarded(reposition), { capture: true, passive: true });
-  window.addEventListener('resize', guarded(reposition));
+  window.addEventListener('scroll', guarded(queueReposition), { capture: true, passive: true });
+  window.addEventListener('resize', guarded(queueReposition));
 
   function onInput(event: Event): void {
     if (!deps.isEnabled()) return;
@@ -72,7 +86,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;
     const slot = slotOf(host);
-    reposition();
+    queueReposition();
     slot.pending = false;
     clearTimeout(slot.timer);
     slot.timer = setTimeout(
@@ -87,6 +101,16 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   function reposition(): void {
     if (marked.size === 0) return;
     renderMarks();
+  }
+
+  function queueReposition(): void {
+    if (marked.size === 0 || frame !== undefined) return;
+    frame = requestAnimationFrame(
+      guarded(() => {
+        frame = undefined;
+        reposition();
+      }),
+    );
   }
 
   function slotOf(el: HTMLElement): Slot {
@@ -294,6 +318,10 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   }
 
   function renderMarks(): void {
+    if (frame !== undefined) {
+      cancelAnimationFrame(frame);
+      frame = undefined;
+    }
     if (!deps.isEnabled()) {
       for (const el of marked) {
         const slot = slots.get(el);
@@ -311,7 +339,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       hideAll();
       return;
     }
-    const items = [];
+    const views: MarkView[] = [];
     for (const el of marked) {
       const slot = slots.get(el);
       const result = slot?.result;
@@ -322,17 +350,48 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       }
       if (slot.running) {
         const spot = markSpot(el);
-        if (spot) items.push({ el, result: undefined, ...spot });
+        if (spot) {
+          views.push({
+            el,
+            ...spot,
+            tone: 'busy',
+            stale: false,
+            text: '',
+            ariaLabel: 'LocalPolish: checking',
+          });
+        }
         continue;
       }
       if (!result) continue;
-      if ('fixed' in result && fieldText(el).trim() === result.fixed.trim()) {
+      const current = fieldText(el);
+      if ('fixed' in result && current.trim() === result.fixed.trim()) {
         slot.result = undefined;
         marked.delete(el);
         continue;
       }
       const spot = markSpot(el);
-      if (spot) items.push({ el, result, ...spot });
+      if (!spot) continue;
+      const stale = current !== result.sent;
+      if ('error' in result) {
+        views.push({
+          el,
+          ...spot,
+          tone: 'error',
+          stale,
+          text: '!',
+          title: result.error,
+          ariaLabel: 'LocalPolish: error',
+        });
+      } else {
+        views.push({
+          el,
+          ...spot,
+          tone: 'fixes',
+          stale,
+          text: result.count > 9 ? '9+' : String(result.count),
+          ariaLabel: `LocalPolish: ${result.count} ${result.count === 1 ? 'fix' : 'fixes'}`,
+        });
+      }
     }
     if (marked.size === 0) {
       hideAll();
@@ -340,51 +399,19 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     }
     // Sites move their composers without a scroll or resize event (X adds its toolbar under the box).
     follow ??= setInterval(guarded(renderMarks), FOLLOW_MS);
+    // layer() also moves the host into a newly opened modal, so it runs even when nothing changed.
+    const container = layer('marks');
+    if (shown?.container === container && sameViews(shown.views, views)) return;
+    shown = { container, views };
     render(
       h(
         Fragment,
         null,
-        items.map((item) => {
-          const mark = item.result;
-          if (!mark) {
-            return h(IdleMark, {
-              key: idOf(item.el),
-              top: item.top,
-              left: item.left,
-              tone: 'busy',
-              stale: false,
-              text: '',
-              ariaLabel: 'LocalPolish: checking',
-              onActivate: guarded(() => activate(item.el)),
-            });
-          }
-          const stale = fieldText(item.el) !== mark.sent;
-          if ('error' in mark) {
-            return h(IdleMark, {
-              key: idOf(item.el),
-              top: item.top,
-              left: item.left,
-              tone: 'error',
-              stale,
-              text: '!',
-              title: mark.error,
-              ariaLabel: 'LocalPolish: error',
-              onActivate: guarded(() => activate(item.el)),
-            });
-          }
-          return h(IdleMark, {
-            key: idOf(item.el),
-            top: item.top,
-            left: item.left,
-            tone: 'fixes',
-            stale,
-            text: mark.count > 9 ? '9+' : String(mark.count),
-            ariaLabel: `LocalPolish: ${mark.count} ${mark.count === 1 ? 'fix' : 'fixes'}`,
-            onActivate: guarded(() => activate(item.el)),
-          });
-        }),
+        views.map(({ el, ...props }) =>
+          h(IdleMark, { key: idOf(el), ...props, onActivate: guarded(() => activate(el)) }),
+        ),
       ),
-      layer('marks'),
+      container,
     );
   }
 
@@ -392,6 +419,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (follow === undefined) return;
     clearInterval(follow);
     follow = undefined;
+    shown = undefined;
     render(null, layer('marks'));
   }
 
@@ -424,6 +452,15 @@ function markSpot(el: HTMLElement): { top: number; left: number } | null {
   const left = rect.right - scrollbar - MARK_INSET;
   if (top < 0 || left < 0 || top > window.innerHeight || left > window.innerWidth) return null;
   return { top, left };
+}
+
+const VIEW_FIELDS = ['el', 'top', 'left', 'tone', 'text', 'ariaLabel', 'title', 'stale'] as const;
+
+function sameViews(before: MarkView[], after: MarkView[]): boolean {
+  return (
+    before.length === after.length &&
+    before.every((view, index) => VIEW_FIELDS.every((key) => view[key] === after[index]?.[key]))
+  );
 }
 
 function readOutcome(message: unknown): Outcome | null {

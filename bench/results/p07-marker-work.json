@@ -1,0 +1,45 @@
+{
+  "task": "P07",
+  "syntheticOnly": true,
+  "scenario": "rich-marker",
+  "fixture": {
+    "words": 1200,
+    "observationMs": 900
+  },
+  "before": [
+    {
+      "temperature": "cold",
+      "startedCairo": "2026-10-20T17:07:38+0300",
+      "innerText": 6,
+      "fieldRectReads": 3,
+      "markMutationRecords": 0
+    },
+    {
+      "temperature": "warm",
+      "startedCairo": "2026-10-20T17:07:43+0300",
+      "innerText": 6,
+      "fieldRectReads": 3,
+      "markMutationRecords": 0
+    }
+  ],
+  "after": [
+    {
+      "temperature": "cold",
+      "startedCairo": "2026-10-20T17:16:22+0300",
+      "innerText": 3,
+      "fieldRectReads": 3,
+      "markMutationRecords": 0
+    },
+    {
+      "temperature": "warm",
+      "startedCairo": "2026-10-20T17:16:27+0300",
+      "innerText": 3,
+      "fieldRectReads": 3,
+      "markMutationRecords": 0
+    }
+  ],
+  "limits": [
+    "Two local smoke samples per version; work counts, not battery or model latency.",
+    "Render counts come from the separate actual IdleMark fixture; bundled renderInvocations remains null."
+  ]
+}
