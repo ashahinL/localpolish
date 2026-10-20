@@ -245,6 +245,59 @@ describe('cliProvider', () => {
     expect(read).toHaveBeenCalled();
   });
 
+  it('forwards valid grok model names and ignores invalid or late frames', async () => {
+    const onModel = vi.fn();
+    const controller = new AbortController();
+    const pending = cliProvider('grok')(
+      prompt,
+      settings(),
+      () => undefined,
+      controller.signal,
+      onModel,
+    );
+    emitMessage({ type: 'model', model: '  grok-4.7  ' });
+    emitMessage({ type: 'model', model: '' });
+    emitMessage({ type: 'model', model: '   ' });
+    emitMessage({ type: 'model', model: 'x'.repeat(201) });
+    emitMessage({ type: 'model', model: 7 });
+    emitMessage({ type: 'model', model: 'grok-4' });
+    emitMessage({ type: 'model', model: 'y'.repeat(200) });
+    emitMessage({ type: 'done' });
+    emitMessage({ type: 'model', model: 'late' });
+    await pending;
+    controller.abort();
+    expect(onModel.mock.calls).toEqual([['grok-4.7'], ['grok-4'], ['y'.repeat(200)]]);
+  });
+
+  it('ignores model frames for other CLIs and after abort', async () => {
+    const claudeModel = vi.fn();
+    const claude = cliProvider('claude')(
+      prompt,
+      settings(),
+      () => undefined,
+      new AbortController().signal,
+      claudeModel,
+    );
+    emitMessage({ type: 'model', model: 'opus' });
+    emitMessage({ type: 'done' });
+    await claude;
+    expect(claudeModel).not.toHaveBeenCalled();
+
+    const grokModel = vi.fn();
+    const controller = new AbortController();
+    const grok = cliProvider('grok')(
+      prompt,
+      settings(),
+      () => undefined,
+      controller.signal,
+      grokModel,
+    );
+    controller.abort();
+    emitMessage({ type: 'model', model: 'grok-4.7' });
+    expect(await rejection(grok)).toBe('Cancelled.');
+    expect(grokModel).not.toHaveBeenCalled();
+  });
+
   it('disconnects and rejects when the request is aborted', async () => {
     const controller = new AbortController();
     const pending = cliProvider('claude')(prompt, settings(), () => undefined, controller.signal);

@@ -238,10 +238,23 @@ export function buildCommand(cli, { model, effort, system, instructionsFile, mod
   throw new Error(`Unknown CLI: ${cli}`);
 }
 
+const MAX_REPORTED_MODEL_LENGTH = 200;
+
+/**
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
+function reportedModelName(value) {
+  if (typeof value !== 'string') return undefined;
+  const model = value.trim();
+  if (model.length === 0 || model.length > MAX_REPORTED_MODEL_LENGTH) return undefined;
+  return model;
+}
+
 /**
  * @param {string} cli
  * @param {string} line
- * @returns {{ text: string } | { error: string } | { end: true } | null}
+ * @returns {{ text: string } | { error: string } | { end: true } | { model: string } | null}
  */
 export function parseLine(cli, line) {
   const trimmed = line.trim();
@@ -255,6 +268,10 @@ export function parseLine(cli, line) {
   if (!msg || typeof msg !== 'object') return null;
 
   if (cli === 'claude' || cli === 'grok') {
+    if (cli === 'grok' && msg.type === 'system' && msg.subtype === 'init') {
+      const model = reportedModelName(msg.model);
+      return model === undefined ? null : { model };
+    }
     const event = msg.event;
     const delta = event && event.delta;
     if (

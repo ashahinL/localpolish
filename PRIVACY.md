@@ -16,7 +16,7 @@ browser, on your device:
 - the API keys and base URL you enter for the OpenAI-compatible and Anthropic
   providers;
 - the list of sites where LocalPolish stays hidden;
-- all-time request attempt counts for each provider and selected model. These
+- all-time request attempt counts for each provider and model. These
   include failed requests, retries, and Test connection. Cached answers do not count.
   An attempt starts before saving its count, so cancellation during that save
   still counts even if the provider has not been called.
@@ -28,7 +28,8 @@ Only trusted extension contexts, including the background, toolbar popup,
 and options page, can read this storage. Content scripts receive only the
 site list, idle Fix switch, and default mode. They cannot read stored API keys.
 
-Usage stores only provider names, selected model names, and request counts. It
+Usage stores only provider names, model names, and request counts. For Grok's CLI
+default, new attempts use the model name reported at startup when available. It
 stores no prompts, answers, keys, sites, URLs, dates, or per-request logs.
 LocalPolish keeps no draft history and writes no text or answer to disk. While a tab is open, Fix while
 I type keeps the last text it sent from each field and the answer in that

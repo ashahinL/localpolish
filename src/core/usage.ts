@@ -53,3 +53,26 @@ export function recordUsage(settings: Pick<Settings, 'provider' | 'models'>): Pr
   usageQueue = result.catch(() => undefined);
   return result;
 }
+
+export function reattributeUsage(
+  provider: ProviderId,
+  fromModel: string,
+  toModel: string,
+): Promise<void> {
+  const result = usageQueue.then(async () => {
+    if (fromModel === toModel) return;
+    const rows = await loadUsage();
+    const source = rows.find((row) => row.provider === provider && row.model === fromModel);
+    if (!source) return;
+    const target = rows.find((row) => row.provider === provider && row.model === toModel);
+    // A full target cannot take the count. Leaving both rows keeps the total the same.
+    if (target && target.requests >= Number.MAX_SAFE_INTEGER) return;
+    source.requests -= 1;
+    if (source.requests === 0) rows.splice(rows.indexOf(source), 1);
+    if (target) target.requests += 1;
+    else rows.push({ provider, model: toModel, requests: 1 });
+    await storageLocal().set({ [USAGE_STORAGE_KEY]: rows });
+  });
+  usageQueue = result.catch(() => undefined);
+  return result;
+}

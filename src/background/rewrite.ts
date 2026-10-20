@@ -8,7 +8,7 @@ import {
 import { type RewriteEvent, type RewriteRequest, type TestResult } from '../core/messages';
 import { buildPrompt } from '../core/prompts';
 import { type Settings } from '../core/settings';
-import { recordUsage } from '../core/usage';
+import { reattributeUsage, recordUsage } from '../core/usage';
 import { BridgeMissingError } from './providers/cli';
 import { type StreamFn } from './providers/types';
 
@@ -33,7 +33,15 @@ export async function runRewrite(
     return;
   }
   // An attempt starts here, even if cancelled while its count is being saved.
-  await recordUsage(settings).catch(() => undefined);
+  const provider = settings.provider;
+  const sourceModel = settings.models[provider];
+  let recorded = false;
+  await recordUsage(settings).then(
+    () => {
+      recorded = true;
+    },
+    () => undefined,
+  );
   if (signal.aborted) return;
 
   const prompt = buildPrompt(req.mode, req.tone, req.text);
@@ -45,7 +53,20 @@ export async function runRewrite(
   const inner = new AbortController();
   let timedOut = false;
   let rejectStream: ((err: Error) => void) | undefined;
+  let modelOpen = true;
+  let acceptedModel = false;
+  let transfer: Promise<void> | undefined;
+  const onModel = (reported: string) => {
+    if (!modelOpen || !recorded || acceptedModel) return;
+    if (signal.aborted || inner.signal.aborted) return;
+    if (provider !== 'grok-cli' || sourceModel !== '') return;
+    const model = reported.trim();
+    if (model === '' || model.length > 200) return;
+    acceptedModel = true;
+    transfer = reattributeUsage(provider, sourceModel, model).catch(() => undefined);
+  };
   const onAbort = () => {
+    modelOpen = false;
     inner.abort();
     rejectStream?.(new Error('Cancelled.'));
   };
@@ -53,6 +74,7 @@ export async function runRewrite(
   if (signal.aborted) onAbort();
   const timer = setTimeout(() => {
     timedOut = true;
+    modelOpen = false;
     inner.abort();
     rejectStream?.(new Error('Timed out after 60 seconds.'));
   }, REWRITE_TIMEOUT_MS);
@@ -61,6 +83,7 @@ export async function runRewrite(
     await new Promise<void>((resolve, reject) => {
       rejectStream = reject;
       if (inner.signal.aborted) {
+        modelOpen = false;
         reject(new Error('Cancelled.'));
         return;
       }
@@ -91,8 +114,18 @@ export async function runRewrite(
             if (req.trigger !== 'idle') post({ type: 'chunk', text });
           },
           inner.signal,
+          onModel,
         ),
-      ).then(resolve, reject);
+      ).then(
+        () => {
+          modelOpen = false;
+          resolve();
+        },
+        (err: unknown) => {
+          modelOpen = false;
+          reject(err);
+        },
+      );
     });
     if (outputExceeded) throw new Error(OUTPUT_LIMIT_MESSAGE);
   } catch (err) {
@@ -113,8 +146,10 @@ export async function runRewrite(
     );
     return;
   } finally {
+    modelOpen = false;
     clearTimeout(timer);
     signal.removeEventListener('abort', onAbort);
+    await transfer;
   }
 
   const cleaned = cleanOutput(raw, req.text);

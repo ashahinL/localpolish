@@ -43,6 +43,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+const MAX_REPORTED_MODEL_LENGTH = 200;
+
+function reportedModelName(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const model = value.trim();
+  if (model.length === 0 || model.length > MAX_REPORTED_MODEL_LENGTH) return undefined;
+  return model;
+}
+
 function bridgeStoppedMessage(detail: string | undefined): string {
   if (detail !== undefined && detail.includes('not found')) return NOT_INSTALLED;
   if (detail !== undefined && detail !== '') return `The bridge stopped: ${detail}`;
@@ -77,7 +86,7 @@ function readPong(value: unknown): BridgeStatus | undefined {
 }
 
 export function cliProvider(cli: CliName): StreamFn {
-  return (prompt, settings, onText, signal) =>
+  return (prompt, settings, onText, signal, onModel) =>
     new Promise((resolve, reject) => {
       if (signal.aborted) {
         reject(new Error('Cancelled.'));
@@ -99,6 +108,13 @@ export function cliProvider(cli: CliName): StreamFn {
 
       port.onMessage.addListener((message: unknown) => {
         if (settled || !isRecord(message)) return;
+        if (message.type === 'model') {
+          if (cli === 'grok' && !signal.aborted) {
+            const model = reportedModelName(message.model);
+            if (model !== undefined) onModel?.(model);
+          }
+          return;
+        }
         if (message.type === 'chunk') {
           if (typeof message.text === 'string') {
             try {

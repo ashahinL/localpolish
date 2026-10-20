@@ -10,4 +10,5 @@ export type StreamFn = (
   settings: Settings,
   onText: (t: string) => void,
   signal: AbortSignal,
+  onModel?: (model: string) => void,
 ) => Promise<void>;

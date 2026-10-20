@@ -1,7 +1,7 @@
 import type { UsageRow } from '../core/usage';
 import { PROVIDERS } from '../options/ProviderSection';
 
-export const DEFAULT_MODEL_LABEL = 'Provider default';
+export const DEFAULT_MODEL_LABEL = 'Unknown (CLI default)';
 
 export function providerTitle(id: UsageRow['provider']): string {
   return PROVIDERS.find((item) => item.id === id)?.title ?? id;

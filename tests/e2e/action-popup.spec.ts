@@ -586,7 +586,7 @@ test('Usage lists each provider and model with a total', async ({ page }) => {
     .poll(() => usageCells(page))
     .toEqual([
       [LONG_MODEL, 'OpenAI-compatible API', '12'],
-      ['Provider default', 'Codex', '7'],
+      ['Unknown (CLI default)', 'Codex', '7'],
       ['claude-haiku-5-5', 'Anthropic API', '3'],
       ['haiku', 'Claude Code', '3'],
     ]);
@@ -624,7 +624,7 @@ test('Usage updates live when the counts change in storage', async ({ page }) =>
     .poll(() => usageCells(page))
     .toEqual([
       ['haiku', 'Claude Code', '2'],
-      ['Provider default', 'Grok CLI', '1'],
+      ['Unknown (CLI default)', 'Grok CLI', '1'],
     ]);
   await expect(usageRegion(page).getByRole('row', { name: /Total/ })).toContainText('3');
 });

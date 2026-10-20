@@ -281,6 +281,10 @@ function handleRewrite(msg) {
       finish({ type: 'done' });
       return;
     }
+    if ('model' in parsed) {
+      process.stdout.write(encodeMessage({ type: 'model', model: parsed.model }));
+      return;
+    }
     rememberedError = parsed.error;
   };
 

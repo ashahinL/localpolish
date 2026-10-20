@@ -320,6 +320,28 @@ describe('parseLine', () => {
     expect(parseLine('codex', '{"type":"turn.completed","usage":{}}')).toEqual({ end: true });
     expect(parseLine('codex', 'Reading additional input from stdin...')).toBeNull();
   });
+
+  it('reads a grok init model and ignores a malformed or non-grok one', () => {
+    const init = (model) =>
+      JSON.stringify({ type: 'system', subtype: 'init', model, session_id: 'abc' });
+    expect(parseLine('grok', init('grok-4.7'))).toEqual({ model: 'grok-4.7' });
+    expect(parseLine('grok', `  ${init('  grok-4.7  ')}\n`)).toEqual({ model: 'grok-4.7' });
+    expect(parseLine('grok', init('a'.repeat(200)))).toEqual({ model: 'a'.repeat(200) });
+    expect(parseLine('grok', init(''))).toBeNull();
+    expect(parseLine('grok', init('   '))).toBeNull();
+    expect(parseLine('grok', init('a'.repeat(201)))).toBeNull();
+    expect(parseLine('grok', init(1))).toBeNull();
+    expect(parseLine('grok', init(null))).toBeNull();
+    expect(parseLine('grok', JSON.stringify({ type: 'system', subtype: 'init' }))).toBeNull();
+    expect(
+      parseLine(
+        'grok',
+        JSON.stringify({ type: 'system', subtype: 'compact_boundary', model: 'grok-4.7' }),
+      ),
+    ).toBeNull();
+    expect(parseLine('claude', init('grok-4.7'))).toBeNull();
+    expect(parseLine('codex', init('grok-4.7'))).toBeNull();
+  });
 });
 
 describe('resolveCommand', () => {

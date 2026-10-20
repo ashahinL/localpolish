@@ -330,7 +330,7 @@ Match the message on screen, then do the fix that follows it.
 - Your text goes only to the provider you chose: the CLI on this computer, which sends it on to its own service under your subscription, or the API URL you set.
 - Fix while I type sends a field's text after you pause, only in message fields and never on a site in **Sites**. Turn it off with its switch.
 - Settings and API keys stay in `chrome.storage.local` on this browser. Chrome does not sync them. LocalPolish does not log them.
-- Usage counts stay in `chrome.storage.local` too, under `usage`. Each row is a provider, the model name you picked (empty means the provider default), and a number. No text, answers, keys, sites or dates are saved. A request is any started attempt: failed and cancelled ones and Test connection count, cached answers do not. Counting started with this update, so earlier use cannot be recovered.
+- Usage counts stay in `chrome.storage.local` too, under `usage`. Each row is a provider, a model name, and a number. When Grok uses its CLI default, new attempts use the model name reported by the CLI at startup. Older blank rows and attempts without model metadata show `Unknown (CLI default)`. Their model names cannot be recovered. No text, answers, keys, sites or dates are saved. A request is any started attempt: failed and cancelled ones and Test connection count, cached answers do not. Counting started with this update, so earlier use cannot be recovered.
 - The bridge runs the CLI in an empty temp folder that is deleted afterwards, with its tools off. Grok can still search X and keeps its session history in `~/.grok`.
 
 The full policy is in [PRIVACY.md](PRIVACY.md). To report a security problem, see [SECURITY.md](SECURITY.md).

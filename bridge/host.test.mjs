@@ -449,6 +449,33 @@ process.stdin.on('end', () => {
     expect(() => process.kill(pid, 0)).toThrow();
   });
 
+  it('forwards a grok init model and then the answer', async () => {
+    const bin = tempDir('lp-bin-');
+    writeCli(
+      bin,
+      'grok',
+      `#!/usr/bin/env node
+process.stdin.resume();
+process.stdin.on('end', () => {
+  const send = (value) => process.stdout.write(JSON.stringify(value) + '\\n');
+  send({ type: 'system', subtype: 'init', model: 'grok-4.7' });
+  const delta = { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Fixed.' } };
+  send({ type: 'stream_event', event: delta });
+  const stop = { type: 'message_delta', delta: { stop_reason: 'end_turn' } };
+  send({ type: 'stream_event', event: stop });
+});
+`,
+    );
+    const host = startHost(bin);
+    host.child.stdin.write(rewrite('grok', 'hello'));
+    expect(await host.closed).toBe(0);
+    expect(host.messages).toEqual([
+      { type: 'model', model: 'grok-4.7' },
+      { type: 'chunk', text: 'Fixed.' },
+      { type: 'done' },
+    ]);
+  });
+
   it('kills the cli when Chrome closes stdin', async () => {
     const bin = tempDir('lp-bin-');
     const pidFile = path.join(bin, 'pid');
