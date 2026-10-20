@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. Tasks through P08a, including P11, are complete. P08b is next. The release version is not chosen.
+Status: implementation in progress. Tasks through P08b, including P11, are complete. P09 is next. Its first browser run failed in the new fixture; that fixture is corrected and not yet rerun. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -41,13 +41,13 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P06](#p06-cancel-abandoned-connection-tests)                 | Cancel tests when their extension page goes away                       | complex      | P01d                    |
 | [x]    | [P07](#p07-coalesce-marker-work)                              | Reduce duplicate marker reads and renders                              | art          | P02, P00a               |
 | [x]    | [P08a](#p08a-prove-hidden-document-state-in-a-browser)        | Establish a reliable hidden-page browser fixture                       | complex      | P00a                    |
-| [ ]    | [P08b](#p08b-defer-new-idle-requests-while-hidden)            | Gate automatic request starts on visibility                            | feature      | P08a, P02, P07          |
+| [x]    | [P08b](#p08b-defer-new-idle-requests-while-hidden)            | Gate automatic request starts on visibility                            | feature      | P08a, P02, P07          |
 | [ ]    | [P09](#p09-stop-posting-unused-idle-chunks)                   | Suppress idle preview messages at the worker boundary                  | feature      | P01d                    |
 | [ ]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: seventeen completed and five pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: eighteen completed and four pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -289,6 +289,8 @@ Done: repeated runs demonstrate real hidden/visible transitions for the top docu
 
 ## P08b. Defer new idle requests while hidden
 
+Status: implemented, pending parent verification and commit. Parent ran all eight new cases on 2026-10-20; every one failed. `tests/e2e/visibility.spec.ts` passed. The fixture waited forever because `beforeEach` saved `idleFix: true` and the first `apply` saved the same value, so Chrome emitted no settings change. It also looked for the cross-host editor world on the main page CDP session, then on a debugger URL that `Browser.getVersion` does not return. `beforeEach` now saves idle Fix off before the editor opens, so the first apply is a real change and the test still waits for that refresh. Each requested document, including the main frame, now gets `newCDPSession` on its own Playwright frame. These corrections are not a browser pass.
+
 Source: G03. Files: `src/content/idle.ts::tryRun` and visibility handling, the proven fixture from P08a, idle/usage browser cases.
 
 Prevent new automatic requests while hidden. On return, recheck current focus, field eligibility, current text, elapsed typing pause, settings and blocked ancestors. Start at most one currently eligible request. Do not store a queued draft or restart the full delay when the pause already elapsed. Keep already-started requests running. Manual requests retain their current behavior. Pause marker polling while hidden and recheck text/position on return.
@@ -401,3 +403,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P07 reviewer verification: all required gates passed. The parent added and verified root-removal recovery, checked three repeats of the timing-sensitive burst case, and saved the before/after rich-editor work counts. No production correction was needed. P06 remote CI passed.
 
 - P08a: actual hidden/visible state is proven for the page and its editor frame. The prior separate-CDP-session focus setting still left documents visible; the supported noDefaults connection resolved the fixture problem. Browser ownership and private-profile cleanup were checked. P08b can now use this fixture. No delegate or reusable skill was needed.
+
+- P08b: automatic idle starts wait while the actual document is hidden. Return rechecks the current focused field and text, using only the remaining pause. Accepted requests keep running; hidden marker polling and field reads stop. The new eight browser cases and the existing real-visibility proof all passed. Fixture review caught identical settings writes and incorrect frame-session discovery; both were corrected without weakening the assertions. The parent added a narrow fallback for frames that share their parent's CDP session. Lint, typecheck, formatting, build, and 478 unit tests passed, with two existing skips. Existing popup/extension regressions passed; the first overlapping browser invocation lost its shared server and was rerun with one server owner. All 30 runtime smoke samples passed, report `P08b-runtime/runtime-smoke-202610201802180300-69842.json` in the local fleet artifact directory. No provider calls were made. Clean-code, test and documentation review passed. Comment Sicko was unavailable, so comments were reviewed manually. Grok suggested no reusable skill; the reviewer agrees.

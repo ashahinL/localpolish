@@ -35,6 +35,7 @@ type IdleResult = { sent: string; fixed: string; count: number } | { sent: strin
 
 interface Slot {
   timer: ReturnType<typeof setTimeout> | undefined;
+  lastInput: number | undefined;
   running: boolean;
   pending: boolean;
   lastFull: string | undefined;
@@ -77,6 +78,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   }
   // Closing the popup restores markers through focusin, so it stays immediate.
   document.addEventListener('focusin', guarded(reposition), true);
+  document.addEventListener('visibilitychange', guarded(onVisibility));
   window.addEventListener('scroll', guarded(queueReposition), { capture: true, passive: true });
   window.addEventListener('resize', guarded(queueReposition));
 
@@ -86,16 +88,42 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;
     const slot = slotOf(host);
+    slot.lastInput = Date.now();
     queueReposition();
     slot.pending = false;
+    arm(host, slot, IDLE_MS);
+  }
+
+  function onVisibility(): void {
+    renderMarks();
+    if (!document.hidden) resumeFocused();
+  }
+
+  function arm(el: HTMLElement, slot: Slot, delay: number): void {
     clearTimeout(slot.timer);
     slot.timer = setTimeout(
       guarded(() => {
         slot.timer = undefined;
-        tryRun(host);
+        tryRun(el);
       }),
-      IDLE_MS,
+      delay,
     );
+  }
+
+  function resumeFocused(): void {
+    const el = focusedEditable();
+    if (!el) return;
+    const slot = slots.get(el);
+    if (!slot || slot.lastInput === undefined) return;
+    if (!deps.isEnabled() || deps.isPopupOpen() || !el.isConnected || !isIdleField(el)) return;
+    const remaining = IDLE_MS - (Date.now() - slot.lastInput);
+    if (remaining <= 0) {
+      clearTimeout(slot.timer);
+      slot.timer = undefined;
+      tryRun(el);
+      return;
+    }
+    arm(el, slot, remaining);
   }
 
   function reposition(): void {
@@ -104,7 +132,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   }
 
   function queueReposition(): void {
-    if (marked.size === 0 || frame !== undefined) return;
+    if (document.hidden || marked.size === 0 || frame !== undefined) return;
     frame = requestAnimationFrame(
       guarded(() => {
         frame = undefined;
@@ -118,6 +146,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (slot) return slot;
     slot = {
       timer: undefined,
+      lastInput: undefined,
       running: false,
       pending: false,
       lastFull: undefined,
@@ -131,6 +160,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   }
 
   function tryRun(el: HTMLElement): void {
+    if (document.hidden) return;
     const slot = slotOf(el);
     if (deps.isPopupOpen()) return;
     if (!deps.isEnabled() || focusedEditable() !== el || !el.isConnected || !isIdleField(el))
@@ -335,6 +365,10 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       hideAll();
       return;
     }
+    if (document.hidden) {
+      concealMarks();
+      return;
+    }
     if (deps.isPopupOpen()) {
       hideAll();
       return;
@@ -413,6 +447,16 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       ),
       container,
     );
+  }
+
+  function concealMarks(): void {
+    if (follow !== undefined) {
+      clearInterval(follow);
+      follow = undefined;
+    }
+    if (shown === undefined) return;
+    shown = undefined;
+    render(null, layer('marks'));
   }
 
   function hideAll(): void {

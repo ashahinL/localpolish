@@ -186,7 +186,7 @@ Select text in a text field. A small round button appears under the spot where y
 
 Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field. Change the key from the popup's **About** tab.
 
-**Fix while I type** is on by default. When you stop typing for 3 seconds in a message field, LocalPolish runs a Fix in the background, and a small marker shows how many fixes it found. Click the marker to see the diff. Turn it off with the **Fix while I type** switch in the toolbar popup.
+**Fix while I type** is on by default. When you stop typing for 3 seconds in a message field, LocalPolish runs a Fix in the background, and a small marker shows how many fixes it found. Click the marker to see the diff. If you switch to another tab before that check starts, LocalPolish waits. When you come back, it uses the text in the field you are typing in and keeps the time you already waited. A check that already started keeps going. Turn it off with the **Fix while I type** switch in the toolbar popup.
 
 The rewrite popup next to the field has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green. Click **Final** above the diff to see only the new text, ready to select. **Changes** brings the diff back. The view you pick stays while the popup is open.
 
