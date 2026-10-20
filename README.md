@@ -190,6 +190,8 @@ Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS.
 
 The rewrite popup next to the field has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green. Click **Final** above the diff to see only the new text, ready to select. **Changes** brings the diff back. The view you pick stays while the popup is open.
 
+LocalPolish accepts at most 256 KiB of text, counted in UTF-8 bytes. A longer selection shows an error that names the 256 KiB limit. The text is not sent, the attempt is not counted, and the text is not shortened.
+
 **Accept** puts the new text in the field. The site's own Undo still works. Press `Cmd+Z` to bring the old text back. **Copy** copies the new text. **Retry** asks again. Esc closes the popup. `Cmd+Enter` accepts the text. `Ctrl+Enter` does the same.
 
 **Shorter** shows a character count and warns when the result is over 280 characters.
@@ -243,6 +245,8 @@ launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"
 ## The bridge
 
 The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with its tools off. Grok can still search X and keeps its session history in `~/.grok`. It streams the answer back.
+
+The host already receives that text wrapped as `<text>`, a newline, the text, a newline, and `</text>`. The wrapper adds 15 bytes. The host rejects a prompt over 256 KiB plus those 15 bytes, with the same error, before it looks up a CLI or starts one. A direct call to the host is held to that wrapped limit.
 
 Each CLI turns tools off in its own way. Grok can still search X and keeps its session history in `~/.grok`:
 

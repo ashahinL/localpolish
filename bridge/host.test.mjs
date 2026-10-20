@@ -472,6 +472,106 @@ if (process.argv.includes('--version')) {
   });
 });
 
+const LIMIT_MESSAGE =
+  'This text is over the 256 KiB limit, so it was not sent. Shorten it and try again.';
+
+describe('host input limit', () => {
+  it.each([
+    { name: 'ASCII', unit: 'a', unitBytes: 1, delta: -1 },
+    { name: 'ASCII', unit: 'a', unitBytes: 1, delta: 0 },
+    { name: 'ASCII', unit: 'a', unitBytes: 1, delta: 1 },
+    { name: 'Arabic', unit: 'م', unitBytes: 2, delta: -1 },
+    { name: 'Arabic', unit: 'م', unitBytes: 2, delta: 0 },
+    { name: 'Arabic', unit: 'م', unitBytes: 2, delta: 1 },
+    { name: 'emoji', unit: '😀', unitBytes: 4, delta: -1 },
+    { name: 'emoji', unit: '😀', unitBytes: 4, delta: 0 },
+    { name: 'emoji', unit: '😀', unitBytes: 4, delta: 1 },
+  ])(
+    'claude keeps a framed $name prompt at raw delta $delta',
+    async ({ unit, unitBytes, delta }) => {
+      const targetBytes = 262144 + delta;
+      const text =
+        unit.repeat(Math.floor(targetBytes / unitBytes)) + 'a'.repeat(targetBytes % unitBytes);
+      expect(Buffer.byteLength(unit)).toBe(unitBytes);
+      expect(Buffer.byteLength(text)).toBe(262144 + delta);
+      const prompt = `<text>\n${text}\n</text>`;
+      expect(Buffer.byteLength(prompt)).toBe(Buffer.byteLength(text) + 15);
+
+      const run = await runFramed('claude', prompt);
+      if (delta <= 0) {
+        expect(run.host.messages).toEqual([{ type: 'chunk', text: 'ok' }, { type: 'done' }]);
+        expect(fs.readFileSync(run.stdinFile)).toEqual(Buffer.from(prompt, 'utf8'));
+        expect(fs.readFileSync(run.marker, 'utf8')).toBe('started');
+        return;
+      }
+      expect(run.host.messages).toEqual([{ type: 'error', message: LIMIT_MESSAGE }]);
+      expect(fs.existsSync(run.marker)).toBe(false);
+      expect(fs.existsSync(run.stdinFile)).toBe(false);
+    },
+  );
+
+  it('accepts a direct prompt at the wrapped cap and rejects one byte over it', async () => {
+    const exact = 'a'.repeat(262159);
+    const over = 'b'.repeat(262160);
+    expect(Buffer.byteLength(exact)).toBe(262159);
+    expect(Buffer.byteLength(over)).toBe(262160);
+
+    const allowed = await runFramed('claude', exact);
+    expect(allowed.host.messages).toEqual([{ type: 'chunk', text: 'ok' }, { type: 'done' }]);
+    expect(fs.readFileSync(allowed.stdinFile)).toEqual(Buffer.from(exact, 'utf8'));
+    expect(fs.readFileSync(allowed.marker, 'utf8')).toBe('started');
+
+    const rejected = await runFramed('claude', over);
+    expect(rejected.host.messages).toEqual([{ type: 'error', message: LIMIT_MESSAGE }]);
+    expect(fs.existsSync(rejected.marker)).toBe(false);
+  });
+
+  it('rejects an oversized Codex prompt before the login check', async () => {
+    const prompt = `<text>\n${'a'.repeat(262145)}\n</text>`;
+    expect(Buffer.byteLength(prompt)).toBe(262160);
+    const run = await runFramed('codex', prompt);
+    expect(run.host.messages).toEqual([{ type: 'error', message: LIMIT_MESSAGE }]);
+    expect(fs.existsSync(run.marker)).toBe(false);
+    expect(fs.existsSync(run.stdinFile)).toBe(false);
+  });
+});
+
+/**
+ * @param {string} cli
+ * @param {string} user
+ */
+async function runFramed(cli, user) {
+  const bin = tempDir('lp-bin-');
+  const marker = path.join(bin, 'started');
+  const stdinFile = path.join(bin, 'stdin.txt');
+  writeCli(
+    bin,
+    cli,
+    `#!/usr/bin/env node
+const fs = require('node:fs');
+fs.writeFileSync(${JSON.stringify(marker)}, 'started');
+const chunks = [];
+process.stdin.on('data', (chunk) => chunks.push(chunk));
+process.stdin.on('end', () => {
+  fs.writeFileSync(${JSON.stringify(stdinFile)}, Buffer.concat(chunks));
+  const send = (event) => JSON.stringify({ type: 'stream_event', event }) + '\\n';
+  process.stdout.write(
+    send({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'ok' } }) +
+      send({ type: 'message_delta', delta: { stop_reason: 'end_turn' } }),
+    () => process.exit(0),
+  );
+});
+`,
+  );
+  const host = startHost(bin, 5000, tempDir('lp-home-'));
+  const frame = rewrite(cli, user);
+  if (!host.child.stdin.write(frame)) {
+    await new Promise((resolve) => host.child.stdin.once('drain', resolve));
+  }
+  await host.closed;
+  return { host, marker, stdinFile };
+}
+
 /**
  * @param {string} file
  * @returns {Promise<number>}

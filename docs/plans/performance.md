@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11 and P00a are complete. P00b is locally verified and awaits its first remote CI run. The release version is not chosen.
+Status: implementation in progress. P11, P00a, and P00b are complete. P01a is complete. P01b is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -26,8 +26,8 @@ This file is the execution plan. The review records the evidence and decisions. 
 | ------ | ------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------ | ----------------------- |
 | [x]    | [P11](#p11-remove-codex-rewrite-context)                      | Remove Codex coding context and unused tools                           | Complete     | None                    |
 | [x]    | [P00a](#p00a-add-a-portable-runtime-benchmark)                | Establish the offline runtime baseline                                 | complex      | P11                     |
-| [~]    | [P00b](#p00b-build-once-in-ci)                                | Remove the duplicate CI build                                          | feature      | None                    |
-| [ ]    | [P01a](#p01a-reject-oversized-input-before-an-attempt-starts) | Bound input before usage counting and provider startup                 | feature      | P00a                    |
+| [x]    | [P00b](#p00b-build-once-in-ci)                                | Remove the duplicate CI build                                          | feature      | None                    |
+| [x]    | [P01a](#p01a-reject-oversized-input-before-an-attempt-starts) | Bound input before usage counting and provider startup                 | feature      | P00a                    |
 | [ ]    | [P01b](#p01b-bound-native-frames-and-cli-event-lines)         | Bound native frames and CLI event lines; remove repeated frame copying | complex      | P01a                    |
 | [ ]    | [P01c](#p01c-bound-sse-events-and-avoid-repeated-line-scans)  | Bound SSE buffering and avoid prefix rescanning                        | complex      | P01a                    |
 | [ ]    | [P01d](#p01d-bound-total-rewrite-output)                      | Bound total output and abort oversized answers                         | complex      | P01b, P01c              |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: two completed, P00b awaiting remote CI, and 19 not started. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: four completed and 18 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -67,7 +67,7 @@ The [completed task record](codex-context.md) covers the implementation, cache-r
 
 ## P00a. Add a portable runtime benchmark
 
-Status: [~] startup reworked; awaiting reviewer smoke twice, successful full baseline, review, and commit. No files staged or committed by the implementer.
+Status: complete, commit `acad41b`, pushed. Two smoke runs, the full 300-sample baseline, all 136 browser tests, and crash-prevention checks passed. The first Linux CI run also passed and uploaded the runtime artifacts.
 
 Source: S05. Files: new offline harness under `bench/runtime/`, `package.json`, `.github/workflows/test.yml`, and the existing fixtures in `tests/e2e/extension.spec.ts` and `tests/e2e/mock-openai.ts`.
 
@@ -81,7 +81,7 @@ Done: the command runs without login or paid calls on a clean checkout after bui
 
 ## P00b. Build once in CI
 
-Status: [~] implemented, reviewed, and locally verified in this task commit. `npm run build` followed by `npx playwright test --workers=2 --max-failures=1` passed all 136 browser tests. The workflow has one production build. The first remote CI run is checked after push.
+Status: complete, commit `9a1ac8e`, pushed. `npm run build` followed by `npx playwright test --workers=2 --max-failures=1` passed all 136 browser tests. The workflow has one production build. The [first remote CI run](https://github.com/ashahinL/localpolish/actions/runs/39374910726) passed all gates, including the new runtime smoke and artifact upload.
 
 Source: S05. Files: `.github/workflows/test.yml`, `package.json`.
 
@@ -90,6 +90,12 @@ Keep `npm run test:e2e` as the standalone build-and-test command. In CI, retain 
 Done: the workflow has one production build, and the same browser suites pass against it. Validate the workflow diff, run `npm run build` followed by `npx playwright test`, and verify the first remote CI run. Do not change browser coverage or dependency versions.
 
 ## P01a. Reject oversized input before an attempt starts
+
+Status: complete in this task commit. Implemented by Grok 4.7 high and reviewed locally. ASCII, Arabic, and emoji cases cover exactly one byte below, at, and one byte above the cap.
+
+`runRewrite` rejects raw text over 262144 UTF-8 bytes before `recordUsage` and before a provider starts. Input at exactly 262144 bytes is kept and sent inside the existing `<text>` frame. ASCII, Arabic, and emoji are counted in bytes. The native host rejects an already framed prompt over 262159 bytes, which is 256 KiB plus the 15-byte `<text>` wrapper, before CLI lookup, Codex login, a temp directory, or spawn. The error is `This text is over the 256 KiB limit, so it was not sent. Shorten it and try again.` The text is not shortened.
+
+Reviewer verification passed: lint, typecheck, 331 unit tests with 2 skipped, formatting, build, all 26 built-extension tests, and all 15 runtime smoke scenarios with 30 samples. The browser regression confirms the error, disabled Accept, zero provider requests, and unchanged stored usage. No real provider calls were used.
 
 Source: S01. Files: `src/entrypoints/background.ts` request handling, `src/background/rewrite.ts::runRewrite`, `bridge/host.mjs::handleRewrite`, `bridge/constants.mjs`, and their existing tests. Add browser-side limit definitions where needed.
 
@@ -285,4 +291,6 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 
 - P00a: portable runtime tooling and 15 offline scenarios are implemented. The reviewer fixed a warm rich-editor fixture and added a macOS sandbox preflight after delegate Chrome crashes. Native mocking now starts in an isolated copy of the built worker. Unit tests passed 310 with 2 skipped, browser tests passed 136, and fixture/preflight checks passed 4. Two successful smoke runs matched coverage and exact request/message/decoding counts with identical source/build hashes. The [full baseline](../../bench/results/runtime-full-202610200817580300-63158.json) passed all 300 samples across 15 scenarios. Four separate heap snapshots were retained and checked against their recorded sizes. SIGTERM stopped new work before any browser scenario started. Lint, typecheck, build, and formatting passed. Earlier failed reports are retained outside the checkout. See the [verification record](../../bench/runtime/REPORT.md). No production optimization or version change is included.
 
-- P00b: CI reuses its explicit build for Playwright. The standalone `test:e2e` script still builds. Browser coverage and dependency versions are unchanged. All 136 browser tests passed after a fresh local build. Formatting and the workflow diff passed review; remote CI follows push.
+- P00b: CI reuses its explicit build for Playwright. The standalone `test:e2e` script still builds. Browser coverage and dependency versions are unchanged. All 136 browser tests passed after a fresh local build. Formatting and the workflow diff passed review. The [first remote CI run](https://github.com/ashahinL/localpolish/actions/runs/39374910726) passed all gates and uploaded the runtime artifacts.
+
+- P01a: complete in this commit. Raw input over 256 KiB UTF-8 is rejected before an attempt or provider work. The native prompt cap allows the existing 15-byte wrapper. The reviewer tightened the multilingual cases to exact adjacent byte boundaries and removed a constant-only test. Lint, typecheck, 331 unit tests with 2 skipped, formatting, build, 26 built-extension tests, and 30 runtime smoke samples passed. Grok suggested no new reusable skill; the reviewer agrees that the existing limit-test workflow covers this work.

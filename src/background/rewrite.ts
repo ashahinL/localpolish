@@ -1,4 +1,5 @@
 import { cleanOutput } from '../core/cleanup';
+import { exceedsInputLimit, INPUT_LIMIT_MESSAGE } from '../core/limits';
 import { type RewriteEvent, type RewriteRequest, type TestResult } from '../core/messages';
 import { buildPrompt } from '../core/prompts';
 import { type Settings } from '../core/settings';
@@ -22,6 +23,10 @@ export async function runRewrite(
   signal: AbortSignal,
 ): Promise<void> {
   if (signal.aborted) return;
+  if (exceedsInputLimit(req.text)) {
+    post({ type: 'error', message: INPUT_LIMIT_MESSAGE });
+    return;
+  }
   // An attempt starts here, even if cancelled while its count is being saved.
   await recordUsage(settings).catch(() => undefined);
   if (signal.aborted) return;

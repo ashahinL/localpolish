@@ -28,6 +28,6 @@ Reports record source/build hashes, Cairo timestamps, environment details, raw s
 
 Renderer-wide listeners and DOM counts do not identify exact extension retention. Content-world pending-work counters exclude work scheduled before instrumentation and worker internals. Exact extension listener counts and bundled Preact render counts are recorded as null with reasons. Heap snapshots can trigger garbage collection. Neither timings nor heap bytes act as universal CI deadlines.
 
-CI runs HTTP fixture checks and smoke after its build/browser install, with a three-minute smoke limit. Reports, raw samples, and heap snapshots upload through the pinned artifact action. Remote execution and artifact upload await the first push. Linux and Windows verification remain separate from the local Mac evidence.
+CI runs HTTP fixture checks and smoke after its build/browser install, with a three-minute smoke limit. Reports, raw samples, and heap snapshots upload through the pinned artifact action. The [first Linux CI run](https://github.com/ashahinL/localpolish/actions/runs/39374910726) passed all gates, including smoke and artifact upload. Windows verification remains separate from the local Mac and Linux evidence.
 
 The reviewer applied the test and documentation checks. The named Comment Sicko agent is unavailable in this environment, so that specialized pass is skipped; comments are reviewed manually. Reusable skill suggestion from Sol: browser sandbox preflight. Reviewer view: add the rule to the existing delegation guides instead of creating a separate skill.

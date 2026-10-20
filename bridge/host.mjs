@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
-import { TIMEOUT_MS } from './constants.mjs';
+import { INPUT_LIMIT_MESSAGE, MAX_USER_PROMPT_BYTES, TIMEOUT_MS } from './constants.mjs';
 import {
   buildCommand,
   codexHomeFor,
@@ -84,6 +84,10 @@ function handleRewrite(msg) {
   const effort = typeof msg.effort === 'string' ? msg.effort : '';
   const system = typeof msg.system === 'string' ? msg.system : '';
   const user = typeof msg.user === 'string' ? msg.user : '';
+  if (user.length > MAX_USER_PROMPT_BYTES || Buffer.byteLength(user) > MAX_USER_PROMPT_BYTES) {
+    sendAndExit({ type: 'error', message: INPUT_LIMIT_MESSAGE });
+    return;
+  }
 
   const bin = findOnPath(cli, process.env.PATH);
   if (!bin) {

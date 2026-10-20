@@ -9,6 +9,7 @@ const modules = [
   'src/background/sse',
   'src/background/providers/cli',
   'src/core/cleanup',
+  'src/core/limits',
   'src/core/messages',
   'src/core/settings',
   'src/core/prompts',

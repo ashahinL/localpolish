@@ -408,6 +408,22 @@ test('server error can be retried', async ({ page, mock }) => {
   await expect(page.locator('#ta')).toHaveValue(REWRITE);
 });
 
+test('text over 256 KiB shows an error and does not call the provider', async ({
+  page,
+  mock,
+  sw,
+}) => {
+  const usageBefore = await storedUsage(sw);
+  await page.locator('#ta').fill('a'.repeat(262145));
+  await sendOpenPopup(page, sw, '#ta');
+
+  const popup = page.locator('.lp-popup');
+  await expect(popup.locator('.lp-error')).toContainText('256 KiB');
+  await expect(popup.getByRole('button', { name: 'Accept' })).toBeDisabled();
+  expect(mock.requests).toHaveLength(0);
+  expect(await storedUsage(sw)).toEqual(usageBefore);
+});
+
 test('blocklist hides the button but the shortcut still opens', async ({ page, mock, sw }) => {
   await writeSettings(sw, `${mock.url}/v1`, { blocklist: ['localhost'] });
   await openFixture(page);
@@ -584,6 +600,13 @@ async function writeSettings(
     const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
     return chrome.storage.local.set({ settings: stored });
   }, settings);
+}
+
+async function storedUsage(sw: Worker): Promise<unknown> {
+  return sw.evaluate(async () => {
+    const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
+    return (await chrome.storage.local.get('usage')).usage ?? null;
+  });
 }
 
 async function storedSettings(sw: Worker): Promise<Record<string, unknown> | undefined> {

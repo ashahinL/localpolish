@@ -166,6 +166,81 @@ describe('runRewrite', () => {
       { type: 'error', message: 'The model returned an empty answer. Try again.' },
     ]);
   });
+
+  it.each([
+    { script: 'ASCII', unit: 'a', unitBytes: 1, edge: 'below', bytesFromExact: -1 },
+    { script: 'ASCII', unit: 'a', unitBytes: 1, edge: 'exact', bytesFromExact: 0 },
+    { script: 'ASCII', unit: 'a', unitBytes: 1, edge: 'above', bytesFromExact: 1 },
+    { script: 'Arabic', unit: 'م', unitBytes: 2, edge: 'below', bytesFromExact: -1 },
+    { script: 'Arabic', unit: 'م', unitBytes: 2, edge: 'exact', bytesFromExact: 0 },
+    { script: 'Arabic', unit: 'م', unitBytes: 2, edge: 'above', bytesFromExact: 1 },
+    { script: 'emoji', unit: '😀', unitBytes: 4, edge: 'below', bytesFromExact: -1 },
+    { script: 'emoji', unit: '😀', unitBytes: 4, edge: 'exact', bytesFromExact: 0 },
+    { script: 'emoji', unit: '😀', unitBytes: 4, edge: 'above', bytesFromExact: 1 },
+  ])(
+    '$script $edge the 262144-byte limit is sent intact or refused',
+    async ({ unit, unitBytes, bytesFromExact }) => {
+      const targetBytes = 262144 + bytesFromExact;
+      const text =
+        unit.repeat(Math.floor(targetBytes / unitBytes)) + 'a'.repeat(targetBytes % unitBytes);
+      expect(new TextEncoder().encode(unit).byteLength).toBe(unitBytes);
+      expect(new TextEncoder().encode(text).byteLength).toBe(262144 + bytesFromExact);
+
+      let seen = '';
+      const stream = vi.fn<StreamFn>(async (prompt, _settings, onText) => {
+        seen = prompt.user;
+        onText('ok');
+      });
+      const events: RewriteEvent[] = [];
+      await runRewrite(
+        { ...request, text },
+        settings(),
+        stream,
+        (event) => events.push(event),
+        new AbortController().signal,
+      );
+
+      if (bytesFromExact <= 0) {
+        expect(seen).toBe(`<text>\n${text}\n</text>`);
+        expect(stream).toHaveBeenCalledOnce();
+        expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+        expect(events).toEqual([
+          { type: 'chunk', text: 'ok' },
+          { type: 'done', text: 'ok' },
+        ]);
+        return;
+      }
+
+      expect(events).toEqual([
+        {
+          type: 'error',
+          message:
+            'This text is over the 256 KiB limit, so it was not sent. Shorten it and try again.',
+        },
+      ]);
+      expect(stream).not.toHaveBeenCalled();
+      expect(recordUsage).not.toHaveBeenCalled();
+    },
+  );
+
+  it('posts nothing when an oversized request is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const stream = vi.fn<StreamFn>();
+    const events: RewriteEvent[] = [];
+
+    await runRewrite(
+      { ...request, text: 'a'.repeat(262145) },
+      settings(),
+      stream,
+      (event) => events.push(event),
+      controller.signal,
+    );
+
+    expect(events).toEqual([]);
+    expect(recordUsage).not.toHaveBeenCalled();
+    expect(stream).not.toHaveBeenCalled();
+  });
 });
 
 describe('testConnection', () => {
