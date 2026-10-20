@@ -1,6 +1,8 @@
 export const HOST_NAME = 'com.localpolish.bridge';
 export const EXTENSION_ID = 'ealpmjmaclnlpelpcacmbicmdipmbeei';
 export const TIMEOUT_MS = 60_000;
+export const MAX_NATIVE_FRAME_BYTES = 8 * 1024 * 1024;
+export const MAX_CLI_EVENT_BYTES = 8 * 1024 * 1024;
 // buildPrompt already wraps raw text as "<text>\n" + text + "\n</text>" (15 bytes).
 export const MAX_INPUT_BYTES = 256 * 1024;
 export const MAX_USER_PROMPT_BYTES = MAX_INPUT_BYTES + 15;

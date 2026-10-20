@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11, P00a, and P00b are complete. P01a is complete. P01b is next. The release version is not chosen.
+Status: implementation in progress. P11, P00a, and P00b are complete. P01a is complete. P01b is complete. P01c is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -28,7 +28,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P00a](#p00a-add-a-portable-runtime-benchmark)                | Establish the offline runtime baseline                                 | complex      | P11                     |
 | [x]    | [P00b](#p00b-build-once-in-ci)                                | Remove the duplicate CI build                                          | feature      | None                    |
 | [x]    | [P01a](#p01a-reject-oversized-input-before-an-attempt-starts) | Bound input before usage counting and provider startup                 | feature      | P00a                    |
-| [ ]    | [P01b](#p01b-bound-native-frames-and-cli-event-lines)         | Bound native frames and CLI event lines; remove repeated frame copying | complex      | P01a                    |
+| [x]    | [P01b](#p01b-bound-native-frames-and-cli-event-lines)         | Bound native frames and CLI event lines; remove repeated frame copying | complex      | P01a                    |
 | [ ]    | [P01c](#p01c-bound-sse-events-and-avoid-repeated-line-scans)  | Bound SSE buffering and avoid prefix rescanning                        | complex      | P01a                    |
 | [ ]    | [P01d](#p01d-bound-total-rewrite-output)                      | Bound total output and abort oversized answers                         | complex      | P01b, P01c              |
 | [ ]    | [P01e](#p01e-bound-http-error-body-reads)                     | Bound error downloads for both API providers                           | feature      | P01c                    |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: four completed and 18 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: five completed and 17 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -117,6 +117,10 @@ Use these release limits, measured in UTF-8 bytes. They are product resource lim
 Done: rejected input starts zero providers and adds zero attempts; supported boundary-sized input is preserved exactly. Run `src/background/entrypoint.test.ts`, `src/background/rewrite.test.ts` and `bridge/host.test.mjs`, plus a built-extension mock-provider case showing the error and disabled Accept.
 
 ## P01b. Bound native frames and CLI event lines
+
+Status: complete in this task commit. Sol high implemented the task; the reviewer checked every diff and fixed a duplicate terminal reply for coalesced invalid requests.
+
+Native JSON payloads and CLI stdout event lines each have an 8 MiB byte cap. The four-byte native header and CR/LF line delimiters do not count. Native decoding uses a fixed header and one payload buffer, with each byte copied once. CLI lines use geometric buffer growth capped at 8 MiB and decode only at a delimiter or EOF. Decoder failures stop further input and send one framed error through active child-group cleanup. Line overflow uses the same kill/finish cleanup. Final events keep priority over trailing garbage.
 
 Source: S01. Files: `bridge/lib.mjs::createDecoder`, `bridge/host.mjs` stdout handling, `bridge/constants.mjs`, `bridge/lib.test.mjs`, `bridge/host.test.mjs`.
 
@@ -294,3 +298,7 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P00b: CI reuses its explicit build for Playwright. The standalone `test:e2e` script still builds. Browser coverage and dependency versions are unchanged. All 136 browser tests passed after a fresh local build. Formatting and the workflow diff passed review. The [first remote CI run](https://github.com/ashahinL/localpolish/actions/runs/39374910726) passed all gates and uploaded the runtime artifacts.
 
 - P01a: complete in this commit. Raw input over 256 KiB UTF-8 is rejected before an attempt or provider work. The native prompt cap allows the existing 15-byte wrapper. The reviewer tightened the multilingual cases to exact adjacent byte boundaries and removed a constant-only test. Lint, typecheck, 331 unit tests with 2 skipped, formatting, build, 26 built-extension tests, and 30 runtime smoke samples passed. Grok suggested no new reusable skill; the reviewer agrees that the existing limit-test workflow covers this work.
+
+- P01b: implemented on `main`, pending reviewer runtime/cleanup verification, review and commit. Tests cover native split headers, coalesced frames, UTF-8, exact 8 MiB payloads, header-only rejection before allocation, malformed JSON, and actual copy work at 1/2/4 MiB. Host tests use fake executables, private homes/temp folders, bounded producers with backpressure, exact-cap lines, overflow, CR/LF/EOF, final-event priority, active decoder failures, and resistant descendants. Native runtime copy metrics now include actual `Buffer.copy` work while preserving the historical concat metric. Allowed checks passed: `npm test -- bridge/lib.test.mjs bridge/host.test.mjs` (68 passed, 1 skipped), `npm run lint`, `npm run typecheck`, `npm test` (25 files, 351 passed, 2 skipped), `npx prettier --check .`, and `npm run build`. The measured native byte-copy totals for 1/2/4 MiB payloads were 1,048,580 / 2,097,156 / 4,194,308, including headers; concat returned-byte work was zero. Fake-process cleanup and empty host-temp folders passed, including resistant descendants. Test-created processes and directories were cleaned up. Guard skills and final review were skipped as dispatched. No git add, commit, push, release, version, provider, default, prompt or fleet changes. Reusable skill suggestion: none; this follows the existing bounded-stream testing workflow. Browser, HTTP/listening and runtime checks are reserved for the reviewer outside this sandbox. No other task status changed.
+
+- P01b reviewer verification: lint, typecheck, 352 unit tests with 2 skipped, formatting, build, and all 15 runtime smoke scenarios with 30 samples passed. The [native copy experiment](../../bench/results/p01b-native-copy.json) measured 1,048,580 / 2,097,156 / 4,194,308 copied bytes for 1/2/4 MiB JSON payloads in 1 KiB fragments, including headers. The roughly 2 MiB benchmark frame copied 2,097,191 bytes, compared with 2,150,628,391 concat bytes in the original baseline. These are copy-work measurements, not model-latency claims. Cleanup tests include resistant descendants, overflow, malformed input, and one terminal reply after coalesced failures. Sol suggested no new skill; the reviewer agrees. P01a also passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39395191716).

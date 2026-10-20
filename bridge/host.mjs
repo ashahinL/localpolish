@@ -3,8 +3,12 @@ import { execFile, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import readline from 'node:readline';
-import { INPUT_LIMIT_MESSAGE, MAX_USER_PROMPT_BYTES, TIMEOUT_MS } from './constants.mjs';
+import {
+  INPUT_LIMIT_MESSAGE,
+  MAX_CLI_EVENT_BYTES,
+  MAX_USER_PROMPT_BYTES,
+  TIMEOUT_MS,
+} from './constants.mjs';
 import {
   buildCommand,
   codexHomeFor,
@@ -25,14 +29,19 @@ const KILL_AFTER_MS = 2000;
 const CHUNK_CHARS = 100_000;
 
 let started = false;
+let exitReplySent = false;
 /** @type {(() => void) | null} */
 let onDisconnect = null;
+/** @type {((message: { type: string, message: string }) => void) | null} */
+let onInputFailure = null;
 
 // stdout is the native-messaging channel. Anything that is not a frame breaks it.
 /**
  * @param {unknown} message
  */
 function sendAndExit(message) {
+  if (exitReplySent) return;
+  exitReplySent = true;
   process.stdout.write(encodeMessage(message), () => {
     process.exit(0);
   });
@@ -209,6 +218,12 @@ function handleRewrite(msg) {
     child.once('close', done);
   };
 
+  onInputFailure = (message) => {
+    if (settled) return;
+    killChild();
+    finish(message);
+  };
+
   runTimer = setTimeout(() => {
     killChild();
     finish({ type: 'error', message: 'Timed out after 60 seconds.' });
@@ -229,8 +244,7 @@ function handleRewrite(msg) {
   });
 
   // 'close' fires after stdout is finished, so every line is parsed before done.
-  const lines = readline.createInterface({ input: child.stdout });
-  lines.on('line', (line) => {
+  const handleLine = (/** @type {string} */ line) => {
     if (settled) return;
     const parsed = parseLine(cli, line);
     if (!parsed) return;
@@ -248,6 +262,59 @@ function handleRewrite(msg) {
       return;
     }
     rememberedError = parsed.error;
+  };
+
+  let lineBuffer = Buffer.alloc(0);
+  let lineBytes = 0;
+  let afterCR = false;
+  const appendLine = (
+    /** @type {Buffer} */ chunk,
+    /** @type {number} */ start,
+    /** @type {number} */ end,
+  ) => {
+    const needed = lineBytes + end - start;
+    if (needed > MAX_CLI_EVENT_BYTES) {
+      killChild();
+      finish({ type: 'error', message: 'CLI event line exceeds the 8 MiB limit.' });
+      return false;
+    }
+    if (needed > lineBuffer.length) {
+      const capacity = Math.min(MAX_CLI_EVENT_BYTES, Math.max(needed, lineBuffer.length * 2, 1024));
+      const next = Buffer.alloc(capacity);
+      lineBuffer.copy(next, 0, 0, lineBytes);
+      lineBuffer = next;
+    }
+    chunk.copy(lineBuffer, lineBytes, start, end);
+    lineBytes = needed;
+    return true;
+  };
+  child.stdout.on('data', (/** @type {Buffer} */ chunk) => {
+    if (settled) return;
+    let start = 0;
+    for (let at = 0; at < chunk.length; at++) {
+      const byte = chunk[at];
+      if (afterCR && byte === 10) {
+        afterCR = false;
+        start = at + 1;
+        continue;
+      }
+      afterCR = false;
+      if (byte !== 10 && byte !== 13) continue;
+      if (!appendLine(chunk, start, at)) return;
+      const line = lineBuffer.toString('utf8', 0, lineBytes);
+      lineBytes = 0;
+      afterCR = byte === 13;
+      handleLine(line);
+      if (settled) return;
+      start = at + 1;
+    }
+    appendLine(chunk, start, chunk.length);
+  });
+  child.stdout.on('end', () => {
+    if (settled || lineBytes === 0) return;
+    const line = lineBuffer.toString('utf8', 0, lineBytes);
+    lineBytes = 0;
+    handleLine(line);
   });
 
   child.on('error', (err) => {
@@ -276,29 +343,40 @@ function handleRewrite(msg) {
   child.stdin.end();
 }
 
-process.stdin.on(
-  'data',
-  createDecoder((msg) => {
-    if (started) return;
-    started = true;
-    if (!msg || typeof msg !== 'object') {
-      sendAndExit({ type: 'error', message: 'Unknown request.' });
-      return;
-    }
-    const type = /** @type {{ type?: unknown }} */ (msg).type;
-    if (type === 'ping') {
-      void handlePing();
-      return;
-    }
-    if (type === 'rewrite') {
-      handleRewrite(/** @type {Record<string, unknown>} */ (msg));
-      return;
-    }
+const decode = createDecoder((msg) => {
+  if (started) return;
+  started = true;
+  if (!msg || typeof msg !== 'object') {
     sendAndExit({ type: 'error', message: 'Unknown request.' });
-  }),
-);
+    return;
+  }
+  const type = /** @type {{ type?: unknown }} */ (msg).type;
+  if (type === 'ping') {
+    void handlePing();
+    return;
+  }
+  if (type === 'rewrite') {
+    handleRewrite(/** @type {Record<string, unknown>} */ (msg));
+    return;
+  }
+  sendAndExit({ type: 'error', message: 'Unknown request.' });
+});
+
+let inputFailed = false;
+process.stdin.on('data', (chunk) => {
+  if (inputFailed) return;
+  try {
+    decode(chunk);
+  } catch (err) {
+    inputFailed = true;
+    const message = { type: 'error', message: /** @type {Error} */ (err).message };
+    if (onInputFailure) onInputFailure(message);
+    else sendAndExit(message);
+  }
+});
 
 process.stdin.on('end', () => {
+  if (inputFailed) return;
   if (onDisconnect) {
     onDisconnect();
     return;

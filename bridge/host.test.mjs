@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { MAX_CLI_EVENT_BYTES, MAX_NATIVE_FRAME_BYTES } from './constants.mjs';
 import { codexHomeFor, createDecoder, encodeMessage } from './lib.mjs';
 
 const windows = process.platform === 'win32';
@@ -50,6 +51,9 @@ function writeCli(binDir, name, body) {
     fs.writeFileSync(path.join(binDir, `${name}.cmd`), shim.join('\r\n'));
     return;
   }
+  if (!fs.existsSync(path.join(binDir, 'node'))) {
+    fs.symlinkSync(process.execPath, path.join(binDir, 'node'));
+  }
   const file = path.join(binDir, name);
   fs.writeFileSync(file, body);
   fs.chmodSync(file, 0o755);
@@ -59,19 +63,20 @@ function writeCli(binDir, name, body) {
  * @param {string} binDir
  * @param {number} closeMs
  */
-function startHost(binDir, closeMs = 5000, home = os.homedir()) {
+function startHost(binDir, closeMs = 5000, home = tempDir('lp-home-')) {
+  const hostTemp = tempDir('lp-host-temp-');
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'PATH'),
   );
-  const systemPath = windows
-    ? [path.join(process.env.SystemRoot ?? '', 'System32')]
-    : ['/usr/bin', '/bin'];
   const child = spawn(process.execPath, [hostPath], {
     env: {
       ...env,
       HOME: home,
       USERPROFILE: home,
-      PATH: [binDir, path.dirname(process.execPath), ...systemPath].join(path.delimiter),
+      PATH: binDir,
+      TMPDIR: hostTemp,
+      TMP: hostTemp,
+      TEMP: hostTemp,
     },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -94,12 +99,199 @@ function startHost(binDir, closeMs = 5000, home = os.homedir()) {
       resolve(code);
     });
   });
-  return { child, messages, closed };
+  return { child, messages, closed, hostTemp, stderr };
 }
 
 function rewrite(cli, user) {
   return encodeMessage({ type: 'rewrite', cli, model: 'm1', system: 'S', user });
 }
+
+const writeBytesSource = `
+async function writeBytes(count) {
+  const chunk = Buffer.alloc(16384, 120);
+  while (count > 0) {
+    const size = Math.min(count, chunk.length);
+    if (!process.stdout.write(chunk.subarray(0, size))) {
+      await new Promise((resolve) => process.stdout.once('drain', resolve));
+    }
+    count -= size;
+  }
+}
+`;
+
+function oversizedHeader() {
+  const header = Buffer.alloc(4);
+  header.writeUInt32LE(MAX_NATIVE_FRAME_BYTES + 1);
+  return header;
+}
+
+function invalidJsonFrame() {
+  const header = Buffer.alloc(4);
+  header.writeUInt32LE(4);
+  return Buffer.concat([header, Buffer.from('{bad')]);
+}
+
+describe('host frame and CLI line limits', () => {
+  it.each(['oversized header', 'malformed JSON', 'unknown request followed by bad header'])(
+    'returns one framed error for initial %s without starting a CLI',
+    async (failure) => {
+      const bin = tempDir('lp-bin-');
+      const marker = path.join(bin, 'started');
+      writeCli(
+        bin,
+        'claude',
+        `#!/usr/bin/env node
+require('fs').writeFileSync(${JSON.stringify(marker)}, 'started');
+`,
+      );
+      const host = startHost(bin);
+      const bad =
+        failure === 'unknown request followed by bad header'
+          ? Buffer.concat([encodeMessage({ type: 'unknown' }), oversizedHeader()])
+          : failure === 'oversized header'
+            ? oversizedHeader()
+            : invalidJsonFrame();
+      // More bytes after the failure must not start the valid request or send another error.
+      host.child.stdin.write(Buffer.concat([bad, bad, rewrite('claude', 'hello')]));
+      expect(await host.closed).toBe(0);
+      expect(host.messages).toEqual([{ type: 'error', message: expect.any(String) }]);
+      if (failure === 'oversized header') {
+        expect(host.messages[0].message).toBe('Native JSON payload exceeds the 8 MiB limit.');
+      }
+      if (failure === 'unknown request followed by bad header') {
+        expect(host.messages[0].message).toBe('Unknown request.');
+      }
+      expect(fs.existsSync(marker)).toBe(false);
+      expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+      expect(Buffer.concat(host.stderr).toString()).toBe('');
+    },
+  );
+
+  it.each(['LF', 'CRLF', 'EOF'])(
+    'accepts an exact-cap CLI event ending with %s',
+    async (ending) => {
+      const bin = tempDir('lp-bin-');
+      const prefix =
+        '{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}},"padding":"';
+      const suffix = '"}';
+      const padding = MAX_CLI_EVENT_BYTES - Buffer.byteLength(prefix + suffix);
+      writeCli(
+        bin,
+        'claude',
+        `#!/usr/bin/env node
+${writeBytesSource}
+process.stdin.resume();
+process.stdin.on('end', async () => {
+  process.stdout.write(${JSON.stringify(prefix)});
+  await writeBytes(${padding});
+  process.stdout.write(${JSON.stringify(suffix)});
+  ${ending === 'EOF' ? 'process.stdout.end();' : `process.stdout.write(${JSON.stringify(ending === 'LF' ? '\n' : '\r\n')});`}
+});
+`,
+      );
+      const host = startHost(bin);
+      host.child.stdin.write(rewrite('claude', 'hello'));
+      expect(await host.closed).toBe(0);
+      expect(host.messages).toEqual([{ type: 'chunk', text: 'ok' }, { type: 'done' }]);
+      expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+      expect(Buffer.concat(host.stderr).toString()).toBe('');
+    },
+  );
+
+  it('rejects a line one byte over the cap without a newline and cleans up', async () => {
+    const bin = tempDir('lp-bin-');
+    const pidFile = path.join(bin, 'pid');
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
+require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+${writeBytesSource}
+process.stdin.resume();
+process.stdin.on('end', async () => {
+  await writeBytes(${MAX_CLI_EVENT_BYTES + 1});
+  setInterval(() => {}, 1000);
+});
+`,
+    );
+    const host = startHost(bin);
+    host.child.stdin.write(rewrite('claude', 'hello'));
+    const pid = await waitForPid(pidFile);
+    pids.push(pid);
+    expect(await host.closed).toBe(0);
+    expect(host.messages).toEqual([
+      { type: 'error', message: 'CLI event line exceeds the 8 MiB limit.' },
+    ]);
+    expect(() => process.kill(pid, 0)).toThrow();
+    expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+    expect(Buffer.concat(host.stderr).toString()).toBe('');
+  });
+
+  it('preserves split UTF-8, CR, split CRLF, multiple lines and JSON at EOF', async () => {
+    const bin = tempDir('lp-bin-');
+    const event = (text) =>
+      JSON.stringify({
+        type: 'stream_event',
+        event: {
+          type: 'content_block_delta',
+          delta: { type: 'text_delta', text },
+        },
+      });
+    const first = Buffer.from(event('م😀'));
+    const split = first.indexOf(Buffer.from('😀')) + 2;
+    const pieces = [
+      first.subarray(0, split),
+      first.subarray(split),
+      Buffer.from('\r'),
+      Buffer.from('\n' + event('second') + '\r' + event('third') + '\n' + event('EOF')),
+    ];
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
+process.stdin.resume();
+process.stdin.on('end', async () => {
+  for (const bytes of ${JSON.stringify(pieces.map((piece) => [...piece]))}) {
+    process.stdout.write(Buffer.from(bytes));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  process.stdout.end();
+});
+`,
+    );
+    const host = startHost(bin);
+    host.child.stdin.write(rewrite('claude', 'hello'));
+    expect(await host.closed).toBe(0);
+    expect(host.messages).toEqual(
+      ['م😀', 'second', 'third', 'EOF']
+        .map((text) => ({ type: 'chunk', text }))
+        .concat({ type: 'done' }),
+    );
+    expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+  });
+
+  it('keeps a valid final event ahead of oversized trailing garbage', async () => {
+    const bin = tempDir('lp-bin-');
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
+${writeBytesSource}
+process.stdin.resume();
+process.stdin.on('end', async () => {
+  process.stdout.write('{"type":"result"}\\n' + 'x'.repeat(16384));
+  await writeBytes(${MAX_CLI_EVENT_BYTES + 1});
+});
+`,
+    );
+    const host = startHost(bin);
+    host.child.stdin.write(rewrite('claude', 'hello'));
+    expect(await host.closed).toBe(0);
+    expect(host.messages).toEqual([{ type: 'done' }]);
+    expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+    expect(Buffer.concat(host.stderr).toString()).toBe('');
+  });
+});
 
 describe('host', () => {
   it('streams claude text deltas and then done', async () => {
@@ -185,9 +377,9 @@ setTimeout(() => {}, 30000);
     expect(() => process.kill(pid, 0)).toThrow();
   });
 
-  it.skipIf(windows)(
-    'kills a grandchild that ignores SIGTERM when Chrome closes stdin',
-    async () => {
+  it.skipIf(windows).each(['disconnect', 'malformed frame', 'oversized header', 'CLI overflow'])(
+    'kills a resistant grandchild and removes the temp directory after %s',
+    async (failure) => {
       const bin = tempDir('lp-bin-');
       const pidFile = path.join(bin, 'pid');
       const script = `
@@ -201,10 +393,12 @@ setInterval(() => {}, 1000);
         `#!/usr/bin/env node
 const { spawn } = require('child_process');
 const fs = require('fs');
+${writeBytesSource}
 spawn(process.execPath, ['-e', ${JSON.stringify(script)}], { stdio: 'ignore' });
 const ready = setInterval(() => {
   if (fs.existsSync(${JSON.stringify(pidFile)})) {
     clearInterval(ready);
+    ${failure === 'CLI overflow' ? `writeBytes(${MAX_CLI_EVENT_BYTES + 1});` : ''}
     setInterval(() => {}, 1000);
   }
 }, 20);
@@ -214,8 +408,23 @@ const ready = setInterval(() => {
       host.child.stdin.write(rewrite('claude', 'hello'));
       const pid = await waitForPid(pidFile);
       pids.push(pid);
-      host.child.stdin.end();
+      if (failure === 'disconnect') host.child.stdin.end();
+      if (failure === 'malformed frame') {
+        host.child.stdin.write(invalidJsonFrame());
+      }
+      if (failure === 'oversized header') {
+        host.child.stdin.write(oversizedHeader());
+      }
       await host.closed;
+      expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+      expect(Buffer.concat(host.stderr).toString()).toBe('');
+      if (failure === 'disconnect') expect(host.messages).toEqual([]);
+      else {
+        expect(host.messages).toEqual([{ type: 'error', message: expect.any(String) }]);
+        if (failure !== 'malformed frame') {
+          expect(host.messages[0].message).toContain('8 MiB limit');
+        }
+      }
       await expect
         .poll(
           () => {

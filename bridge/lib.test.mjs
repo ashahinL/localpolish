@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { MAX_NATIVE_FRAME_BYTES } from './constants.mjs';
 import {
   buildCommand,
   CODEX_DISABLED_FEATURES,
@@ -30,26 +31,103 @@ describe('encodeMessage', () => {
 });
 
 describe('createDecoder', () => {
-  it('emits one message when a frame arrives in three chunks', () => {
-    const obj = { type: 'chunk', text: 'She' };
-    const encoded = encodeMessage(obj);
+  it.each([
+    { name: 'one-byte fragments', size: 1 },
+    { name: 'split header', size: 3 },
+    { name: 'header boundary', size: 4 },
+    { name: 'split payload and UTF-8', size: 7 },
+    { name: 'coalesced frames', size: 1000 },
+  ])('decodes $name', ({ size }) => {
+    const messages = [{ text: 'مرحبا 😀' }, { text: 'second' }, { end: true }];
+    const frame = Buffer.concat(messages.map(encodeMessage));
     const seen = [];
     const decode = createDecoder((message) => seen.push(message));
-    decode(encoded.subarray(0, 2));
-    decode(encoded.subarray(2, 5));
-    expect(seen).toEqual([]);
-    decode(encoded.subarray(5));
-    expect(seen).toEqual([obj]);
+    for (let at = 0; at < frame.length; at += size) decode(frame.subarray(at, at + size));
+    expect(seen).toEqual(messages);
   });
 
-  it('emits two messages when two frames arrive in one chunk', () => {
-    const first = { type: 'chunk', text: 'a' };
-    const second = { type: 'chunk', text: 'b' };
+  it('resets before calling the message callback', () => {
     const seen = [];
-    createDecoder((message) => seen.push(message))(
-      Buffer.concat([encodeMessage(first), encodeMessage(second)]),
-    );
-    expect(seen).toEqual([first, second]);
+    const decode = createDecoder((message) => {
+      seen.push(message);
+      if (seen.length === 1) decode(encodeMessage({ text: 'nested' }));
+    });
+    decode(encodeMessage({ text: 'first' }));
+    expect(seen).toEqual([{ text: 'first' }, { text: 'nested' }]);
+  });
+
+  it('accepts exactly 8 MiB of JSON excluding the header', () => {
+    const message = { text: 'x'.repeat(MAX_NATIVE_FRAME_BYTES - 11) };
+    const frame = encodeMessage(message);
+    expect(frame.length).toBe(MAX_NATIVE_FRAME_BYTES + 4);
+    const seen = [];
+    const decode = createDecoder((message) => seen.push(message));
+    for (let at = 0; at < frame.length; at += 1024) decode(frame.subarray(at, at + 1024));
+    expect(seen).toEqual([message]);
+  });
+
+  it('rejects an oversized header before allocating or receiving its payload', () => {
+    const header = Buffer.alloc(4);
+    header.writeUInt32LE(MAX_NATIVE_FRAME_BYTES + 1);
+    const seen = [];
+    const decode = createDecoder((message) => seen.push(message));
+    decode(header.subarray(0, 3));
+    const alloc = vi.spyOn(Buffer, 'alloc');
+    try {
+      expect(() => decode(header.subarray(3))).toThrow(
+        'Native JSON payload exceeds the 8 MiB limit.',
+      );
+      expect(alloc).not.toHaveBeenCalled();
+      expect(seen).toEqual([]);
+    } finally {
+      alloc.mockRestore();
+    }
+  });
+
+  it.each(['', '{bad'])('throws for malformed JSON %j without a callback', (json) => {
+    const header = Buffer.alloc(4);
+    header.writeUInt32LE(Buffer.byteLength(json));
+    const frame = Buffer.concat([header, Buffer.from(json)]);
+    const seen = [];
+    expect(() => createDecoder((message) => seen.push(message))(frame)).toThrow(SyntaxError);
+    expect(seen).toEqual([]);
+  });
+
+  it('copies fragmented 1, 2 and 4 MiB frames with linear byte work', () => {
+    const work = [];
+    for (const mib of [1, 2, 4]) {
+      const message = { text: 'x'.repeat(mib * 1024 * 1024 - 11) };
+      const frame = encodeMessage(message);
+      const seen = [];
+      const decode = createDecoder((message) => seen.push(message));
+      let copyBytes = 0;
+      let concatBytes = 0;
+      const copy = Buffer.prototype.copy;
+      const concat = Buffer.concat;
+      Buffer.prototype.copy = function (...args) {
+        const bytes = Reflect.apply(copy, this, args);
+        copyBytes += bytes;
+        return bytes;
+      };
+      Buffer.concat = function (...args) {
+        const result = Reflect.apply(concat, Buffer, args);
+        concatBytes += result.length;
+        return result;
+      };
+      try {
+        for (let at = 0; at < frame.length; at += 1024) decode(frame.subarray(at, at + 1024));
+      } finally {
+        Buffer.prototype.copy = copy;
+        Buffer.concat = concat;
+      }
+      expect(seen).toEqual([message]);
+      expect(copyBytes).toBe(frame.length);
+      expect(concatBytes).toBe(0);
+      work.push(copyBytes + concatBytes);
+    }
+    expect(work).toEqual([1048580, 2097156, 4194308]);
+    expect(work[1]).toBeLessThanOrEqual(work[0] * 2);
+    expect(work[2]).toBeLessThanOrEqual(work[1] * 2);
   });
 });
 

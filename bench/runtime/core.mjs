@@ -58,11 +58,23 @@ export function coreSession(root, temp) {
       const decode = createDecoder((message) => received.push(message));
       let copiedBytes = 0;
       let concatCalls = 0;
+      let concatReturnedBytes = 0;
+      let bufferCopyBytes = 0;
+      let bufferCopyCalls = 0;
       const concat = Buffer.concat;
+      const copy = Buffer.prototype.copy;
       Buffer.concat = function (buffers, ...args) {
         copiedBytes += buffers.reduce((total, buffer) => total + buffer.length, 0);
         concatCalls++;
-        return Reflect.apply(concat, Buffer, [buffers, ...args]);
+        const result = Reflect.apply(concat, Buffer, [buffers, ...args]);
+        concatReturnedBytes += result.length;
+        return result;
+      };
+      Buffer.prototype.copy = function (...args) {
+        const bytes = Reflect.apply(copy, this, args);
+        bufferCopyBytes += bytes;
+        bufferCopyCalls++;
+        return bytes;
       };
       try {
         for (let at = 0; at < frame.length; at += fragmentBytes) {
@@ -70,6 +82,7 @@ export function coreSession(root, temp) {
         }
       } finally {
         Buffer.concat = concat;
+        Buffer.prototype.copy = copy;
       }
       assert.deepEqual(received, [message]);
       return {
@@ -80,6 +93,12 @@ export function coreSession(root, temp) {
         concatCopiedBytes: copiedBytes,
         copyCountScope: 'Buffer.concat bytes only; initial Buffer.from copy excluded.',
         concatCalls,
+        concatReturnedBytes,
+        bufferCopyBytes,
+        bufferCopyCalls,
+        totalMeasuredCopyBytes: concatReturnedBytes + bufferCopyBytes,
+        measuredCopyScope:
+          'Decode only, after frame construction: Buffer.concat returned bytes plus Buffer.copy returned bytes, including header and payload copies. Other copying is excluded.',
       };
     }
     if (name === 'sse-1k') {

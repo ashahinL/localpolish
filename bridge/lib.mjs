@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { MAX_NATIVE_FRAME_BYTES } from './constants.mjs';
 
 /**
  * @param {unknown} obj
@@ -37,16 +38,35 @@ export function splitText(text, size) {
  * @returns {(chunk: Buffer) => void}
  */
 export function createDecoder(onMessage) {
-  /** @type {Buffer} */
-  let pending = Buffer.alloc(0);
+  const header = Buffer.alloc(4);
+  let headerBytes = 0;
+  /** @type {Buffer | null} */
+  let payload = null;
+  let payloadBytes = 0;
   return (chunk) => {
-    pending = pending.length === 0 ? Buffer.from(chunk) : Buffer.concat([pending, chunk]);
-    while (pending.length >= 4) {
-      const length = pending.readUInt32LE(0);
-      const frameEnd = 4 + length;
-      if (pending.length < frameEnd) return;
-      const json = pending.subarray(4, frameEnd).toString('utf8');
-      pending = pending.subarray(frameEnd);
+    let at = 0;
+    while (at < chunk.length) {
+      if (payload === null) {
+        const count = Math.min(4 - headerBytes, chunk.length - at);
+        chunk.copy(header, headerBytes, at, at + count);
+        headerBytes += count;
+        at += count;
+        if (headerBytes < 4) return;
+        const length = header.readUInt32LE(0);
+        if (length > MAX_NATIVE_FRAME_BYTES) {
+          throw new Error('Native JSON payload exceeds the 8 MiB limit.');
+        }
+        payload = Buffer.alloc(length);
+      }
+      const count = Math.min(payload.length - payloadBytes, chunk.length - at);
+      chunk.copy(payload, payloadBytes, at, at + count);
+      payloadBytes += count;
+      at += count;
+      if (payloadBytes < payload.length) return;
+      const json = payload.toString('utf8');
+      headerBytes = 0;
+      payload = null;
+      payloadBytes = 0;
       onMessage(JSON.parse(json));
     }
   };

@@ -1,0 +1,29 @@
+{
+  "syntheticOnly": true,
+  "measuredCairo": "2026-10-20T11:51:35+0300",
+  "node": "v26.10.0",
+  "platform": "darwin",
+  "cpu": "Apple M4",
+  "fragmentBytes": 1024,
+  "scope": "Actual Buffer.copy return bytes plus Buffer.concat output lengths, during decoding only. Construction, allocation zeroing, UTF-8 conversion and JSON parsing are excluded.",
+  "results": [
+    {
+      "payloadMiB": 1,
+      "frameBytes": 1048580,
+      "bufferCopyBytes": 1048580,
+      "concatBytes": 0
+    },
+    {
+      "payloadMiB": 2,
+      "frameBytes": 2097156,
+      "bufferCopyBytes": 2097156,
+      "concatBytes": 0
+    },
+    {
+      "payloadMiB": 4,
+      "frameBytes": 4194308,
+      "bufferCopyBytes": 4194308,
+      "concatBytes": 0
+    }
+  ]
+}
