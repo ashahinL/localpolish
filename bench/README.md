@@ -65,6 +65,30 @@ A blocked browser launch or failed assertion returns a nonzero exit and preserve
 
 CI runs the fixture checks and a smoke benchmark after its existing build and Chromium installation. Smoke has a three-minute step limit within the existing fifteen-minute job. The report, JSONL, and heap snapshots upload even after failure. The upload action is pinned to the [official v4.6.2 commit](https://github.com/actions/upload-artifact/commit/ea165f8d65b6e75b540449e92b4886f43607fa02). CI runs the browser suites against that same build. The standalone `npm run test:e2e` command still builds before testing.
 
+## Offline request lifecycle
+
+`npm run bench:lifecycle` is a separate command from the 15-scenario runtime benchmark. It does not change that command or its saved results.
+
+```bash
+npm run bench:lifecycle -- --help
+npm run bench:lifecycle -- --core-only --out-dir /tmp/localpolish-lifecycle
+npm run bench:lifecycle -- --out-dir /tmp/localpolish-lifecycle
+```
+
+Use Node 22 or later. The default command also needs `npm run build` and Playwright Chromium. `--core-only` skips the browser. `--out-dir DIRECTORY` chooses the report directory. The default directory is `bench/results`. Check the arguments before any probe starts. The macOS Codex sandbox cannot launch the browser half. Run that half outside the sandbox.
+
+The core probe compiles the production `runRewrite` and `cliProvider`. Fake storage delays the real usage write by 80 ms. `connectNative` spawns `bridge/host.mjs` through Node. The host receives a private `HOME`, `USERPROFILE`, and temp directory. Its `PATH` contains only an owned fake `codex` and Node. Fake `auth.json` exists only under `codexHomeFor` for that private home. The probe never reads a real Codex login or an installed CLI.
+
+The fake model argument is `gpt-6-luna` and `gpt-6-sol`, both at effort `none`. Each model runs three cache cases: fresh, missing, and stale. A fresh cache must put `model_catalog_json` on the spawned argv and use the stripped tool metadata. A missing or stale cache must omit that override. Only those fallback cases add a 150 ms wait inside the fake CLI. The report labels that wait synthetic. It is not a Codex network refresh and not Luna or Sol latency.
+
+Other injected waits are 120 ms before the first Codex `item.completed` text, 70 ms before `turn.completed`, and on POSIX 250 ms after `SIGTERM` before the fake exits. Windows does not add an exit hold, because the host already uses `taskkill /F`. A 30 second hang guard only stops a stuck case. The checks require the injected minimums, the exact answer `I went home.`, one usage row, event order, pid absence, and an empty host temp directory. They do not use a machine-specific maximum time.
+
+The phases are usage save, native and CLI startup, first model text, model stop and output ready, child exit, and host exit. On POSIX the fake is still alive when the host done frame arrives, and host close is later. Output ready is not UI ready. Process close is not UI ready. Raw epoch timestamps, Cairo start and finish, durations, and the phase definitions are in the JSON report. `syntheticOnly` is true.
+
+The default command then runs the existing `browserSession` `rewrite-small` path and records its Accept enabled and first preview counters. Native messaging stays stubbed. The provider is the local API mock. Provider completion outside the page is null, with a reason. Those UI numbers stay in their own section. They are not added to the native phases, and they are not end-to-end CLI UI latency. `--core-only` leaves that section unmeasured.
+
+Usage storage, process startup, first text, and process exit can each be slow for a different reason. This report does not promise a faster Luna or Sol reply. It does not include a live provider run. A live comparison needs a separate budget.
+
 > Results from 17 October 2026. The bridge and the default have changed since. Today the default is Codex `gpt-6-luna` at effort `none` (`src/core/settings.ts`), and the Fix prompt is in `src/core/prompts.ts`.
 
 ## Paid Fix-mode benchmark

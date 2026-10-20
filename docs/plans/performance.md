@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. Tasks through P09, including P11, are complete. P10 is implemented pending parent verification and commit. The late-initial browser regression replaced the mock content unit test and has not been run here. The release version is not chosen.
+Status: implementation in progress. Tasks through P12 are complete. P13 candidate verification is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -44,10 +44,10 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P08b](#p08b-defer-new-idle-requests-while-hidden)            | Gate automatic request starts on visibility                            | feature      | P08a, P02, P07          |
 | [x]    | [P09](#p09-stop-posting-unused-idle-chunks)                   | Suppress idle preview messages at the worker boundary                  | feature      | P01d                    |
 | [x]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
-| [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
+| [x]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: twenty completed and two pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: twenty-one completed and P13 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -319,6 +319,8 @@ Done: model/key/effort/temperature-only changes produce zero page notifications 
 
 ## P12. Measure the request lifecycle
 
+Status: complete in this task commit. `npm run bench:lifecycle` passed parent verification with six native/fake-CLI cases and the actual built-extension API UI probe. No production model, prompt, effort, idle delay, or subscription changed.
+
 Source: S05 and the owner's Luna/Sol speed questions. Files: `bench/runtime/`, the existing model bench tooling and `bench/README.md`; production files only if a testable timing boundary cannot be observed externally.
 
 Add an offline lifecycle report that separates request acceptance and usage-save time, native/CLI startup, first model text, model stop/ready, UI-ready time and child exit. Use controlled fake delays to prove the report distinguishes these phases. Include the production Codex arguments and fresh-cache versus cache-refresh paths from P11. Keep measurement code in the harness where possible. Add no telemetry or draft logging to normal use.
@@ -414,10 +416,12 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 
 - P10: equivalent normalized page settings stop before storage reads or tab work. Relevant changes load one sanitized snapshot and send it directly to all frames. One worker queue orders reads, broadcasts and initial replies; a content generation guard rejects a late initial response after a newer broadcast. Trusted storage and fresh provider settings reads are preserved. Parent verification passed lint, typecheck, formatting, build, 498 unit tests with two existing skips, 45 built-extension/visibility browser checks, and all 30 runtime smoke samples. The model-only scenario now requires zero page-settings reads. Report: `P10-runtime/runtime-smoke-202610202154500300-31368.json` in local fleet artifacts. Test review replaced internal UI mocks with a real held-initial-response browser case. The parent fixed frame selection focus and scoped the native counter after first-run setup. Code, test and docs review passed. Comment Sicko was unavailable; comments were reviewed manually. Grok suggested no reusable skill; the reviewer agrees.
 
-## Handoff before request timing
+- P12: added the offline lifecycle command and [compact parent report](../../bench/results/p12-lifecycle.json). Actual runRewrite, cliProvider and native host ran with private fake Codex/home/auth/PATH. Both model names passed fresh/missing/stale cache checks, real captured argv, one usage attempt, synthetic delay placement, output-ready-before-exit, missing PID and empty host temp. The separate browser API probe observed first preview and enabled Accept. It is not added to CLI timings. Parent checks passed lint, typecheck, formatting, build, 498 unit tests with two existing skips, four runtime fixture checks, and the complete lifecycle command. Raw report: `P12-lifecycle-final/lifecycle-202610202218040300-50634.json` in local fleet artifacts. Parent review fixed failure cleanup to abort outstanding work, capture the latest owned PID, handle host errors/close, and avoid an unneeded cleanup timer. Test and docs review passed; Comment Sicko was unavailable and comments were checked manually. Grok suggested no reusable skill; reviewer agrees. Windows lifecycle measurements and live model latency remain unmeasured. No provider calls or production behavior changes.
 
-- Current source: P10 is included in this task commit, based on pushed `9c359dc`. Resolve the task hash with `git log -1 --format=%h`. P11 and P00a through P10 are complete.
-- Next task: P12, offline lifecycle measurement. Then P13, full candidate and package verification. No release version or publication is authorized.
-- Required checks: P12 controlled fake-delay cases, then the P13 full gates, runtime comparison, platform CI and packed-artifact checks.
-- Active processes: none from delegates. A task-owned Vite fixture may still be listening on 5179 after an interrupted parent browser run; stop it during cleanup.
+## Handoff after lifecycle measurement
+
+- Current source: P12 is included in this task commit, based on pushed `73e351e`. Resolve the task hash with `git log -1 --format=%h`. P11 and P00a through P12 are complete.
+- Next task: P13, full candidate and package verification. P13 is not done. No release version or publication is authorized.
+- Required checks: P13 full gates, full runtime comparison, exact-commit platform CI and extracted package checks. P12 complete lifecycle report and core cases passed locally on macOS.
+- Active processes: none. No delegates are running.
 - Session override: complex implementation uses Grok 4.7 xhigh. No Sol delegates and no saved fleet/config changes. Wait quietly during each delegate run.

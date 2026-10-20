@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "command": "npm run bench:lifecycle",
+  "status": "passed",
+  "syntheticOnly": true,
+  "scope": "core-native plus a separate browser API probe",
+  "startedCairo": "2026-10-20T22:18:04+03:00",
+  "finishedCairo": "2026-10-20T22:18:13+03:00",
+  "timezone": "Africa/Cairo",
+  "delaysInjected": {
+    "usageSaveMs": 80,
+    "firstTextMs": 120,
+    "completionMs": 70,
+    "posixExitHoldMs": 250,
+    "syntheticCacheRefreshMs": 150,
+    "windowsExitHoldMs": 0,
+    "windowsExitHoldReason": "The production host uses taskkill /F. This probe does not add a fake exit hold on Windows.",
+    "hangGuardMs": 30000,
+    "hangGuardReason": "Stops a stuck case only. Not a latency limit and not asserted as a maximum."
+  },
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "25.6.0",
+    "node": "v26.10.0",
+    "cpu": "Apple M4",
+    "logicalCpus": 10,
+    "totalMemoryBytes": 17179869184,
+    "playwrightPackage": "1.64.1",
+    "chromium": "156.0.8078.4",
+    "chromiumReason": "Chromium version reported by the separate browserSession. It is not a CLI measurement.",
+    "sourceCommit": "73e351e609431bffe4074109590d64cba30fbb00",
+    "dirty": true,
+    "sourceHash": "880d4e3e851a9a97cfca6db82a4665d054bc7c78cbbb16a850f830d9b2b39449",
+    "buildHash": "c703fcf058a6f86822953098aaa35bb7f840e1b909dda1acac91b00c85e8d8b1",
+    "buildHashReason": "SHA-256 of the checkout dist directory."
+  },
+  "rawReport": "lifecycle-202610202218040300-50634.json",
+  "cases": [
+    {
+      "model": "gpt-6-luna",
+      "cache": "fresh",
+      "effort": "none",
+      "status": "passed",
+      "answer": "I went home.",
+      "usage": [
+        {
+          "provider": "codex-cli",
+          "model": "gpt-6-luna",
+          "requests": 1
+        }
+      ],
+      "catalogOverride": true,
+      "aliveAtReady": true,
+      "pidAbsentAfterClose": true,
+      "hostTempEmpty": true,
+      "durationsMs": {
+        "usageSave": 83,
+        "nativeStartupToFakeStart": 470,
+        "promptDelivery": 2,
+        "syntheticCacheRefresh": null,
+        "firstText": 121,
+        "completion": 73,
+        "outputReadyAfterStop": 2,
+        "outputReadyToChildExit": 253,
+        "childExitToHostClose": 17
+      },
+      "ordering": {
+        "outputReadyBeforeChildExit": true,
+        "outputReadyBeforeChildExitReason": "The done frame was observed while the delayed SIGTERM hold kept the fake alive.",
+        "hostCloseIsUiReady": false
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "cache": "missing",
+      "effort": "none",
+      "status": "passed",
+      "answer": "I went home.",
+      "usage": [
+        {
+          "provider": "codex-cli",
+          "model": "gpt-6-luna",
+          "requests": 1
+        }
+      ],
+      "catalogOverride": false,
+      "aliveAtReady": true,
+      "pidAbsentAfterClose": true,
+      "hostTempEmpty": true,
+      "durationsMs": {
+        "usageSave": 81,
+        "nativeStartupToFakeStart": 524,
+        "promptDelivery": 3,
+        "syntheticCacheRefresh": 152,
+        "firstText": 124,
+        "completion": 77,
+        "outputReadyAfterStop": 1,
+        "outputReadyToChildExit": 254,
+        "childExitToHostClose": 13
+      },
+      "ordering": {
+        "outputReadyBeforeChildExit": true,
+        "outputReadyBeforeChildExitReason": "The done frame was observed while the delayed SIGTERM hold kept the fake alive.",
+        "hostCloseIsUiReady": false
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "cache": "stale",
+      "effort": "none",
+      "status": "passed",
+      "answer": "I went home.",
+      "usage": [
+        {
+          "provider": "codex-cli",
+          "model": "gpt-6-luna",
+          "requests": 1
+        }
+      ],
+      "catalogOverride": false,
+      "aliveAtReady": true,
+      "pidAbsentAfterClose": true,
+      "hostTempEmpty": true,
+      "durationsMs": {
+        "usageSave": 81,
+        "nativeStartupToFakeStart": 481,
+        "promptDelivery": 3,
+        "syntheticCacheRefresh": 154,
+        "firstText": 127,
+        "completion": 78,
+        "outputReadyAfterStop": 2,
+        "outputReadyToChildExit": 252,
+        "childExitToHostClose": 17
+      },
+      "ordering": {
+        "outputReadyBeforeChildExit": true,
+        "outputReadyBeforeChildExitReason": "The done frame was observed while the delayed SIGTERM hold kept the fake alive.",
+        "hostCloseIsUiReady": false
+      }
+    },
+    {
+      "model": "gpt-6-sol",
+      "cache": "fresh",
+      "effort": "none",
+      "status": "passed",
+      "answer": "I went home.",
+      "usage": [
+        {
+          "provider": "codex-cli",
+          "model": "gpt-6-sol",
+          "requests": 1
+        }
+      ],
+      "catalogOverride": true,
+      "aliveAtReady": true,
+      "pidAbsentAfterClose": true,
+      "hostTempEmpty": true,
+      "durationsMs": {
+        "usageSave": 83,
+        "nativeStartupToFakeStart": 485,
+        "promptDelivery": 2,
+        "syntheticCacheRefresh": null,
+        "firstText": 125,
+        "completion": 74,
+        "outputReadyAfterStop": 2,
+        "outputReadyToChildExit": 249,
+        "childExitToHostClose": 8
+      },
+      "ordering": {
+        "outputReadyBeforeChildExit": true,
+        "outputReadyBeforeChildExitReason": "The done frame was observed while the delayed SIGTERM hold kept the fake alive.",
+        "hostCloseIsUiReady": false
+      }
+    },
+    {
+      "model": "gpt-6-sol",
+      "cache": "missing",
+      "effort": "none",
+      "status": "passed",
+      "answer": "I went home.",
+      "usage": [
+        {
+          "provider": "codex-cli",
+          "model": "gpt-6-sol",
+          "requests": 1
+        }
+      ],
+      "catalogOverride": false,
+      "aliveAtReady": true,
+      "pidAbsentAfterClose": true,
+      "hostTempEmpty": true,
+      "durationsMs": {
+        "usageSave": 81,
+        "nativeStartupToFakeStart": 517,
+        "promptDelivery": 3,
+        "syntheticCacheRefresh": 153,
+        "firstText": 123,
+        "completion": 74,
+        "outputReadyAfterStop": 5,
+        "outputReadyToChildExit": 252,
+        "childExitToHostClose": 19
+      },
+      "ordering": {
+        "outputReadyBeforeChildExit": true,
+        "outputReadyBeforeChildExitReason": "The done frame was observed while the delayed SIGTERM hold kept the fake alive.",
+        "hostCloseIsUiReady": false
+      }
+    },
+    {
+      "model": "gpt-6-sol",
+      "cache": "stale",
+      "effort": "none",
+      "status": "passed",
+      "answer": "I went home.",
+      "usage": [
+        {
+          "provider": "codex-cli",
+          "model": "gpt-6-sol",
+          "requests": 1
+        }
+      ],
+      "catalogOverride": false,
+      "aliveAtReady": true,
+      "pidAbsentAfterClose": true,
+      "hostTempEmpty": true,
+      "durationsMs": {
+        "usageSave": 84,
+        "nativeStartupToFakeStart": 500,
+        "promptDelivery": 2,
+        "syntheticCacheRefresh": 154,
+        "firstText": 125,
+        "completion": 78,
+        "outputReadyAfterStop": 2,
+        "outputReadyToChildExit": 252,
+        "childExitToHostClose": 14
+      },
+      "ordering": {
+        "outputReadyBeforeChildExit": true,
+        "outputReadyBeforeChildExitReason": "The done frame was observed while the delayed SIGTERM hold kept the fake alive.",
+        "hostCloseIsUiReady": false
+      }
+    }
+  ],
+  "browserUi": {
+    "status": "measured",
+    "measured": true,
+    "syntheticOnly": true,
+    "scenario": "rewrite-small",
+    "scope": "Separate browser probe. Native messaging is the existing runtime stub. The provider is the local API mock. Accept enabled and first preview come from the isolated-world counters. These numbers are not CLI startup, first model text, child exit, or a total with the native phases.",
+    "acceptEnabledMs": 366.10000002384186,
+    "acceptEnabledReason": "Milliseconds from the isolated-world reset until the Accept button was enabled.",
+    "firstPreviewMs": 46.300000071525574,
+    "firstPreviewReason": "Milliseconds from the isolated-world reset until the first non-empty preview.",
+    "providerCompletionMs": null,
+    "providerCompletionReason": "The local mock does not publish a provider completion time outside the page. Accept enabled is the UI counter.",
+    "requests": 1,
+    "outputBytes": 12,
+    "browserVersion": "156.0.8078.4",
+    "nativeConnections": null,
+    "nativeConnectionsReason": "rewrite-small does not return the stub connection counter. The stub is not a CLI measurement.",
+    "clock": "performance.now in the isolated world, milliseconds from that probe reset",
+    "endToEndCliUiMs": null,
+    "endToEndCliUiReason": "Native phases and this API probe use different providers and clocks. They are not added together."
+  },
+  "limits": [
+    "Synthetic delays do not establish real Luna or Sol speed.",
+    "Native and browser API probes are separate; no end-to-end CLI UI total.",
+    "macOS observed; Windows exit behavior not measured locally."
+  ]
+}
