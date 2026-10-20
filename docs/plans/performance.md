@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. Tasks through P07, including P11, are complete. P08a is next. The release version is not chosen.
+Status: implementation in progress. Tasks through P08a, including P11, are complete. P08b is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -40,14 +40,14 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P05](#p05-reuse-completed-result-analysis)                   | Lazily reuse completed diffs and static token notes                    | art          | P00a                    |
 | [x]    | [P06](#p06-cancel-abandoned-connection-tests)                 | Cancel tests when their extension page goes away                       | complex      | P01d                    |
 | [x]    | [P07](#p07-coalesce-marker-work)                              | Reduce duplicate marker reads and renders                              | art          | P02, P00a               |
-| [ ]    | [P08a](#p08a-prove-hidden-document-state-in-a-browser)        | Establish a reliable hidden-page browser fixture                       | complex      | P00a                    |
+| [x]    | [P08a](#p08a-prove-hidden-document-state-in-a-browser)        | Establish a reliable hidden-page browser fixture                       | complex      | P00a                    |
 | [ ]    | [P08b](#p08b-defer-new-idle-requests-while-hidden)            | Gate automatic request starts on visibility                            | feature      | P08a, P02, P07          |
 | [ ]    | [P09](#p09-stop-posting-unused-idle-chunks)                   | Suppress idle preview messages at the worker boundary                  | feature      | P01d                    |
 | [ ]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: sixteen completed and six pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: seventeen completed and five pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -275,6 +275,12 @@ Done: unchanged ticks do not render again; event bursts share work; script-only 
 
 ## P08a. Prove hidden document state in a browser
 
+Status: complete in this task commit. The parent implemented and verified this browser-only fixture inline.
+
+`tests/e2e/visibility-runtime.ts` starts a private Chromium process and connects to its loopback CDP endpoint with Playwright's supported [`noDefaults: true`](https://playwright.dev/docs/api/class-browsertype#browser-type-connect-over-cdp) option. It uses the default context, avoiding Playwright's automatic focus emulation. Existing suites keep their normal launch setup. The helper checks the macOS sandbox guard before launching, owns its temporary profile and browser process, closes Chrome through the protocol, and removes its profile. It accepts an optional extension directory for P08b.
+
+The [visibility evidence](../../bench/results/p08a-visibility.json) records three real hidden/visible tab-switch cycles in both headed and headless Chrome. The committed test repeats three cycles for the top document and its editable srcdoc frame. Three fresh-browser runs passed, followed by a passing cleanup verification run. No visibility getters or events are faked. Typecheck, targeted lint and formatting passed. Local macOS is verified; Linux CI is pending. No production code or provider calls changed. Manual test/documentation/comment review passed. Comment Sicko is unavailable.
+
 Source: G03's missing proof. Files: a visibility fixture under `tests/e2e/` or `bench/runtime/`, existing extension launch setup.
 
 Establish a browser scenario that asserts `document.hidden === true` and `document.visibilityState === 'hidden'` in the actual tested document, then verifies the visible transition. Use a headed browser or supported visibility control. Switching focus alone is insufficient: the review's two-tab and minimized-window probes both still reported visible.
@@ -393,3 +399,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P07 initial handoff: implemented, pending parent review, full gates, browser/runtime checks and commit. Changed `src/content/idle.ts`, `tests/e2e/fixtures/main.js`, `tests/e2e/popup.spec.ts`, `bench/runtime/browser.mjs` and this plan. Scroll, resize and input share one pending `requestAnimationFrame`; any immediate pass (state change, refresh, focusin or the 250 ms periodic pass) cancels it, and a pass that finds no markers, idle off or an open popup ends with nothing queued. Focusin and the initial busy/result/error/blocking renders stay synchronous. Each pass reads a completed field's text once and reuses it for the trimmed-equal hide and the stale check; busy fields read none. Each pass calls `layer('marks')` first, so modal reparenting and root recreation still run, then skips Preact rendering when the container and every marker's element, top, left, tone, text, aria label, title and stale state match the last render. Hiding clears that snapshot. The fixture counts real `IdleMark` VNode commits through Preact's `options.diffed`, chaining any earlier hook. New browser cases check zero commits for unchanged ticks with two markers, a script-only rich edit turning stale with one render, detached-editor removal, a 30-event scroll/resize/input burst using one geometry pass with zero commits, a refresh dropping the queued frame, and an unchanged marker moving into a later modal with zero commits. Existing movement, scroll-away, popup-close, spinner and blocking cases are unchanged. The runtime `rich-marker` scenario now requires `innerText` reads to equal observed marker passes (field rect reads), with passes bounded by the 900 ms window; `renderInvocations` stays null with its reason, and baseline reports are unchanged. Checks run: `npm run typecheck`, ESLint and Prettier on the touched files, and a fixture bundle build to a temporary folder (removed). Browser and runtime checks were written but not run here. No browser, Playwright, runtime harness, listening server or real provider/CLI was started. Guard skills, final review and git writes were skipped as dispatched. No version, default, model, prompt, fleet or other task status changed. No battery claim is made.
 
 - P07 reviewer verification: all required gates passed. The parent added and verified root-removal recovery, checked three repeats of the timing-sensitive burst case, and saved the before/after rich-editor work counts. No production correction was needed. P06 remote CI passed.
+
+- P08a: actual hidden/visible state is proven for the page and its editor frame. The prior separate-CDP-session focus setting still left documents visible; the supported noDefaults connection resolved the fixture problem. Browser ownership and private-profile cleanup were checked. P08b can now use this fixture. No delegate or reusable skill was needed.

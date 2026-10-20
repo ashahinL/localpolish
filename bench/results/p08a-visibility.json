@@ -1,0 +1,250 @@
+{
+  "task": "P08a",
+  "verifiedCairo": "2026-10-20 17:20:19 EEST",
+  "method": "Private Chrome profile, loopback CDP, default context, connectOverCDP({noDefaults:true}), actual tab switches",
+  "priorMethod": "Standard Playwright plus separate-session setFocusEmulationEnabled(false) remained visible",
+  "noDocumentOverrides": true,
+  "observations": [
+    {
+      "headless": true,
+      "transitions": [
+        {
+          "visible": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ],
+          "hidden": [
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            },
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            }
+          ],
+          "restored": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ]
+        },
+        {
+          "visible": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ],
+          "hidden": [
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            },
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            }
+          ],
+          "restored": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ]
+        },
+        {
+          "visible": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ],
+          "hidden": [
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            },
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            }
+          ],
+          "restored": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "headless": false,
+      "transitions": [
+        {
+          "visible": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ],
+          "hidden": [
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            },
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            }
+          ],
+          "restored": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ]
+        },
+        {
+          "visible": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ],
+          "hidden": [
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            },
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            }
+          ],
+          "restored": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ]
+        },
+        {
+          "visible": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ],
+          "hidden": [
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            },
+            {
+              "hidden": true,
+              "state": "hidden",
+              "focused": false
+            }
+          ],
+          "restored": [
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": true
+            },
+            {
+              "hidden": false,
+              "state": "visible",
+              "focused": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "automatedTest": "npx playwright test tests/e2e/visibility.spec.ts --workers=1 --repeat-each=3",
+  "automatedResult": "3 passed; each checks three hidden/visible cycles for the page and its editor frame",
+  "platformLimit": "Local macOS proof; Linux CI pending. Headed is recorded from the separate probe; committed automated fixture uses headless Chrome."
+}
