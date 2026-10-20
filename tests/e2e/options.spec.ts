@@ -1,5 +1,6 @@
 import { expect, test as base, type BrowserContext, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { heldSaves, holdSaves, releaseSaves, replyToTest, testPorts } from './test-owner';
 
 const DIST = new URL('../../dist', import.meta.url);
 // The built page loads /chunks/... by absolute path, which file:// cannot resolve.
@@ -12,6 +13,7 @@ interface StubConfig {
   failUsageRead?: boolean;
   bridge: unknown;
   holdBridge: boolean;
+  holdTest: boolean;
   test: unknown;
   shortcut: string;
 }
@@ -42,6 +44,7 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
     failSets: 0,
     bridge: BRIDGE_OK,
     holdBridge: false,
+    holdTest: false,
     test: { ok: true, sample: 'Hello.', ms: 1234 },
     shortcut: '⇧⌘K',
     ...overrides,
@@ -58,9 +61,19 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
     const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
     const runtimeSent: Array<{ type: string }> = [];
     const bridgeHeld: Array<(reply: unknown) => void> = [];
+    const testPorts: Array<{
+      disconnected: boolean;
+      disconnects: number;
+      reply(result: unknown): void;
+      disconnect(): void;
+    }> = [];
+    const saveHeld: Array<() => void> = [];
     Object.assign(window, {
       __runtimeSent: runtimeSent,
       __bridgeHeld: bridgeHeld,
+      __testPorts: testPorts,
+      __holdSaves: false,
+      __saveHeld: saveHeld,
       __store: store,
       chrome: {
         storage: {
@@ -70,6 +83,9 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
               return key in store ? { [key]: copy(store[key]) } : {};
             },
             set: async (items: Record<string, unknown>) => {
+              if ((window as unknown as { __holdSaves: boolean }).__holdSaves) {
+                await new Promise<void>((resolve) => saveHeld.push(resolve));
+              }
               if (cfg.failSets > 0) {
                 cfg.failSets -= 1;
                 throw new Error('Storage write failed');
@@ -88,15 +104,39 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
           },
         },
         runtime: {
+          connect: ({ name }: { name: string }) => {
+            if (name !== 'test-connection') throw new Error(`Unexpected port ${name}`);
+            const messages: Array<(message: unknown) => void> = [];
+            const disconnects: Array<() => void> = [];
+            let accepted = false;
+            const port = {
+              disconnected: false,
+              disconnects: 0,
+              reply: (result: unknown) => messages.forEach((cb) => cb({ type: 'result', result })),
+              postMessage: (message: { type: string }) => {
+                if (accepted || port.disconnected) return;
+                if (message.type !== 'test-connection') throw new Error('Invalid test start');
+                accepted = true;
+                runtimeSent.push(copy(message));
+                if (!cfg.holdTest) setTimeout(() => port.reply(cfg.test), 300);
+              },
+              disconnect: () => {
+                if (port.disconnected) return;
+                port.disconnected = true;
+                port.disconnects++;
+                disconnects.forEach((cb) => cb());
+              },
+              onMessage: { addListener: (cb: (message: unknown) => void) => messages.push(cb) },
+              onDisconnect: { addListener: (cb: () => void) => disconnects.push(cb) },
+            };
+            testPorts.push(port);
+            return port;
+          },
           sendMessage: async (message: { type: string }) => {
             runtimeSent.push(copy(message));
             if (message.type === 'bridge-status') {
               if (cfg.holdBridge) return new Promise((reply) => bridgeHeld.push(reply));
               return cfg.bridge;
-            }
-            if (message.type === 'test-connection') {
-              await new Promise((done) => setTimeout(done, 300));
-              return cfg.test;
             }
             return undefined;
           },
@@ -105,6 +145,7 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
         tabs: { create: async () => ({}) },
       },
     });
+    window.addEventListener('pagehide', () => testPorts.forEach((port) => port.disconnect()));
   }, config);
   await page.goto(`${ORIGIN}/options.html`);
   await expect(page.getByRole('heading', { name: 'AI provider' })).toBeVisible();
@@ -429,4 +470,66 @@ test('Usage shows a load failure instead of zero', async ({ page }) => {
   await expect(usage.getByRole('alert')).toHaveText('Could not load usage: Usage read failed');
   await expect(usage.getByText('No requests recorded yet.')).toHaveCount(0);
   await expect(usage.getByRole('table')).toHaveCount(0);
+});
+
+test('provider change cancels its options test and ignores the old reply', async ({ page }) => {
+  await openOptions(page, { holdTest: true, settings: { provider: 'claude-cli' } });
+  const run = page.getByRole('button', { name: 'Test connection' });
+  await run.click();
+  await expect.poll(() => testPorts(page)).toEqual([{ disconnected: false, disconnects: 0 }]);
+  await expect(run).toBeDisabled();
+  await provider(page, 'OpenAI-compatible API').click();
+  await expect.poll(() => testPorts(page)).toEqual([{ disconnected: true, disconnects: 1 }]);
+  await expect(run).toBeEnabled();
+  await expect(page.getByText('Testing…')).toHaveCount(0);
+  await replyToTest(page, 0, 'Old provider.');
+  await expect(page.getByText('Old provider.', { exact: false })).toHaveCount(0);
+  await run.click();
+  await expect.poll(() => testPorts(page).then((ports) => ports.length)).toBe(2);
+  await replyToTest(page, 1, 'Current provider.');
+  await expect(page.getByText('Works. Got “Current provider.” in 0.1 s')).toBeVisible();
+  await expect(run).toBeEnabled();
+});
+
+test('a replacement options run closes only the previous port and ignores its answer', async ({
+  page,
+}) => {
+  await openOptions(page, { holdTest: true });
+  const run = page.getByRole('button', { name: 'Test connection' });
+  await run.click();
+  await expect.poll(() => testPorts(page).then((ports) => ports.length)).toBe(1);
+  await run.dispatchEvent('click');
+  await expect
+    .poll(() => testPorts(page))
+    .toEqual([
+      { disconnected: true, disconnects: 1 },
+      { disconnected: false, disconnects: 0 },
+    ]);
+  await replyToTest(page, 0, 'Replaced answer.');
+  await expect(page.getByText('Replaced answer.', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Testing…')).toBeVisible();
+  await replyToTest(page, 1, 'Replacement.');
+  await expect(page.getByText('Works. Got “Replacement.” in 0.1 s')).toBeVisible();
+});
+
+test('an abandoned options save cannot open a test port after a provider change', async ({
+  page,
+}) => {
+  await openOptions(page, { holdTest: true, settings: { provider: 'claude-cli' } });
+  await holdSaves(page);
+  await page.getByLabel('Model', { exact: true }).selectOption({ label: 'Custom…' });
+  await page.getByLabel('Custom model', { exact: true }).fill('held-model');
+  const run = page.getByRole('button', { name: 'Test connection' });
+  await run.dispatchEvent('click');
+  await expect.poll(() => heldSaves(page)).toBe(1);
+  await expect(page.getByText('Testing…')).toBeVisible();
+  await provider(page, 'OpenAI-compatible API').click();
+  await expect(run).toBeEnabled();
+  await releaseSaves(page);
+  await expect.poll(async () => (await stored(page))?.provider).toBe('openai-compatible');
+  expect(await testPorts(page)).toEqual([]);
+  await expect(page.getByText('Testing…')).toHaveCount(0);
+  await expect(
+    page.getByText('Settings were not saved, so the test did not run. Try again.'),
+  ).toHaveCount(0);
 });

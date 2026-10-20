@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { type TestResult } from '../core/messages';
 import { testConnection } from '../options/chrome';
 import { useSettingsApi } from '../options/useSettings';
@@ -13,22 +13,31 @@ export function useTest(): TestState {
   const { flush, settings } = useSettingsApi();
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
-  // A late answer must not restore a result cleared by a provider change.
   const runId = useRef(0);
+  const controller = useRef<AbortController | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     runId.current += 1;
+    controller.current?.abort();
     setResult(null);
     setRunning(false);
+    return () => {
+      runId.current += 1;
+      controller.current?.abort();
+    };
   }, [settings?.provider]);
 
   const run = (): void => {
     const id = ++runId.current;
+    controller.current?.abort();
+    const owner = new AbortController();
+    controller.current = owner;
     void (async () => {
       setRunning(true);
       setResult(null);
-      if (!(await flush())) {
-        if (id !== runId.current) return;
+      const saved = await flush();
+      if (id !== runId.current || owner.signal.aborted) return;
+      if (!saved) {
         setResult({
           ok: false,
           message: 'Settings were not saved, so the test did not run. Try again.',
@@ -36,8 +45,8 @@ export function useTest(): TestState {
         setRunning(false);
         return;
       }
-      const next = await testConnection();
-      if (id !== runId.current) return;
+      const next = await testConnection(owner.signal);
+      if (id !== runId.current || owner.signal.aborted) return;
       setResult(next);
       setRunning(false);
     })();

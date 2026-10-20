@@ -287,6 +287,10 @@ npm run bridge:uninstall
 
 The popup's **Provider** tab and the options page show the bridge status. Each CLI shows its version, or the words "not found". **Test connection** checks the provider you picked.
 
+**Test connection** saves pending settings before sending its fixed sample. Each options page, setup page, or toolbar popup owns its test. Closing that page, unmounting its test owner, changing provider, or starting a replacement test cancels that owner's previous test. Other pages' tests keep running. The 45-second timeout starts when the provider stream starts, after settings and usage saving. An accepted attempt counts once even if cancelled during the usage save; that cancellation prevents provider startup. Cancellation before acceptance counts zero.
+
+Extension pages call `runtime.connect({ name: TEST_PORT })`, where `TEST_PORT` is `test-connection`. The port accepts one `{ type: 'test-connection' }` start and replies with `{ type: 'result', result: TestResult }`. `TestResult` is `{ ok: true, sample, ms }` or `{ ok: false, message }`. Disconnect aborts only that port's test. The old `runtime.sendMessage` test request is removed. Rewrite ports, settings messages, and shared bridge health checks keep their existing protocols.
+
 CLI pages share an ongoing bridge check and reuse successful results for up to 30 seconds. **Check again** bypasses a cached result and shares any check already running. Failed checks are retried on the next request. API providers start no automatic bridge check; you can run diagnostics with **Check again** in options.
 
 ## Sites that need Copy instead of Accept
@@ -313,7 +317,7 @@ Match the message on screen, then do the fix that follows it.
 - `<cli> CLI not found. Install it, log in, then run "npm run bridge:install" again.` The message names the CLI, such as `codex`. Install it, log in, then run `npm run bridge:install` again.
 - `Codex needs its own login for LocalPolish. In a terminal run: CODEX_HOME="..." codex login`. The message prints the real path in place of `...`. Run that command. The same command is in Setup.
 - `Timed out after 60 seconds.` The bridge waited 60 seconds and did not get a finished answer. Try again, or pick a faster model.
-- `Timed out after 45 seconds.` **Test connection** waited 45 seconds. Check that the CLI is logged in and that the model name is valid.
+- `Timed out after 45 seconds.` **Test connection** waited 45 seconds after the provider stream started. Check that the CLI is logged in and that the model name is valid.
 - `Cannot reach <url>. Is the server running?` Start the server at that URL, or correct the base URL on the options page.
 - `HTTP 403: ...` When the base URL uses port 11434, the message adds `Ollama blocks unknown origins: set OLLAMA_ORIGINS=chrome-extension://* and restart Ollama.` Use the Ollama command in Providers, then restart Ollama.
 - `Set a model name for the OpenAI-compatible provider in LocalPolish settings.` Open the options page and set a model for that provider.

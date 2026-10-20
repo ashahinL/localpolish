@@ -3,6 +3,8 @@ import { getProvider } from '../background/providers';
 import { runRewrite, testConnection } from '../background/rewrite';
 import {
   REWRITE_PORT,
+  TEST_PORT,
+  type TestEvent,
   type BridgeStatus,
   type PageSettings,
   type RewriteEvent,
@@ -79,7 +81,6 @@ function isRuntimeMessage(value: unknown): value is RuntimeMessage {
   if (typeof value !== 'object' || value === null) return false;
   const type = (value as { type?: unknown }).type;
   return (
-    type === 'test-connection' ||
     type === 'bridge-status' ||
     type === 'open-popup' ||
     type === 'page-settings' ||
@@ -154,6 +155,43 @@ export default defineBackground(() => {
   });
 
   extension().runtime.onConnect.addListener((port) => {
+    if (port.name === TEST_PORT) {
+      const controller = new AbortController();
+      let started = false;
+      port.onDisconnect.addListener(() => controller.abort());
+      const reply = (result: TestEvent['result']) => {
+        if (controller.signal.aborted) return;
+        try {
+          port.postMessage({ type: 'result', result } satisfies TestEvent);
+        } catch {
+          controller.abort();
+        }
+      };
+      port.onMessage.addListener((message) => {
+        if (started || controller.signal.aborted) return;
+        if (
+          typeof message !== 'object' ||
+          message === null ||
+          (message as { type?: unknown }).type !== 'test-connection'
+        ) {
+          reply({ ok: false, message: 'The connection test request was not understood.' });
+          return;
+        }
+        started = true;
+        void loadSettings()
+          .then((settings) => {
+            if (controller.signal.aborted) return;
+            return testConnection(settings, getProvider(settings.provider), controller.signal);
+          })
+          .then((result) => {
+            if (result) reply(result);
+          })
+          .catch((err: unknown) => {
+            reply({ ok: false, message: errorMessage(err, 'Could not load settings.') });
+          });
+      });
+      return;
+    }
     if (port.name !== REWRITE_PORT) return;
 
     const controller = new AbortController();
@@ -226,16 +264,6 @@ export default defineBackground(() => {
           reply(settings);
         })
         .catch(() => reply(null));
-      return true;
-    }
-
-    if (message.type === 'test-connection') {
-      void loadSettings()
-        .then((settings) => testConnection(settings, getProvider(settings.provider)))
-        .then(reply)
-        .catch((err: unknown) => {
-          reply({ ok: false, message: errorMessage(err, 'Could not load settings.') });
-        });
       return true;
     }
 

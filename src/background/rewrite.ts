@@ -44,43 +44,56 @@ export async function runRewrite(
   const utf8 = new TextEncoder();
   const inner = new AbortController();
   let timedOut = false;
+  let rejectStream: ((err: Error) => void) | undefined;
   const onAbort = () => {
     inner.abort();
+    rejectStream?.(new Error('Cancelled.'));
   };
   signal.addEventListener('abort', onAbort);
   if (signal.aborted) onAbort();
   const timer = setTimeout(() => {
     timedOut = true;
     inner.abort();
+    rejectStream?.(new Error('Timed out after 60 seconds.'));
   }, REWRITE_TIMEOUT_MS);
 
   try {
-    await stream(
-      prompt,
-      settings,
-      (text) => {
-        if (outputExceeded) throw new Error(OUTPUT_LIMIT_MESSAGE);
-        const remainingBytes = MAX_OUTPUT_BYTES - outputBytes;
-        const first = text.charCodeAt(0);
-        // Separate encodings count a split pair as 3 + 3 bytes instead of 4.
-        const correction = endsWithHighSurrogate && first >= 0xdc00 && first <= 0xdfff ? 2 : 0;
-        const bytes =
-          text.length > remainingBytes ? Infinity : utf8.encode(text).byteLength - correction;
-        if (bytes > remainingBytes) {
-          outputExceeded = true;
-          inner.abort();
-          throw new Error(OUTPUT_LIMIT_MESSAGE);
-        }
-        outputBytes += bytes;
-        if (text.length > 0) {
-          const last = text.charCodeAt(text.length - 1);
-          endsWithHighSurrogate = last >= 0xd800 && last <= 0xdbff;
-        }
-        raw += text;
-        post({ type: 'chunk', text });
-      },
-      inner.signal,
-    );
+    await new Promise<void>((resolve, reject) => {
+      rejectStream = reject;
+      if (inner.signal.aborted) {
+        reject(new Error('Cancelled.'));
+        return;
+      }
+      Promise.resolve(
+        stream(
+          prompt,
+          settings,
+          (text) => {
+            if (inner.signal.aborted) throw new Error('Cancelled.');
+            if (outputExceeded) throw new Error(OUTPUT_LIMIT_MESSAGE);
+            const remainingBytes = MAX_OUTPUT_BYTES - outputBytes;
+            const first = text.charCodeAt(0);
+            // Separate encodings count a split pair as 3 + 3 bytes instead of 4.
+            const correction = endsWithHighSurrogate && first >= 0xdc00 && first <= 0xdfff ? 2 : 0;
+            const bytes =
+              text.length > remainingBytes ? Infinity : utf8.encode(text).byteLength - correction;
+            if (bytes > remainingBytes) {
+              outputExceeded = true;
+              inner.abort();
+              throw new Error(OUTPUT_LIMIT_MESSAGE);
+            }
+            outputBytes += bytes;
+            if (text.length > 0) {
+              const last = text.charCodeAt(text.length - 1);
+              endsWithHighSurrogate = last >= 0xd800 && last <= 0xdbff;
+            }
+            raw += text;
+            post({ type: 'chunk', text });
+          },
+          inner.signal,
+        ),
+      ).then(resolve, reject);
+    });
     if (outputExceeded) throw new Error(OUTPUT_LIMIT_MESSAGE);
   } catch (err) {
     if (timedOut) {
@@ -112,22 +125,32 @@ export async function runRewrite(
   post({ type: 'done', text: cleaned });
 }
 
-export async function testConnection(settings: Settings, stream: StreamFn): Promise<TestResult> {
+export async function testConnection(
+  settings: Settings,
+  stream: StreamFn,
+  ownerSignal: AbortSignal,
+): Promise<TestResult> {
+  if (ownerSignal.aborted) return { ok: false, message: 'Cancelled.' };
   const started = Date.now();
   const controller = new AbortController();
   let sample: string | undefined;
   let failure: string | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  let onTimeout: () => void;
-  const timeout = new Promise<'timeout'>((resolve) => {
-    onTimeout = () => {
-      controller.abort();
-      resolve('timeout');
-    };
+  let stop!: (reason: 'timeout' | 'cancelled') => void;
+  const stopped = new Promise<'timeout' | 'cancelled'>((resolve) => {
+    stop = resolve;
   });
+  const onOwnerAbort = () => {
+    controller.abort();
+    stop('cancelled');
+  };
+  ownerSignal.addEventListener('abort', onOwnerAbort);
   const timedStream: StreamFn = (...args) => {
-    timer = setTimeout(onTimeout, TEST_TIMEOUT_MS);
+    timer = setTimeout(() => {
+      controller.abort();
+      stop('timeout');
+    }, TEST_TIMEOUT_MS);
     return stream(...args);
   };
 
@@ -143,16 +166,16 @@ export async function testConnection(settings: Settings, stream: StreamFn): Prom
         },
         controller.signal,
       ).then(() => 'finished' as const),
-      timeout,
+      stopped,
     ]);
-    if (outcome === 'timeout') {
-      return { ok: false, message: 'Timed out after 45 seconds.' };
-    }
+    if (outcome === 'timeout') return { ok: false, message: 'Timed out after 45 seconds.' };
+    if (ownerSignal.aborted) return { ok: false, message: 'Cancelled.' };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'The rewrite failed.';
     return { ok: false, message };
   } finally {
     clearTimeout(timer);
+    ownerSignal.removeEventListener('abort', onOwnerAbort);
   }
 
   if (failure !== undefined) return { ok: false, message: failure };

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
-import { type TestResult } from '../core/messages';
 import { type DefaultMode, type Settings } from '../core/settings';
 import { useBridge } from '../popup/useBridge';
-import { openShortcutsPage, polishShortcut, testConnection } from './chrome';
+import { openShortcutsPage, polishShortcut } from './chrome';
+import { useTest } from '../popup/useTest';
 import { CodeLine, Field, Note, TextInput } from './controls';
 import { formatSeconds, invalidSiteEntries, parseBlocklist, shortcutKeys } from './form';
 import { isCli } from './ProviderSection';
@@ -66,24 +66,7 @@ export function BridgeSection() {
 }
 
 export function TestSection() {
-  const { flush } = useSettingsApi();
-  const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<TestResult | null>(null);
-
-  const run = async () => {
-    setRunning(true);
-    setResult(null);
-    if (!(await flush())) {
-      setResult({
-        ok: false,
-        message: 'Settings were not saved, so the test did not run. Try again.',
-      });
-      setRunning(false);
-      return;
-    }
-    setResult(await testConnection());
-    setRunning(false);
-  };
+  const { running, result, run } = useTest();
 
   return (
     <section class="card">

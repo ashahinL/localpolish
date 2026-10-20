@@ -1,4 +1,11 @@
-import { type BridgeStatus, type RuntimeMessage, type TestResult } from '../core/messages';
+import {
+  TEST_PORT,
+  type BridgeStatus,
+  type RuntimeMessage,
+  type TestResult,
+  type TestStart,
+  type TestEvent,
+} from '../core/messages';
 
 interface Command {
   name?: string;
@@ -7,8 +14,19 @@ interface Command {
 
 type StorageListener = (changes: Record<string, unknown>, areaName: string) => void;
 
+interface TestPort {
+  postMessage(message: TestStart): void;
+  disconnect(): void;
+  onMessage: { addListener(cb: (message: TestEvent) => void): void };
+  onDisconnect: { addListener(cb: () => void): void };
+}
+
 interface OptionsChrome {
-  runtime: { sendMessage(message: RuntimeMessage): Promise<unknown> };
+  runtime: {
+    sendMessage(message: RuntimeMessage): Promise<unknown>;
+    connect(options: { name: string }): TestPort;
+    lastError?: { message?: string };
+  };
   storage: {
     onChanged: {
       addListener(cb: StorageListener): void;
@@ -43,8 +61,39 @@ export function bridgeStatus(force = false): Promise<BridgeStatus> {
   return ask<BridgeStatus>({ type: 'bridge-status', force });
 }
 
-export function testConnection(): Promise<TestResult> {
-  return ask<TestResult>({ type: 'test-connection' });
+export function testConnection(signal: AbortSignal): Promise<TestResult> {
+  if (signal.aborted) return Promise.resolve({ ok: false, message: 'Cancelled.' });
+  return new Promise((resolve) => {
+    let port: TestPort | undefined;
+    let settled = false;
+    const finish = (result: TestResult) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      resolve(result);
+      try {
+        port?.disconnect();
+      } catch {
+        // The owner may have already closed the port.
+      }
+    };
+    const onAbort = () => finish({ ok: false, message: 'Cancelled.' });
+    try {
+      port = extension().runtime.connect({ name: TEST_PORT });
+      port.onDisconnect.addListener(() => {
+        const detail = extension().runtime.lastError?.message;
+        finish({ ok: false, message: detail || 'The extension background did not answer.' });
+      });
+      port.onMessage.addListener((message) => {
+        if (message.type === 'result') finish(message.result);
+      });
+      signal.addEventListener('abort', onAbort);
+      if (signal.aborted) onAbort();
+      if (!settled) port.postMessage({ type: 'test-connection' });
+    } catch (err) {
+      finish({ ok: false, message: errorMessage(err) });
+    }
+  });
 }
 
 export async function polishShortcut(): Promise<string> {

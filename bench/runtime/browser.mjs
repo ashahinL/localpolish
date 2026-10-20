@@ -338,6 +338,8 @@ chrome.runtime.onMessage.addListener((message) => {
           const activeBeforeClose = mock.streams.active;
           await owner.close();
           await pause(page, 500);
+          await expect.poll(() => mock.streams.active).toBe(0);
+          await expect.poll(() => mock.streams.cancelled - before.cancelled).toBe(1);
           detail = {
             activeBeforeClose,
             observationMs: 500,

@@ -1,5 +1,6 @@
 import { expect, test as base, type BrowserContext, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { heldSaves, holdSaves, releaseSaves, replyToTest, testPorts } from './test-owner';
 
 const DIST = new URL('../../dist', import.meta.url);
 // The built page loads /chunks/... by absolute path, which file:// cannot resolve.
@@ -13,6 +14,7 @@ interface StubConfig {
   tabUrl: string | undefined;
   bridge: unknown;
   holdBridge: boolean;
+  holdTest: boolean;
   test: unknown;
   shortcut: string;
 }
@@ -51,6 +53,7 @@ async function openPopup(
     tabUrl: 'https://mail.google.com/mail/u/0/',
     bridge: BRIDGE_OK,
     holdBridge: false,
+    holdTest: false,
     test: { ok: true, sample: 'Hello.', ms: 1234 },
     shortcut: '⇧⌘K',
     ...overrides,
@@ -68,12 +71,22 @@ async function openPopup(
     const opened: string[] = [];
     const runtimeSent: Array<{ type: string }> = [];
     const bridgeHeld: Array<(reply: unknown) => void> = [];
+    const testPorts: Array<{
+      disconnected: boolean;
+      disconnects: number;
+      reply(result: unknown): void;
+      disconnect(): void;
+    }> = [];
+    const saveHeld: Array<() => void> = [];
     Object.assign(window, {
       __runtimeSent: runtimeSent,
       __store: store,
       __opened: opened,
       __bridgeCalls: 0,
       __bridgeHeld: bridgeHeld,
+      __testPorts: testPorts,
+      __holdSaves: false,
+      __saveHeld: saveHeld,
       chrome: {
         storage: {
           local: {
@@ -82,6 +95,9 @@ async function openPopup(
               return key in store ? { [key]: copy(store[key]) } : {};
             },
             set: async (items: Record<string, unknown>) => {
+              if ((window as unknown as { __holdSaves: boolean }).__holdSaves) {
+                await new Promise<void>((resolve) => saveHeld.push(resolve));
+              }
               if (cfg.failSets > 0) {
                 cfg.failSets -= 1;
                 throw new Error('Storage write failed');
@@ -100,16 +116,40 @@ async function openPopup(
           },
         },
         runtime: {
+          connect: ({ name }: { name: string }) => {
+            if (name !== 'test-connection') throw new Error(`Unexpected port ${name}`);
+            const messages: Array<(message: unknown) => void> = [];
+            const disconnects: Array<() => void> = [];
+            let accepted = false;
+            const port = {
+              disconnected: false,
+              disconnects: 0,
+              reply: (result: unknown) => messages.forEach((cb) => cb({ type: 'result', result })),
+              postMessage: (message: { type: string }) => {
+                if (accepted || port.disconnected) return;
+                if (message.type !== 'test-connection') throw new Error('Invalid test start');
+                accepted = true;
+                runtimeSent.push(copy(message));
+                if (!cfg.holdTest) setTimeout(() => port.reply(cfg.test), 300);
+              },
+              disconnect: () => {
+                if (port.disconnected) return;
+                port.disconnected = true;
+                port.disconnects++;
+                disconnects.forEach((cb) => cb());
+              },
+              onMessage: { addListener: (cb: (message: unknown) => void) => messages.push(cb) },
+              onDisconnect: { addListener: (cb: () => void) => disconnects.push(cb) },
+            };
+            testPorts.push(port);
+            return port;
+          },
           sendMessage: async (message: { type: string }) => {
             runtimeSent.push(copy(message));
             if (message.type === 'bridge-status') {
               (window as unknown as { __bridgeCalls: number }).__bridgeCalls += 1;
               if (cfg.holdBridge) return new Promise((reply) => bridgeHeld.push(reply));
               return cfg.bridge;
-            }
-            if (message.type === 'test-connection') {
-              await new Promise((done) => setTimeout(done, 300));
-              return cfg.test;
             }
             return undefined;
           },
@@ -128,6 +168,7 @@ async function openPopup(
         },
       },
     });
+    window.addEventListener('pagehide', () => testPorts.forEach((port) => port.disconnect()));
   }, config);
   await page.goto(`${ORIGIN}/${path}`);
   if (path === 'popup.html') await expect(page.getByRole('tab', { name: 'Home' })).toBeVisible();
@@ -462,45 +503,47 @@ test('hover help shows after 2 seconds', async ({ page }) => {
   }
 });
 
-test('a failed save blocks Test connection and is retried', async ({ page }) => {
-  await page.clock.install();
-  await openPopup(page, { failSets: 1 });
-  await page.getByRole('tab', { name: 'Provider' }).click();
-  await page.getByLabel('Model', { exact: true }).selectOption({ label: 'Custom…' });
-  await page.clock.pauseAt(Date.now() + 10_000);
-  try {
-    await page.getByLabel('Custom model', { exact: true }).fill('custom-retry-model');
-    const run = page.getByRole('button', { name: 'Test connection' });
-    // Keep focus in the input so the button's flush handles the pending typing edit.
-    await run.dispatchEvent('click');
-    await expect(page.getByText('Could not save: Storage write failed')).toBeVisible();
-    await expect(
-      page.getByText('Settings were not saved, so the test did not run. Try again.'),
-    ).toBeVisible();
-    await expect(run).toBeEnabled();
-    const testMessages = () =>
-      page.evaluate(() =>
-        (window as unknown as { __runtimeSent: Array<{ type: string }> }).__runtimeSent.filter(
-          (message) => message.type === 'test-connection',
-        ),
-      );
-    expect(await testMessages()).toHaveLength(0);
-    expect(
-      ((await stored(page))?.models as Record<string, string> | undefined)?.['codex-cli'],
-    ).not.toBe('custom-retry-model');
+for (const path of ['popup.html', 'setup.html'] as const) {
+  test(`${path} failed save blocks Test connection and is retried`, async ({ page }) => {
+    await page.clock.install();
+    await openPopup(page, { failSets: 1 }, path);
+    if (path === 'popup.html') await page.getByRole('tab', { name: 'Provider' }).click();
+    await page.getByLabel('Model', { exact: true }).selectOption({ label: 'Custom…' });
+    await page.clock.pauseAt(Date.now() + 10_000);
+    try {
+      await page.getByLabel('Custom model', { exact: true }).fill('custom-retry-model');
+      const run = page.getByRole('button', { name: 'Test connection' });
+      // Keep focus in the input so the button's flush handles the pending typing edit.
+      await run.dispatchEvent('click');
+      await expect(page.getByText('Could not save: Storage write failed')).toBeVisible();
+      await expect(
+        page.getByText('Settings were not saved, so the test did not run. Try again.'),
+      ).toBeVisible();
+      await expect(run).toBeEnabled();
+      const testMessages = () =>
+        page.evaluate(() =>
+          (window as unknown as { __runtimeSent: Array<{ type: string }> }).__runtimeSent.filter(
+            (message) => message.type === 'test-connection',
+          ),
+        );
+      expect(await testMessages()).toHaveLength(0);
+      expect(
+        ((await stored(page))?.models as Record<string, string> | undefined)?.['codex-cli'],
+      ).not.toBe('custom-retry-model');
 
-    await run.click();
-    await expect
-      .poll(async () => ((await stored(page))?.models as Record<string, string>)?.['codex-cli'])
-      .toBe('custom-retry-model');
-    await expect.poll(testMessages).toHaveLength(1);
-    await page.clock.runFor(300);
-    await expect(page.getByText('Works. Got “Hello.” in 1.2 s')).toBeVisible();
-    await expect(page.getByText('Could not save: Storage write failed')).toHaveCount(0);
-  } finally {
-    await page.clock.resume();
-  }
-});
+      await run.click();
+      await expect
+        .poll(async () => ((await stored(page))?.models as Record<string, string>)?.['codex-cli'])
+        .toBe('custom-retry-model');
+      await expect.poll(testMessages).toHaveLength(1);
+      await page.clock.runFor(300);
+      await expect(page.getByText('Works. Got “Hello.” in 1.2 s')).toBeVisible();
+      await expect(page.getByText('Could not save: Storage write failed')).toHaveCount(0);
+    } finally {
+      await page.clock.resume();
+    }
+  });
+}
 
 const LONG_MODEL = `my-org/${'very-long-custom-model-name-'.repeat(6)}q4_k_m`;
 
@@ -593,3 +636,68 @@ test('Usage shows a load failure instead of zero', async ({ page }) => {
   await expect(usage.getByText('No requests recorded yet.')).toHaveCount(0);
   await expect(usage.getByRole('table')).toHaveCount(0);
 });
+
+for (const path of ['popup.html', 'setup.html'] as const) {
+  test(`${path} provider change cancels the test and ignores a late answer`, async ({ page }) => {
+    await openPopup(page, { holdTest: true, settings: { provider: 'claude-cli' } }, path);
+    const run = page.getByRole('button', { name: 'Test connection' });
+    await run.click();
+    await expect.poll(() => testPorts(page).then((ports) => ports.length)).toBe(1);
+    await expect(run).toBeDisabled();
+    if (path === 'popup.html') await page.getByRole('tab', { name: 'Provider' }).click();
+    await radioLabel(page, 'OpenAI-compatible').click();
+    await expect.poll(() => testPorts(page)).toEqual([{ disconnected: true, disconnects: 1 }]);
+    await expect(run).toBeEnabled();
+    await replyToTest(page, 0, 'Old provider.');
+    await expect(page.getByText('Old provider.', { exact: false })).toHaveCount(0);
+    await expect(page.getByText('Testing…')).toHaveCount(0);
+    await run.click();
+    await expect.poll(() => testPorts(page).then((ports) => ports.length)).toBe(2);
+    await replyToTest(page, 1, 'Current provider.');
+    await expect(page.getByText('Works. Got “Current provider.” in 0.1 s')).toBeVisible();
+    await expect(run).toBeEnabled();
+  });
+
+  test(`${path} replacement disconnects the old run without showing its result`, async ({
+    page,
+  }) => {
+    await openPopup(page, { holdTest: true }, path);
+    const run = page.getByRole('button', { name: 'Test connection' });
+    await run.click();
+    await expect.poll(() => testPorts(page).then((ports) => ports.length)).toBe(1);
+    await run.dispatchEvent('click');
+    await expect
+      .poll(() => testPorts(page))
+      .toEqual([
+        { disconnected: true, disconnects: 1 },
+        { disconnected: false, disconnects: 0 },
+      ]);
+    await replyToTest(page, 0, 'Replaced answer.');
+    await expect(page.getByText('Replaced answer.', { exact: false })).toHaveCount(0);
+    await expect(run).toBeDisabled();
+    await replyToTest(page, 1, 'Replacement.');
+    await expect(page.getByText('Works. Got “Replacement.” in 0.1 s')).toBeVisible();
+    await expect(run).toBeEnabled();
+  });
+
+  test(`${path} cannot start an abandoned save after changing provider`, async ({ page }) => {
+    await openPopup(page, { holdTest: true, settings: { provider: 'claude-cli' } }, path);
+    if (path === 'popup.html') await page.getByRole('tab', { name: 'Provider' }).click();
+    await holdSaves(page);
+    await page.getByLabel('Model', { exact: true }).selectOption({ label: 'Custom…' });
+    await page.getByLabel('Custom model', { exact: true }).fill('held-model');
+    const run = page.getByRole('button', { name: 'Test connection' });
+    await run.dispatchEvent('click');
+    await expect.poll(() => heldSaves(page)).toBe(1);
+    await expect(run).toBeDisabled();
+    await radioLabel(page, 'OpenAI-compatible').click();
+    await expect(run).toBeEnabled();
+    await releaseSaves(page);
+    await expect.poll(async () => (await stored(page))?.provider).toBe('openai-compatible');
+    expect(await testPorts(page)).toEqual([]);
+    await expect(page.getByText('Testing…')).toHaveCount(0);
+    await expect(
+      page.getByText('Settings were not saved, so the test did not run. Try again.'),
+    ).toHaveCount(0);
+  });
+}

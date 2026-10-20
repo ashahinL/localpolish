@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
 import { recordUsage } from '../core/usage';
-import { BridgeMissingError } from './providers/cli';
+import { BridgeMissingError, cliProvider } from './providers/cli';
 import { openaiProvider } from './providers/openai';
 import { REWRITE_TIMEOUT_MS, runRewrite, testConnection } from './rewrite';
 import { type StreamFn } from './providers/types';
@@ -419,13 +419,158 @@ describe('runRewrite', () => {
 });
 
 describe('testConnection', () => {
+  it('rejects a preaborted owner before accepting an attempt', async () => {
+    const owner = new AbortController();
+    owner.abort();
+    const stream = vi.fn<StreamFn>();
+    expect(await testConnection(settings(), stream, owner.signal)).toEqual({
+      ok: false,
+      message: 'Cancelled.',
+    });
+    expect(recordUsage).not.toHaveBeenCalled();
+    expect(stream).not.toHaveBeenCalled();
+  });
+
+  it('cancels promptly during usage saving and never starts the provider afterward', async () => {
+    vi.useFakeTimers();
+    try {
+      let save!: () => void;
+      vi.mocked(recordUsage).mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            save = resolve;
+          }),
+      );
+      const owner = new AbortController();
+      const stream = vi.fn<StreamFn>();
+      const pending = testConnection(settings(), stream, owner.signal);
+      owner.abort();
+      expect(await pending).toEqual({ ok: false, message: 'Cancelled.' });
+      expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+      expect(stream).not.toHaveBeenCalled();
+      save();
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(stream).not.toHaveBeenCalled();
+      expect(recordUsage).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears both timers when an active provider ignores owner cancellation', async () => {
+    vi.useFakeTimers();
+    try {
+      let start!: () => void;
+      const started = new Promise<void>((resolve) => {
+        start = resolve;
+      });
+      let providerSignal!: AbortSignal;
+      const owner = new AbortController();
+      const pending = testConnection(
+        settings(),
+        (_prompt, _settings, _onText, signal) => {
+          providerSignal = signal;
+          start();
+          return new Promise(() => {});
+        },
+        owner.signal,
+      );
+      await started;
+      expect(vi.getTimerCount()).toBe(2);
+      owner.abort();
+      expect(await pending).toEqual({ ok: false, message: 'Cancelled.' });
+      expect(providerSignal.aborted).toBe(true);
+      expect(recordUsage).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('releases a real Response reader when the fetch boundary aborts', async () => {
+    const originalFetch = globalThis.fetch;
+    let reading!: () => void;
+    const started = new Promise<void>((resolve) => {
+      reading = resolve;
+    });
+    let body!: ReadableStream<Uint8Array>;
+    let fetchSignal!: AbortSignal;
+    globalThis.fetch = vi.fn<typeof fetch>(async (_url, init) => {
+      fetchSignal = init!.signal!;
+      body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          fetchSignal.addEventListener(
+            'abort',
+            () => controller.error(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        },
+        pull() {
+          reading();
+        },
+      });
+      return new Response(body);
+    });
+    try {
+      const owner = new AbortController();
+      const pending = testConnection(
+        settings({ models: { 'openai-compatible': 'mock-model' } }),
+        openaiProvider,
+        owner.signal,
+      );
+      await started;
+      expect(body.locked).toBe(true);
+      owner.abort();
+      expect(await pending).toEqual({ ok: false, message: 'Cancelled.' });
+      expect(fetchSignal.aborted).toBe(true);
+      await vi.waitFor(() => expect(body.locked).toBe(false));
+      expect(recordUsage).toHaveBeenCalledOnce();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('disconnects only its active native provider on owner cancellation', async () => {
+    const messages: Array<(message: unknown) => void> = [];
+    const disconnects: Array<() => void> = [];
+    let start!: () => void;
+    const started = new Promise<void>((resolve) => {
+      start = resolve;
+    });
+    const disconnect = vi.fn(() => disconnects.forEach((cb) => cb()));
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connectNative: () => ({
+          postMessage: () => start(),
+          disconnect,
+          onMessage: { addListener: (cb: (message: unknown) => void) => messages.push(cb) },
+          onDisconnect: { addListener: (cb: () => void) => disconnects.push(cb) },
+        }),
+      },
+    });
+    try {
+      const owner = new AbortController();
+      const pending = testConnection(settings(), cliProvider('claude'), owner.signal);
+      await started;
+      owner.abort();
+      expect(await pending).toEqual({ ok: false, message: 'Cancelled.' });
+      expect(disconnect).toHaveBeenCalledOnce();
+      expect(recordUsage).toHaveBeenCalledOnce();
+      messages.forEach((cb) => cb({ type: 'done' }));
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('returns the cleaned sample and how long it took', async () => {
     const stream: StreamFn = async (prompt, _settings, onText) => {
       expect(prompt.user).toContain('<text>\nthis are a test sentence\n</text>');
       onText('This is a test sentence.');
     };
 
-    const result = await testConnection(settings(), stream);
+    const result = await testConnection(settings(), stream, new AbortController().signal);
 
     expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
     expect(result.ok).toBe(true);
@@ -439,23 +584,57 @@ describe('testConnection', () => {
     const stream: StreamFn = async () => {
       throw new Error('no key');
     };
-    await expect(testConnection(settings(), stream)).resolves.toEqual({
-      ok: false,
-      message: 'no key',
-    });
+    await expect(testConnection(settings(), stream, new AbortController().signal)).resolves.toEqual(
+      {
+        ok: false,
+        message: 'no key',
+      },
+    );
     expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+  });
+
+  it('keeps the 45-second timeout result when abort immediately rejects the provider', async () => {
+    vi.useFakeTimers();
+    try {
+      let signal!: AbortSignal;
+      const pending = testConnection(
+        settings(),
+        (_prompt, _settings, _onText, providerSignal) => {
+          signal = providerSignal;
+          return new Promise((_resolve, reject) => {
+            providerSignal.addEventListener(
+              'abort',
+              () => reject(new Error('Native port disconnected.')),
+              { once: true },
+            );
+          });
+        },
+        new AbortController().signal,
+      );
+      await vi.advanceTimersByTimeAsync(44_999);
+      expect(signal.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await pending).toEqual({ ok: false, message: 'Timed out after 45 seconds.' });
+      expect(signal.aborted).toBe(true);
+      expect(recordUsage).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('fails when the provider does not answer within 45 seconds', async () => {
     vi.useFakeTimers();
     try {
       const stream: StreamFn = () => new Promise(() => undefined);
-      const pending = testConnection(settings(), stream);
+      const pending = testConnection(settings(), stream, new AbortController().signal);
       await vi.advanceTimersByTimeAsync(45_000);
       await expect(pending).resolves.toEqual({
         ok: false,
         message: 'Timed out after 45 seconds.',
       });
+      expect(recordUsage).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
     }
@@ -514,7 +693,7 @@ it('starts the connection timeout only when the provider starts', async () => {
         }),
     );
     const stream = vi.fn<StreamFn>(() => new Promise(() => undefined));
-    const pending = testConnection(settings(), stream);
+    const pending = testConnection(settings(), stream, new AbortController().signal);
     await vi.advanceTimersByTimeAsync(90_000);
     expect(stream).not.toHaveBeenCalled();
     saved();
@@ -522,6 +701,36 @@ it('starts the connection timeout only when the provider starts', async () => {
     expect(stream).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(45_000);
     await expect(pending).resolves.toEqual({ ok: false, message: 'Timed out after 45 seconds.' });
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('settles runRewrite and clears its timer when the provider ignores abort', async () => {
+  vi.useFakeTimers();
+  try {
+    const owner = new AbortController();
+    let start!: () => void;
+    const started = new Promise<void>((resolve) => {
+      start = resolve;
+    });
+    const post = vi.fn();
+    const pending = runRewrite(
+      request,
+      settings(),
+      () => {
+        start();
+        return new Promise(() => {});
+      },
+      post,
+      owner.signal,
+    );
+    await started;
+    owner.abort();
+    await pending;
+    expect(post).not.toHaveBeenCalled();
+    expect(recordUsage).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
   } finally {
     vi.useRealTimers();
   }

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, loadSettings } from '../core/settings';
-import { runRewrite } from './rewrite';
+import { runRewrite, testConnection } from './rewrite';
+import { getProvider } from './providers';
+import { TEST_PORT } from '../core/messages';
+import { testConnection as pageTestConnection } from '../options/chrome';
 
 vi.mock('../core/settings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../core/settings')>()),
@@ -459,5 +462,202 @@ describe('background bridge health', () => {
     expect(await pending).toEqual(success);
     expect(await restarted.request({ type: 'bridge-status' })).toEqual(success);
     expect(restarted.connectNative).toHaveBeenCalledOnce();
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function ownerPort(background: Awaited<ReturnType<typeof startBackground>>) {
+  const port = { ...nativePort(), name: TEST_PORT };
+  background.onConnect.mock.calls[0]![0](port);
+  return port;
+}
+
+describe('connection test owner ports', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    vi.mocked(loadSettings).mockResolvedValue(DEFAULT_SETTINGS);
+    vi.mocked(testConnection)
+      .mockReset()
+      .mockResolvedValue({ ok: true, sample: 'Current.', ms: 1 });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('does not accept an attempt after the owner closes while settings load', async () => {
+    const settings = deferred<typeof DEFAULT_SETTINGS>();
+    vi.mocked(loadSettings).mockReturnValueOnce(settings.promise);
+    const background = await startBackground();
+    const owner = ownerPort(background);
+    owner.emitMessage({ type: 'test-connection' });
+    owner.emitDisconnect();
+    settings.resolve(DEFAULT_SETTINGS);
+    const live = ownerPort(background);
+    live.emitMessage({ type: 'test-connection' });
+    await vi.waitFor(() => expect(live.postMessage).toHaveBeenCalledOnce());
+    expect(testConnection).toHaveBeenCalledOnce();
+    expect(getProvider).toHaveBeenCalledOnce();
+    expect(owner.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('keeps two owners independent and never posts a closed owner result', async () => {
+    const firstResult = deferred<Awaited<ReturnType<typeof testConnection>>>();
+    const secondResult = deferred<Awaited<ReturnType<typeof testConnection>>>();
+    vi.mocked(testConnection)
+      .mockReturnValueOnce(firstResult.promise)
+      .mockReturnValueOnce(secondResult.promise);
+    const background = await startBackground();
+    const first = ownerPort(background);
+    const second = ownerPort(background);
+    first.emitMessage({ type: 'test-connection' });
+    second.emitMessage({ type: 'test-connection' });
+    await vi.waitFor(() => expect(testConnection).toHaveBeenCalledTimes(2));
+    const firstSignal = vi.mocked(testConnection).mock.calls[0]![2];
+    const secondSignal = vi.mocked(testConnection).mock.calls[1]![2];
+    expect(firstSignal).not.toBe(secondSignal);
+    first.emitDisconnect();
+    expect(firstSignal.aborted).toBe(true);
+    expect(secondSignal.aborted).toBe(false);
+    firstResult.resolve({ ok: true, sample: 'Old.', ms: 1 });
+    secondResult.resolve({ ok: true, sample: 'Current.', ms: 2 });
+    await vi.waitFor(() =>
+      expect(second.postMessage).toHaveBeenCalledExactlyOnceWith({
+        type: 'result',
+        result: { ok: true, sample: 'Current.', ms: 2 },
+      }),
+    );
+    expect(first.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid starts and accepts only one valid start on a port', async () => {
+    const background = await startBackground();
+    const owner = ownerPort(background);
+    owner.emitMessage({ type: 'rewrite' });
+    expect(owner.postMessage).toHaveBeenCalledExactlyOnceWith({
+      type: 'result',
+      result: {
+        ok: false,
+        message: 'The connection test request was not understood.',
+      },
+    });
+    expect(loadSettings).not.toHaveBeenCalled();
+    owner.emitMessage({ type: 'test-connection' });
+    owner.emitMessage({ type: 'test-connection' });
+    await vi.waitFor(() => expect(owner.postMessage).toHaveBeenCalledTimes(2));
+    expect(testConnection).toHaveBeenCalledOnce();
+    expect(loadSettings).toHaveBeenCalledOnce();
+  });
+
+  it.each(['settings', 'provider', 'test'])(
+    'answers a %s failure without an unhandled rejection',
+    async (boundary) => {
+      if (boundary === 'settings')
+        vi.mocked(loadSettings).mockRejectedValueOnce(new Error('Storage failed'));
+      if (boundary === 'provider')
+        vi.mocked(getProvider).mockImplementationOnce(() => {
+          throw new Error('Unknown provider');
+        });
+      if (boundary === 'test')
+        vi.mocked(testConnection).mockRejectedValueOnce(new Error('Provider failed'));
+      const background = await startBackground();
+      const owner = ownerPort(background);
+      owner.emitMessage({ type: 'test-connection' });
+      const message = {
+        settings: 'Storage failed',
+        provider: 'Unknown provider',
+        test: 'Provider failed',
+      }[boundary];
+      await vi.waitFor(() =>
+        expect(owner.postMessage).toHaveBeenCalledExactlyOnceWith({
+          type: 'result',
+          result: { ok: false, message },
+        }),
+      );
+    },
+  );
+
+  it('does not handle the legacy unowned runtime request', async () => {
+    const background = await startBackground();
+    const reply = vi.fn();
+    expect(background.message({ type: 'test-connection' }, {}, reply)).toBeUndefined();
+    expect(testConnection).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+  });
+});
+
+describe('extension page test transport', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function transport() {
+    const port = nativePort();
+    const lastError = vi.fn<() => { message: string } | undefined>(() => undefined);
+    const runtime = {
+      connect: vi.fn(() => port),
+      get lastError() {
+        return lastError();
+      },
+    };
+    vi.stubGlobal('chrome', { runtime });
+    return { port, runtime, lastError };
+  }
+
+  it('never connects for an already cancelled owner', async () => {
+    const { runtime } = transport();
+    const owner = new AbortController();
+    owner.abort();
+    expect(await pageTestConnection(owner.signal)).toEqual({ ok: false, message: 'Cancelled.' });
+    expect(runtime.connect).not.toHaveBeenCalled();
+  });
+
+  it.each(['result', 'abort'])(
+    'settles once before synchronous disconnect after %s',
+    async (outcome) => {
+      const { port, runtime, lastError } = transport();
+      const owner = new AbortController();
+      const remove = vi.spyOn(owner.signal, 'removeEventListener');
+      const pending = pageTestConnection(owner.signal);
+      expect(runtime.connect).toHaveBeenCalledExactlyOnceWith({ name: TEST_PORT });
+      expect(port.postMessage).toHaveBeenCalledExactlyOnceWith({ type: 'test-connection' });
+      const result = { ok: true, sample: 'Current.', ms: 3 };
+      if (outcome === 'result') port.emitMessage({ type: 'result', result });
+      else owner.abort();
+      expect(await pending).toEqual(
+        outcome === 'result' ? result : { ok: false, message: 'Cancelled.' },
+      );
+      expect(port.disconnect).toHaveBeenCalledOnce();
+      expect(lastError).toHaveBeenCalledOnce();
+      expect(remove).toHaveBeenCalledWith('abort', expect.any(Function));
+      port.emitMessage({ type: 'result', result: { ok: false, message: 'Late.' } });
+      owner.abort();
+      expect(port.disconnect).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('preserves transport errors on disconnect and thrown connect or post', async () => {
+    const { port, runtime, lastError } = transport();
+    lastError.mockReturnValue({ message: 'Worker stopped' });
+    const pending = pageTestConnection(new AbortController().signal);
+    port.emitDisconnect();
+    expect(await pending).toEqual({ ok: false, message: 'Worker stopped' });
+    runtime.connect.mockImplementationOnce(() => {
+      throw new Error('Connect failed');
+    });
+    expect(await pageTestConnection(new AbortController().signal)).toEqual({
+      ok: false,
+      message: 'Connect failed',
+    });
+    port.postMessage.mockImplementationOnce(() => {
+      throw new Error('Post failed');
+    });
+    expect(await pageTestConnection(new AbortController().signal)).toEqual({
+      ok: false,
+      message: 'Post failed',
+    });
   });
 });

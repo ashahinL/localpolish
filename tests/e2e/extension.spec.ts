@@ -479,6 +479,149 @@ test('toolbar popup Test connection', async ({ page }) => {
   await expect(page.getByText('Works. Got')).toBeVisible();
 });
 
+for (const route of ['options.html', 'setup.html', 'popup.html'] as const) {
+  test(`${route} closes its held connection test and reopening shows no old result`, async ({
+    extensionContext,
+    mock,
+    sw,
+  }) => {
+    await expect.poll(() => mock.streams.active).toBe(0);
+    await clearUsage(sw);
+    const cancelledBefore = mock.streams.cancelled;
+    mock.reply({ chunks: ['Abandoned sample.'], hold: true });
+    const owner = await extensionContext.newPage();
+    const reopened = await extensionContext.newPage();
+    try {
+      await owner.goto(`chrome-extension://${EXTENSION_ID}/${route}`);
+      await owner.getByRole('button', { name: 'Test connection', exact: true }).click();
+      await expect.poll(() => mock.streams.active).toBe(1);
+      await expect(owner.getByText('Testing…')).toBeVisible();
+      await expect(
+        owner.getByRole('button', { name: 'Test connection', exact: true }),
+      ).toBeDisabled();
+      await owner.close();
+      await expect.poll(() => mock.streams.cancelled).toBe(cancelledBefore + 1);
+      await expect.poll(() => mock.streams.active).toBe(0);
+      mock.releaseHeld();
+      await reopened.goto(`chrome-extension://${EXTENSION_ID}/${route}`);
+      await expect(
+        reopened.getByRole('button', { name: 'Test connection', exact: true }),
+      ).toBeEnabled();
+      await expect(reopened.getByText('Testing…')).toHaveCount(0);
+      await expect(reopened.getByText('Works. Got')).toHaveCount(0);
+      await expect(reopened.getByText('Abandoned sample.', { exact: false })).toHaveCount(0);
+      expect(mock.requests).toHaveLength(1);
+      expect(await storedUsage(sw)).toEqual([
+        { provider: 'openai-compatible', model: 'mock-model', requests: 1 },
+      ]);
+    } finally {
+      mock.releaseHeld();
+      await owner.close();
+      await reopened.close();
+      await expect.poll(() => mock.streams.active).toBe(0);
+    }
+  });
+
+  test(`${route} provider change cancels its held test and clears loading`, async ({
+    extensionContext,
+    mock,
+    sw,
+  }) => {
+    await expect.poll(() => mock.streams.active).toBe(0);
+    await clearUsage(sw);
+    const cancelledBefore = mock.streams.cancelled;
+    mock.reply({ chunks: ['Old provider sample.'], hold: true });
+    const owner = await extensionContext.newPage();
+    try {
+      await owner.goto(`chrome-extension://${EXTENSION_ID}/${route}`);
+      await owner.getByRole('button', { name: 'Test connection', exact: true }).click();
+      await expect.poll(() => mock.streams.active).toBe(1);
+      if (route === 'popup.html')
+        await owner.getByRole('tab', { name: 'Provider', exact: true }).click();
+      if (route === 'options.html')
+        await owner.locator('label.provider', { hasText: 'Anthropic API' }).click();
+      else
+        await owner
+          .locator('label', {
+            has: owner.getByRole('radio', { name: 'Anthropic API', exact: true }),
+          })
+          .click();
+      await expect.poll(() => mock.streams.cancelled).toBe(cancelledBefore + 1);
+      await expect.poll(() => mock.streams.active).toBe(0);
+      mock.releaseHeld();
+      await expect(owner.getByText('Testing…')).toHaveCount(0);
+      await expect(
+        owner.getByRole('button', { name: 'Test connection', exact: true }),
+      ).toBeEnabled();
+      await expect(owner.getByText('Works. Got')).toHaveCount(0);
+      await expect(owner.getByText('Old provider sample.', { exact: false })).toHaveCount(0);
+      expect(mock.requests).toHaveLength(1);
+      expect(await storedUsage(sw)).toEqual([
+        { provider: 'openai-compatible', model: 'mock-model', requests: 1 },
+      ]);
+    } finally {
+      mock.releaseHeld();
+      await owner.close();
+      await expect.poll(() => mock.streams.active).toBe(0);
+    }
+  });
+}
+
+test('two extension pages own independent held tests and count exactly two attempts', async ({
+  extensionContext,
+  mock,
+  sw,
+}) => {
+  await expect.poll(() => mock.streams.active).toBe(0);
+  await clearUsage(sw);
+  const before = { ...mock.streams };
+  mock.reply({ chunks: ['Independent sample.'], hold: true });
+  const first = await extensionContext.newPage();
+  const second = await extensionContext.newPage();
+  try {
+    await first.goto(`chrome-extension://${EXTENSION_ID}/options.html`);
+    await first.getByRole('button', { name: 'Test connection', exact: true }).click();
+    await expect.poll(() => mock.streams.active).toBe(1);
+    await second.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
+    await second.getByRole('button', { name: 'Test connection', exact: true }).click();
+    await expect.poll(() => mock.streams.active).toBe(2);
+    expect(await storedUsage(sw)).toEqual([
+      { provider: 'openai-compatible', model: 'mock-model', requests: 2 },
+    ]);
+    await first.close();
+    await expect.poll(() => mock.streams.cancelled).toBe(before.cancelled + 1);
+    await expect.poll(() => mock.streams.active).toBe(1);
+    await expect(second.getByText('Testing…')).toBeVisible();
+    await expect(
+      second.getByRole('button', { name: 'Test connection', exact: true }),
+    ).toBeDisabled();
+    mock.releaseHeld();
+    await expect(second.getByText('Works. Got')).toContainText('Independent sample.');
+    await expect(
+      second.getByRole('button', { name: 'Test connection', exact: true }),
+    ).toBeEnabled();
+    await expect.poll(() => mock.streams.active).toBe(0);
+    expect(mock.streams.cancelled).toBe(before.cancelled + 1);
+    expect(mock.streams.finished).toBe(before.finished + 1);
+    expect(mock.requests).toHaveLength(2);
+    expect(await storedUsage(sw)).toEqual([
+      { provider: 'openai-compatible', model: 'mock-model', requests: 2 },
+    ]);
+  } finally {
+    mock.releaseHeld();
+    await first.close();
+    await second.close();
+    await expect.poll(() => mock.streams.active).toBe(0);
+  }
+});
+
+async function clearUsage(sw: Worker): Promise<void> {
+  await sw.evaluate(() => {
+    const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
+    return chrome.storage.local.set({ usage: [] });
+  });
+}
+
 test('Esc does not reach the page', async ({ page }) => {
   await page.evaluate(() => {
     const api = window as unknown as PageApi;
