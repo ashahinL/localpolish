@@ -486,6 +486,24 @@ test.describe('idle fix', () => {
     expect(await requests(page)).toBe(2);
   });
 
+  test('turning idle off during the pause prevents a request and the next enabled edit works', async ({
+    page,
+  }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.locator('#ta').pressSequentially('i has went home today');
+    await page.clock.fastForward(1000);
+    await page.evaluate(() => (window as unknown as PageApi).__lp.setEnabled(false));
+    await pause(page);
+    expect(await requests(page)).toBe(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+
+    await page.evaluate(() => (window as unknown as PageApi).__lp.setEnabled(true));
+    await page.locator('#ta').pressSequentially(' now');
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+    await expect(page.locator('.lp-mark')).toBeVisible();
+  });
+
   test('turning idle off during a request drops its answer', async ({ page }) => {
     await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
     await page.locator('#ta').click();

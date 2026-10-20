@@ -67,6 +67,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   window.addEventListener('resize', guarded(reposition));
 
   function onInput(event: Event): void {
+    if (!deps.isEnabled()) return;
     if (!(event.target instanceof Node)) return;
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;

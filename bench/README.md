@@ -32,7 +32,7 @@ The scenarios cover the following work:
 | `rewrite-multilingual`                     | Mixed Arabic and English, exact answer, preview and ready, one request                                                                      |
 | `diff-1500-no-overlap`                     | 1,500 distinct words on each side, Final then Changes three times, exact answer and one request                                             |
 | `selection-100`                            | 100 selection events over a 2,000-word textarea, immediate and settled isolated-world style and rect calls                                  |
-| `idle-off`                                 | Ten typed characters, idle timer counts, no request after a 3,300 ms observation                                                            |
+| `idle-off`                                 | Ten typed characters with idle Fix off and with a blocked site; zero idle timers or requests in each 3,300 ms observation                   |
 | `rich-marker`                              | A 1,200-word rich editor, one idle rewrite, 900 ms of reads, geometry, and marker DOM mutations                                             |
 | `api-native-checks`                        | Options, toolbar popup, and setup using the API provider, mocked native-check counts                                                        |
 | `connection-owner-close`                   | Held SSE Test connection, active streams and cancellation 500 ms after the owner closes, then explicit release                              |

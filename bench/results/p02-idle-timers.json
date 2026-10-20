@@ -1,0 +1,28 @@
+{
+  "syntheticOnly": true,
+  "timezone": "Africa/Cairo",
+  "finishedCairo": "2026-10-20T12:34:40+0300",
+  "baseline": "runtime-full-202610200817580300-63158.json",
+  "beforeIdleTimerCounts": [
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20
+  ],
+  "after": [
+    {
+      "temperature": "cold",
+      "characters": 10,
+      "observationMsPerCase": 3300,
+      "disabledTimers": 0,
+      "blockedTimers": 0,
+      "requests": 0
+    },
+    {
+      "temperature": "warm",
+      "characters": 10,
+      "observationMsPerCase": 3300,
+      "disabledTimers": 0,
+      "blockedTimers": 0,
+      "requests": 0
+    }
+  ],
+  "scope": "New timers in the extension content world. This does not measure model latency or battery use."
+}

@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, P01d, and P01e are complete. P02 is next. The release version is not chosen.
+Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, P01d, P01e, and P02 are complete. P03a is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -32,7 +32,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P01c](#p01c-bound-sse-events-and-avoid-repeated-line-scans)  | Bound SSE buffering and avoid prefix rescanning                        | complex      | P01a                    |
 | [x]    | [P01d](#p01d-bound-total-rewrite-output)                      | Bound total output and abort oversized answers                         | complex      | P01b, P01c              |
 | [x]    | [P01e](#p01e-bound-http-error-body-reads)                     | Bound error downloads for both API providers                           | feature      | P01c                    |
-| [ ]    | [P02](#p02-skip-idle-scheduling-when-disabled)                | Avoid field discovery and timers when idle Fix is off                  | feature      | P00a                    |
+| [x]    | [P02](#p02-skip-idle-scheduling-when-disabled)                | Avoid field discovery and timers when idle Fix is off                  | feature      | P00a                    |
 | [ ]    | [P03a](#p03a-run-native-version-probes-together)              | Parallelize independent version commands                               | feature      | P00a                    |
 | [ ]    | [P03b](#p03b-gate-automatic-bridge-checks-by-provider)        | Stop automatic native checks for API providers                         | art          | P00a                    |
 | [ ]    | [P03c](#p03c-share-and-cache-bridge-health-results)           | Share in-flight health work and briefly cache success                  | complex      | P03a, P03b              |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: eight completed and 14 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: nine completed and 13 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -178,6 +178,8 @@ Replace unbounded `res.text()` on non-success responses with a reader that retai
 Done: a mock endless error body is cancelled after bounded consumption; both providers show useful bounded diagnostics; multibyte text and an empty body work. Run both provider test files. The limit applies to downloads, not just the final string shown to the user.
 
 ## P02. Skip idle scheduling when disabled
+
+Status: complete in this task commit, implemented and reviewed inline. The early enabled check skips field discovery, slot lookup and timer scheduling while disabled or blocked. The existing send-time check and Draft.js fallback remain.
 
 Source: S02. Files: `src/content/idle.ts::createIdleFix` and its `onInput` and `tryRun` functions; `tests/e2e/popup.spec.ts` and `tests/e2e/extension.spec.ts`.
 
@@ -336,3 +338,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P01d reviewer verification: lint, typecheck, 413 unit tests with 2 skipped, formatting, build, four benchmark-fixture checks, all 27 built-extension tests, and 30 runtime smoke samples passed. The initial new browser case used an empty field; adding its missing synthetic draft made it exercise the request. No production change was needed after review. HTTP cancellation and reader release, one accepted attempt, split Unicode, fake CLI process-group termination and temp cleanup passed. No task-owned browser or server remains. clean-code-guard: clean. Test/docs guards and manual comment review passed; Comment Sicko is unavailable in this environment. Sol suggested no reusable skill; the reviewer agrees. P01c passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39397647004).
 
 - P01e reviewer verification: lint, typecheck, 436 unit tests with 2 skipped, formatting, build, and the built-extension HTTP error/retry regression passed. Both providers retain an 8 KiB response prefix, display at most 300 Unicode code points, preserve status and existing hints, and release the reader. The endless source stops at 8 KiB; an already delivered 20 KiB chunk does not cause another read. No real provider calls were used. clean-code-guard: clean; test/docs guards and manual comment review passed. Grok proposed a reusable `bound-http-error-body` skill. The reviewer would keep this as a tested code pattern until it recurs across projects, rather than create another skill now. P01d passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39399038001). Following the user’s cost feedback, future delegates run targeted checks and the reviewer owns one full integration pass; small tasks stay inline.
+
+- P02 verification: lint, typecheck, 436 unit tests with 2 skipped, formatting, build, 43 idle/blocking/adoption/Draft.js browser regressions, and all 30 runtime smoke samples passed. Ten typed characters scheduled zero new idle timers with idle Fix off and with the site blocked, in both cold and warm samples. Each case observed zero requests for 3,300 ms. The new browser case disables during an existing pause, then verifies the next enabled edit works. [Timer measurements](../../bench/results/p02-idle-timers.json) retain the original baseline counts. No model-latency or battery claim is made. clean-code-guard: clean; test/docs guards and manual comment review passed. No delegate or new reusable skill was needed.

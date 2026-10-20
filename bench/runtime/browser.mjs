@@ -248,8 +248,29 @@ chrome.runtime.onMessage.addListener((message) => {
         await pause(page, 3300);
         const afterPause = await counters();
         assert.equal(mock.requests.length - requestStart, 0);
-        assert.ok((afterTyping.calls['setTimeout:3000'] ?? 0) <= 40);
-        detail = { characters: 10, inputBytes: 10, observationMs: 3300, afterTyping, afterPause };
+        assert.equal(afterTyping.calls['setTimeout:3000'] ?? 0, 0);
+        await page.locator('#draft').selectText();
+        await expect(page.locator('.lp-fab')).toBeVisible();
+        await settings({ idleFix: true, blocklist: ['127.0.0.1'] });
+        await expect(page.locator('.lp-fab')).toHaveCount(0);
+        await page.locator('#draft').press('End');
+        await page.locator('#draft').fill('');
+        await reset();
+        await page.locator('#draft').pressSequentially('abcdefghij');
+        const blockedTyping = await counters();
+        await pause(page, 3300);
+        const blockedPause = await counters();
+        assert.equal(blockedTyping.calls['setTimeout:3000'] ?? 0, 0);
+        assert.equal(mock.requests.length - requestStart, 0);
+        await settings();
+        detail = {
+          characters: 10,
+          inputBytes: 10,
+          observationMs: 3300,
+          afterTyping,
+          afterPause,
+          blocked: { afterTyping: blockedTyping, afterPause: blockedPause },
+        };
       } else if (name === 'rich-marker') {
         const fixture = {
           input: rich.input.slice(0, -6) + String(++richRevision).padStart(6, '0'),
