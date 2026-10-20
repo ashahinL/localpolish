@@ -237,8 +237,16 @@ chrome.runtime.onMessage.addListener((message) => {
         })()`);
         await pause(page, 250);
         const settled = await counters();
-        assert.ok((settled.calls.getComputedStyle ?? 0) <= 2000);
-        assert.ok((settled.calls.getBoundingClientRect ?? 0) <= 2000);
+        for (const call of [
+          'getComputedStyle',
+          'getBoundingClientRect',
+          'offsetTop',
+          'offsetLeft',
+          'offsetHeight',
+        ]) {
+          assert.equal(burst.immediate.calls[call] ?? 0, 0, `${call} before debounce`);
+          assert.equal(settled.calls[call] ?? 0, 1, `${call} after debounce`);
+        }
         detail = { events: 100, inputBytes: 10_000, ...burst, settled };
       } else if (name === 'idle-off') {
         await page.locator('#draft').fill('');

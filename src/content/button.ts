@@ -2,7 +2,7 @@ import { h, render } from 'preact';
 import { fieldFocusCaret, focusCaret } from './caret';
 import { deepActiveElement, findEditable } from './editable';
 import { guarded } from './guard';
-import { placeButton, type Rect } from './position';
+import { placeButton } from './position';
 import { FloatingButton } from './ui/FloatingButton';
 import { layer } from './ui/root';
 
@@ -20,9 +20,9 @@ export function createButton(deps: ButtonDeps): { refresh(): void } {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let shown = false;
 
-  function wanted(): Rect | null {
+  function wantedField(): HTMLElement | null {
     if (!deps.isEnabled() || deps.isPopupOpen()) return null;
-    return selectionCaret();
+    return selectedEditable();
   }
 
   function hide(): void {
@@ -33,7 +33,15 @@ export function createButton(deps: ButtonDeps): { refresh(): void } {
   }
 
   function update(): void {
-    const caret = wanted();
+    const field = wantedField();
+    if (!field) {
+      hide();
+      return;
+    }
+    const caret =
+      field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement
+        ? fieldFocusCaret(field)
+        : focusCaret();
     if (!caret) {
       hide();
       return;
@@ -56,7 +64,7 @@ export function createButton(deps: ButtonDeps): { refresh(): void } {
   document.addEventListener(
     'selectionchange',
     guarded(() => {
-      if (!wanted()) {
+      if (!wantedField()) {
         hide();
         return;
       }
@@ -69,11 +77,11 @@ export function createButton(deps: ButtonDeps): { refresh(): void } {
   return { refresh: update };
 }
 
-function selectionCaret(): Rect | null {
+function selectedEditable(): HTMLElement | null {
   const field = findEditable(deepActiveElement());
   if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
     if (field.selectionStart === null || field.selectionStart === field.selectionEnd) return null;
-    return fieldFocusCaret(field);
+    return field;
   }
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
@@ -86,5 +94,5 @@ function selectionCaret(): Rect | null {
   ) {
     return null;
   }
-  return focusCaret();
+  return host;
 }

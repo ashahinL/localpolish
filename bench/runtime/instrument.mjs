@@ -25,6 +25,9 @@ export function instrument() {
   for (const [object, name] of [
     [HTMLElement.prototype, 'innerText'],
     [HTMLTextAreaElement.prototype, 'value'],
+    [HTMLElement.prototype, 'offsetTop'],
+    [HTMLElement.prototype, 'offsetLeft'],
+    [HTMLElement.prototype, 'offsetHeight'],
   ]) {
     const descriptor = Object.getOwnPropertyDescriptor(object, name);
     Object.defineProperty(object, name, {

@@ -1,0 +1,56 @@
+{
+  "syntheticOnly": true,
+  "timezone": "Africa/Cairo",
+  "finishedCairo": "2026-10-20T16:43:22+0300",
+  "events": 100,
+  "inputBytes": 10000,
+  "baseline": "runtime-full-202610200817580300-63158.json",
+  "before": {
+    "samples": 20,
+    "immediate": {
+      "getComputedStyle": [100],
+      "getBoundingClientRect": [100]
+    },
+    "settled": {
+      "getComputedStyle": [101],
+      "getBoundingClientRect": [101]
+    }
+  },
+  "after": [
+    {
+      "temperature": "cold",
+      "immediate": {
+        "getComputedStyle": 0,
+        "getBoundingClientRect": 0,
+        "offsetTop": 0,
+        "offsetLeft": 0,
+        "offsetHeight": 0
+      },
+      "settled": {
+        "getComputedStyle": 1,
+        "getBoundingClientRect": 1,
+        "offsetTop": 1,
+        "offsetLeft": 1,
+        "offsetHeight": 1
+      }
+    },
+    {
+      "temperature": "warm",
+      "immediate": {
+        "getComputedStyle": 0,
+        "getBoundingClientRect": 0,
+        "offsetTop": 0,
+        "offsetLeft": 0,
+        "offsetHeight": 0
+      },
+      "settled": {
+        "getComputedStyle": 1,
+        "getBoundingClientRect": 1,
+        "offsetTop": 1,
+        "offsetLeft": 1,
+        "offsetHeight": 1
+      }
+    }
+  ],
+  "scope": "JavaScript DOM-call counts in the extension content world. Offset reads were not instrumented in the baseline. These are not total browser layout counts, model-latency or battery measurements."
+}

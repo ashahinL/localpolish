@@ -310,6 +310,31 @@ test('the floating button follows a textarea selection', async ({ page }) => {
   await expect(fab).toHaveCount(0);
 });
 
+test('a collapsed selection hides the floating button without waiting for the debounce', async ({
+  page,
+}) => {
+  await page.clock.install();
+  try {
+    await page.evaluate(() => (window as unknown as PageApi).__lp.startButton());
+    await page.locator('#ta').fill('hello there');
+    await page.locator('#ta').focus();
+    await page.locator('#ta').evaluate((field: HTMLTextAreaElement) => {
+      field.setSelectionRange(0, 5);
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+    await page.clock.runFor(150);
+    await expect(page.locator('.lp-fab')).toBeVisible();
+
+    await page.locator('#ta').evaluate((field: HTMLTextAreaElement) => {
+      field.setSelectionRange(5, 5);
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+    await expect(page.locator('.lp-fab')).toHaveCount(0);
+  } finally {
+    await page.clock.resume();
+  }
+});
+
 test('the floating button sits where the selection ended', async ({ page }) => {
   await page.evaluate(() => (window as unknown as PageApi).__lp.startButton());
   const fab = page.locator('.lp-fab');

@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. Tasks through P03c, including P11, are complete. P04 is next. The release version is not chosen.
+Status: implementation in progress. Tasks through P04, including P11, are complete. P05 is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -36,7 +36,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P03a](#p03a-run-native-version-probes-together)              | Parallelize independent version commands                               | feature      | P00a                    |
 | [x]    | [P03b](#p03b-gate-automatic-bridge-checks-by-provider)        | Stop automatic native checks for API providers                         | art          | P00a                    |
 | [x]    | [P03c](#p03c-share-and-cache-bridge-health-results)           | Share in-flight health work and briefly cache success                  | complex      | P03a, P03b              |
-| [ ]    | [P04](#p04-debounce-selection-geometry)                       | Measure selection geometry after the debounce                          | art          | P00a                    |
+| [x]    | [P04](#p04-debounce-selection-geometry)                       | Measure selection geometry after the debounce                          | art          | P00a                    |
 | [ ]    | [P05](#p05-reuse-completed-result-analysis)                   | Lazily reuse completed diffs and static token notes                    | art          | P00a                    |
 | [ ]    | [P06](#p06-cancel-abandoned-connection-tests)                 | Cancel tests when their extension page goes away                       | complex      | P01d                    |
 | [ ]    | [P07](#p07-coalesce-marker-work)                              | Reduce duplicate marker reads and renders                              | art          | P02, P00a               |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: twelve completed and 10 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: thirteen completed and 9 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -221,7 +221,9 @@ Done: concurrent callers open one native port; immediate repeats reuse success; 
 
 ## P04. Debounce selection geometry
 
-Source: G06. Files: `src/content/button.ts::createButton` and `selectionCaret`, `src/content/caret.ts`, selection cases in `tests/e2e/popup.spec.ts`.
+Status: complete in this task commit, implemented and reviewed inline. Selection events check eligibility without measuring the caret; update reads the current selection and geometry after the existing 150 ms debounce.
+
+Source: G06. Files: `src/content/button.ts::createButton` and `selectedEditable`, `src/content/caret.ts`, selection cases in `tests/e2e/popup.spec.ts`.
 
 Before the existing 150 ms debounce, check only eligibility and whether the selection is nonempty. Hide immediately on collapse or lost eligibility. Measure caret geometry only after the selection settles. Re-read the current selection then; do not retain an old range or mirror.
 
@@ -358,3 +360,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P03c initial handoff: implemented, pending parent review, full gates, browser verification and commit. Changed `src/entrypoints/background.ts`, `src/core/messages.ts`, `src/options/chrome.ts`, `src/popup/useBridge.ts`, `src/background/entrypoint.test.ts`, both existing options/toolbar/setup browser fixture files, and this plan. The worker owns one shared ping and one successful health result in memory. Expiry is completion time plus 30,000 milliseconds, with no reuse at the deadline. Normal and forced callers share current work; explicit diagnostics bypass completed success. False results and rejections invalidate old success and allow a normal retry. Worker restart resets completed and unfinished health state. Cache contents are parsed health status only; settings are not read. The entrypoint tests now use actual `pingBridge` and pong parsing through fake Chrome native ports. They cover shared callers, immediate reuse, literal force handling, refresh, exact expiry, errors, malformed pong, disconnect, thrown connect/post calls, rejection, timeout, closed callers, retries and restart. Request promises resolve through `sendResponse`, without microtask-count sleeps. Fake timers are restored. Checks passed: `npm test -- src/background/entrypoint.test.ts src/background/providers/cli.test.ts` (54 tests across two files) and `npm run typecheck`. Extended built-page fixtures assert automatic/manual force flags, retain held provider-change races and check recovery from failure; they were not run here. Parent owns full integration gates, build and browser checks. No browser, Playwright, runtime harness, listening server or real provider/CLI was started. No task-owned process, server, browser, worktree or temporary directory remains. Guard skills, final review and git add/commit/push were skipped as dispatched. No defaults, models, prompts, fleet, version, global settings or other task status changed. No model-speed claim. Reusable skill suggestion: none; the existing implementation and Chrome-boundary testing workflow covers this work.
 
 - P03c reviewer verification: lint, typecheck, 453 unit tests with 2 skipped, formatting, build, and both options/toolbar/setup browser suites passed (40 cases). The saved Playwright result completed at 12:56 Africa/Cairo on 2026-10-20, after the final build. Concurrent normal and forced callers share one native ping; successful status expires 30 seconds after completion. Explicit checks bypass completed cache, failures invalidate prior success, closed callers do not break peers, and restart clears memory. Tests use real ping parsing through fake Chrome ports. The reviewer removed redundant force variants and a contrived listener-registration rejection case; normal transport failures remain covered. README documents cache and retry behavior. clean-code-guard: clean; test/docs guards and manual comment review passed. Sol suggested no reusable skill; the reviewer agrees. No real provider calls or persistent cache were added.
+
+- P04 verification: lint, typecheck, 453 unit tests with 2 skipped, formatting, build, 14 selection/button/modal/blocking browser cases, and all 30 runtime smoke samples passed. A clocked collapse case verifies immediate removal without advancing the debounce. Forward/backward textarea and rich selection, dialogs, shortcuts and guarded clicks still pass. [Selection work measurements](../../bench/results/p04-selection-work.json) record zero immediate style/rect/mirror-offset reads for 100 selection events, then one settled pass in cold and warm samples. Existing baseline style/rect counts remain available; mirror offsets were not measured there. No total-layout, latency or battery claim is made. clean-code-guard: clean; test/docs guards and manual comment review passed. No delegate or reusable skill was needed.
