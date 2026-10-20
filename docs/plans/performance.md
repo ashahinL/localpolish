@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11 and P00a are complete. P00b is next. The release version is not chosen.
+Status: implementation in progress. P11 and P00a are complete. P00b is locally verified and awaits its first remote CI run. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -26,7 +26,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | ------ | ------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------ | ----------------------- |
 | [x]    | [P11](#p11-remove-codex-rewrite-context)                      | Remove Codex coding context and unused tools                           | Complete     | None                    |
 | [x]    | [P00a](#p00a-add-a-portable-runtime-benchmark)                | Establish the offline runtime baseline                                 | complex      | P11                     |
-| [ ]    | [P00b](#p00b-build-once-in-ci)                                | Remove the duplicate CI build                                          | feature      | None                    |
+| [~]    | [P00b](#p00b-build-once-in-ci)                                | Remove the duplicate CI build                                          | feature      | None                    |
 | [ ]    | [P01a](#p01a-reject-oversized-input-before-an-attempt-starts) | Bound input before usage counting and provider startup                 | feature      | P00a                    |
 | [ ]    | [P01b](#p01b-bound-native-frames-and-cli-event-lines)         | Bound native frames and CLI event lines; remove repeated frame copying | complex      | P01a                    |
 | [ ]    | [P01c](#p01c-bound-sse-events-and-avoid-repeated-line-scans)  | Bound SSE buffering and avoid prefix rescanning                        | complex      | P01a                    |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: two completed and 20 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: two completed, P00b awaiting remote CI, and 19 not started. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -80,6 +80,8 @@ Source: S05. Files: new offline harness under `bench/runtime/`, `package.json`, 
 Done: the command runs without login or paid calls on a clean checkout after build; records the actual ready event rather than CLI exit; reproduces the reviewed problems; uploads its report. Run it twice and compare scenario coverage and counts. This task establishes tooling, without optimizing production code.
 
 ## P00b. Build once in CI
+
+Status: [~] implemented, reviewed, and locally verified in this task commit. `npm run build` followed by `npx playwright test --workers=2 --max-failures=1` passed all 136 browser tests. The workflow has one production build. The first remote CI run is checked after push.
 
 Source: S05. Files: `.github/workflows/test.yml`, `package.json`.
 
@@ -282,3 +284,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - Plan preparation: accepted G01-G03 and G05-G08 map to tasks above. G04 is a conditional experiment. S01-S06 are covered. No additional production implementation started while converting the review.
 
 - P00a: portable runtime tooling and 15 offline scenarios are implemented. The reviewer fixed a warm rich-editor fixture and added a macOS sandbox preflight after delegate Chrome crashes. Native mocking now starts in an isolated copy of the built worker. Unit tests passed 310 with 2 skipped, browser tests passed 136, and fixture/preflight checks passed 4. Two successful smoke runs matched coverage and exact request/message/decoding counts with identical source/build hashes. The [full baseline](../../bench/results/runtime-full-202610200817580300-63158.json) passed all 300 samples across 15 scenarios. Four separate heap snapshots were retained and checked against their recorded sizes. SIGTERM stopped new work before any browser scenario started. Lint, typecheck, build, and formatting passed. Earlier failed reports are retained outside the checkout. See the [verification record](../../bench/runtime/REPORT.md). No production optimization or version change is included.
+
+- P00b: CI reuses its explicit build for Playwright. The standalone `test:e2e` script still builds. Browser coverage and dependency versions are unchanged. All 136 browser tests passed after a fresh local build. Formatting and the workflow diff passed review; remote CI follows push.

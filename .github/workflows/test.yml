@@ -38,4 +38,4 @@ jobs:
           path: bench/runtime/reports/
           if-no-files-found: warn
           retention-days: 14
-      - run: npm run test:e2e
+      - run: npx playwright test

@@ -55,7 +55,7 @@ The Playwright configuration and shared launcher reject `process.platform === 'd
 
 A blocked browser launch or failed assertion returns a nonzero exit and preserves an `incomplete` report. A shared browser setup failure blocks the remaining browser scenarios explicitly, with missing sample counts. The full run still executes all ten cold and ten warm core samples. It never substitutes core code for browser measurements. A report with missing browser samples is **not a completed baseline**.
 
-CI runs the fixture checks and a smoke benchmark after its existing build and Chromium installation. Smoke has a three-minute step limit within the existing fifteen-minute job. The report, JSONL, and heap snapshots upload even after failure. The upload action is pinned to the [official v4.6.2 commit](https://github.com/actions/upload-artifact/commit/ea165f8d65b6e75b540449e92b4886f43607fa02). P00b's duplicate-build cleanup is separate.
+CI runs the fixture checks and a smoke benchmark after its existing build and Chromium installation. Smoke has a three-minute step limit within the existing fifteen-minute job. The report, JSONL, and heap snapshots upload even after failure. The upload action is pinned to the [official v4.6.2 commit](https://github.com/actions/upload-artifact/commit/ea165f8d65b6e75b540449e92b4886f43607fa02). CI runs the browser suites against that same build. The standalone `npm run test:e2e` command still builds before testing.
 
 > Results from 17 October 2026. The bridge and the default have changed since. Today the default is Codex `gpt-6-luna` at effort `none` (`src/core/settings.ts`), and the Fix prompt is in `src/core/prompts.ts`.
 
