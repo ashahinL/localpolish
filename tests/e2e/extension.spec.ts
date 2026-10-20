@@ -1,9 +1,5 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  chromium,
   expect,
   test as base,
   type BrowserContext,
@@ -13,7 +9,7 @@ import {
 } from '@playwright/test';
 import { defaultReply, startMockOpenAI, type MockOpenAI } from './mock-openai';
 
-const EXTENSION_ID = 'ealpmjmaclnlpelpcacmbicmdipmbeei';
+import { EXTENSION_ID, extensionWorker, launchExtension } from './extension-runtime';
 const DIST = fileURLToPath(new URL('../../dist', import.meta.url));
 const SOURCE = 'i has went home';
 const REWRITE = 'I went home.';
@@ -56,20 +52,11 @@ const test = base.extend<
   extensionContext: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
-      const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'localpolish-e2e-'));
+      const extension = await launchExtension(DIST);
       try {
-        const context = await chromium.launchPersistentContext(userDataDir, {
-          channel: 'chromium',
-          headless: true,
-          args: [`--disable-extensions-except=${DIST}`, `--load-extension=${DIST}`],
-        });
-        try {
-          await use(context);
-        } finally {
-          await context.close();
-        }
+        await use(extension.context);
       } finally {
-        fs.rmSync(userDataDir, { recursive: true, force: true });
+        await extension.close();
       }
     },
     { scope: 'worker' },
@@ -96,10 +83,6 @@ const test = base.extend<
     await page.close();
   },
 });
-
-function extensionWorker(context: BrowserContext): Worker | undefined {
-  return context.serviceWorkers().find((worker) => worker.url().includes(EXTENSION_ID));
-}
 
 test.beforeEach(async ({ page, mock, sw }) => {
   mock.reply(defaultReply);

@@ -28,4 +28,14 @@ jobs:
       - run: npx prettier --check .
       - run: npm run build
       - run: npx playwright install --with-deps chromium
+      - run: node --test bench/runtime/fixtures.test.mjs
+      - run: npm run bench:runtime -- --smoke --out-dir bench/runtime/reports
+        timeout-minutes: 3
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: runtime-smoke
+          path: bench/runtime/reports/
+          if-no-files-found: warn
+          retention-days: 14
       - run: npm run test:e2e

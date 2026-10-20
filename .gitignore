@@ -8,3 +8,6 @@ playwright-report/
 .keys/
 .DS_Store
 *.log
+
+bench/runtime/reports/
+bench/results/*.heapsnapshot

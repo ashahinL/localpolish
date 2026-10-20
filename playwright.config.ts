@@ -1,4 +1,7 @@
 import { defineConfig } from '@playwright/test';
+import { assertBrowserLaunchAllowed } from './tests/e2e/extension-runtime';
+
+assertBrowserLaunchAllowed();
 
 export default defineConfig({
   testDir: 'tests/e2e',

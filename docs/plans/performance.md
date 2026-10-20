@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: ready for implementation. P11 is complete and pushed. The remaining tasks have not started. The release version is not chosen.
+Status: implementation in progress. P11 and P00a are complete. P00b is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -25,7 +25,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | Status | Task                                                          | Scope                                                                  | Lane         | Depends on              |
 | ------ | ------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------ | ----------------------- |
 | [x]    | [P11](#p11-remove-codex-rewrite-context)                      | Remove Codex coding context and unused tools                           | Complete     | None                    |
-| [ ]    | [P00a](#p00a-add-a-portable-runtime-benchmark)                | Establish the offline runtime baseline                                 | complex      | P11                     |
+| [x]    | [P00a](#p00a-add-a-portable-runtime-benchmark)                | Establish the offline runtime baseline                                 | complex      | P11                     |
 | [ ]    | [P00b](#p00b-build-once-in-ci)                                | Remove the duplicate CI build                                          | feature      | None                    |
 | [ ]    | [P01a](#p01a-reject-oversized-input-before-an-attempt-starts) | Bound input before usage counting and provider startup                 | feature      | P00a                    |
 | [ ]    | [P01b](#p01b-bound-native-frames-and-cli-event-lines)         | Bound native frames and CLI event lines; remove repeated frame copying | complex      | P01a                    |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: one completed and 21 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: two completed and 20 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -66,6 +66,8 @@ Status: complete, commit `227afbc`, pushed to `main`.
 The [completed task record](codex-context.md) covers the implementation, cache-refresh fallback, request capture, live token counts and quality limits. The same fragment used 781 input tokens on both Luna and Sol after reduction, compared with about 9,360 before. The broader Luna sample passed 18/21 checks after removal and 16/21 before. Sol passed 5/5 in both small samples. A general latency improvement is unproven. Do not redo this task or change the user's global skills or fleet settings.
 
 ## P00a. Add a portable runtime benchmark
+
+Status: [~] startup reworked; awaiting reviewer smoke twice, successful full baseline, review, and commit. No files staged or committed by the implementer.
 
 Source: S05. Files: new offline harness under `bench/runtime/`, `package.json`, `.github/workflows/test.yml`, and the existing fixtures in `tests/e2e/extension.spec.ts` and `tests/e2e/mock-openai.ts`.
 
@@ -278,3 +280,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 
 - P11: committed as `227afbc` and pushed before this plan was created. Full checks and measured limitations are in [its task record](codex-context.md).
 - Plan preparation: accepted G01-G03 and G05-G08 map to tasks above. G04 is a conditional experiment. S01-S06 are covered. No additional production implementation started while converting the review.
+
+- P00a: portable runtime tooling and 15 offline scenarios are implemented. The reviewer fixed a warm rich-editor fixture and added a macOS sandbox preflight after delegate Chrome crashes. Native mocking now starts in an isolated copy of the built worker. Unit tests passed 310 with 2 skipped, browser tests passed 136, and fixture/preflight checks passed 4. Two successful smoke runs matched coverage and exact request/message/decoding counts with identical source/build hashes. The [full baseline](../../bench/results/runtime-full-202610200817580300-63158.json) passed all 300 samples across 15 scenarios. Four separate heap snapshots were retained and checked against their recorded sizes. SIGTERM stopped new work before any browser scenario started. Lint, typecheck, build, and formatting passed. Earlier failed reports are retained outside the checkout. See the [verification record](../../bench/runtime/REPORT.md). No production optimization or version change is included.

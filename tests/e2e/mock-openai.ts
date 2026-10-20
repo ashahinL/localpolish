@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-export type MockReply = { chunks: string[] } | { status: number; body: string };
+export type MockReply =
+  { chunks: string[]; hold?: boolean; intervalMs?: number } | { status: number; body: string };
 
 // The extension posts plain JSON. Callers read whatever fields the request had.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -9,7 +10,9 @@ type PostedBody = any;
 export interface MockOpenAI {
   url: string;
   requests: Array<{ body: PostedBody; authorization?: string }>;
+  streams: { started: number; active: number; cancelled: number; finished: number };
   reply(next: MockReply): void;
+  releaseHeld(): void;
   close(): Promise<void>;
 }
 
@@ -23,6 +26,8 @@ const CORS = {
 export function startMockOpenAI(): Promise<MockOpenAI> {
   const requests: MockOpenAI['requests'] = [];
   let next: MockReply = defaultReply;
+  const streams = { started: 0, active: 0, cancelled: 0, finished: 0 };
+  const held = new Set<() => void>();
 
   const server = createServer((req, res) => {
     if (req.method === 'OPTIONS') {
@@ -34,7 +39,45 @@ export function startMockOpenAI(): Promise<MockOpenAI> {
     readBody(req)
       .then((raw) => {
         requests.push({ body: parseBody(raw), authorization: req.headers.authorization });
-        writeReply(res, next);
+        const reply = next;
+        if (!('chunks' in reply)) {
+          writeReply(res, reply);
+          return;
+        }
+        streams.started++;
+        streams.active++;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const finish = () => {
+          held.delete(finish);
+          if (!res.destroyed && !res.writableEnded) {
+            res.end('data: [DONE]\n\n');
+          }
+        };
+        res.once('close', () => {
+          clearTimeout(timer);
+          held.delete(finish);
+          streams.active--;
+          if (res.writableEnded) streams.finished++;
+          else streams.cancelled++;
+        });
+        res.writeHead(200, { ...CORS, 'content-type': 'text/event-stream' });
+        let index = 0;
+        const send = () => {
+          if (res.destroyed) return;
+          while (index < reply.chunks.length) {
+            const payload = JSON.stringify({
+              choices: [{ delta: { content: reply.chunks[index++] } }],
+            });
+            res.write(`data: ${payload}\n\n`);
+            if (reply.intervalMs) {
+              timer = setTimeout(send, reply.intervalMs);
+              return;
+            }
+          }
+          if (reply.hold) held.add(finish);
+          else finish();
+        };
+        send();
       })
       .catch(() => {
         if (!res.headersSent) res.writeHead(500);
@@ -53,12 +96,17 @@ export function startMockOpenAI(): Promise<MockOpenAI> {
       resolve({
         url: `http://127.0.0.1:${address.port}`,
         requests,
+        streams,
         reply(value) {
           next = value;
+        },
+        releaseHeld() {
+          for (const finish of held) finish();
         },
         close() {
           return new Promise((done, fail) => {
             server.close((err) => (err ? fail(err) : done()));
+            server.closeAllConnections();
           });
         },
       });
@@ -80,21 +128,7 @@ function parseBody(raw: string): PostedBody {
   return JSON.parse(raw);
 }
 
-function writeReply(res: ServerResponse, reply: MockReply): void {
-  if ('chunks' in reply) {
-    res.writeHead(200, {
-      'content-type': 'text/event-stream',
-      'access-control-allow-origin': '*',
-    });
-    for (const chunk of reply.chunks) {
-      const payload = JSON.stringify({ choices: [{ delta: { content: chunk } }] });
-      res.write(`data: ${payload}\n\n`);
-    }
-    res.write('data: [DONE]\n\n');
-    res.end();
-    return;
-  }
-
+function writeReply(res: ServerResponse, reply: { status: number; body: string }): void {
   res.writeHead(reply.status, { 'access-control-allow-origin': '*' });
   res.end(reply.body);
 }

@@ -1,6 +1,65 @@
+# Benchmarks
+
+## Portable offline runtime benchmark
+
+Run P00a against the existing built extension. This command uses synthetic text, loopback HTTP, and a fake native CLI. It does not use the paid CLI benchmarks documented below.
+
+```bash
+npm ci
+npm run build
+npx playwright install chromium
+node --test bench/runtime/fixtures.test.mjs
+npm run bench:runtime -- --smoke --out-dir /tmp/localpolish-runtime-smoke-1
+npm run bench:runtime -- --smoke --out-dir /tmp/localpolish-runtime-smoke-2
+npm run bench:runtime
+```
+
+Use Node 22 or later. `--out-dir DIRECTORY` selects the report directory. The default is `bench/results`. Paths to the extension and source files resolve from the checkout, so the command also works from another working directory. Missing `dist/manifest.json` fails with a build instruction. No dependency or login is required beyond the project's installed packages and Playwright Chromium.
+
+Full mode requests ten cold and ten warm samples for **each of 15 scenarios**. Smoke requests one of each with the same fixture sizes. Neither mode changes production settings defaults or delays. The synthetic provider sends rewrite preview chunks 75 ms apart so the real streaming UI can be observed before ready. These timings include local harness work and are not model-latency measurements.
+
+Cold browser samples use a fresh Chromium process, profile, worker, and editor. Warm samples reuse the final cold session and repeat the operation in the same browser, worker, and editor without reloading. Core cold samples use fresh Node workers. Core warm samples reuse their imported functions and fake Chrome storage boundary. The native host is single-use. Its warm samples reuse the Node harness but still start a fresh host and fake CLI. Reports label that difference.
+
+The launch helper is shared with `tests/e2e/extension.spec.ts`. Before launch, the benchmark copies `dist` into a unique temporary directory and reads `manifest.background.service_worker`. It prepends only the existing native-message stub and query counters to that copied built worker. All original worker bytes follow unchanged. The manifest bytes and key stay unchanged, so the extension ID stays the same. The stub runs before production startup can open the setup page or reach an installed native host. The normal extension launch flags load this runtime copy. The original `dist` and production source files are not edited by the harness. `buildHash` identifies the original checkout build, not the instrumented runtime copy. Cleanup removes the copy after closing the extension, on both setup failure and normal close. Later isolated-content-world CDP counters remain in use. Only core probes compile the listed TypeScript modules to temporary CommonJS files.
+
+The rich-editor fixture changes its last six-byte word on each operation. Its byte and word counts stay constant. This allows warm requests to run while preserving the production rule that unchanged fields are not sent twice.
+
+The scenarios cover the following work:
+
+| Scenario                                   | Synthetic fixture and check                                                                                                        |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `rewrite-small`                            | Exact 15-byte input and 12-byte answer, first real preview, ready result, one request                                              |
+| `rewrite-multilingual`                     | Mixed Arabic and English, exact answer, preview and ready, one request                                                             |
+| `diff-1500-no-overlap`                     | 1,500 distinct words on each side, Final then Changes three times, exact answer and one request                                    |
+| `selection-100`                            | 100 selection events over a 2,000-word textarea, immediate and settled isolated-world style and rect calls                         |
+| `idle-off`                                 | Ten typed characters, idle timer counts, no request after a 3,300 ms observation                                                   |
+| `rich-marker`                              | A 1,200-word rich editor, one idle rewrite, 900 ms of reads, geometry, and marker DOM mutations                                    |
+| `api-native-checks`                        | Options, toolbar popup, and setup using the API provider, mocked native-check counts                                               |
+| `connection-owner-close`                   | Held SSE Test connection, active streams and cancellation 500 ms after the owner closes, then explicit release                     |
+| `model-settings-frames`                    | Model-only storage change, main editor plus a page with three child frames, page-settings query counts                             |
+| `open-close-retention`                     | Three real rewrite popup open/close cycles, exact answers and three requests, DOM, listener, pending-work and heap observations    |
+| `rewrite-1000-manual`, `rewrite-1000-idle` | Actual `runRewrite`, 1,000 synthetic chunks, exact final text and message counts                                                   |
+| `native-frame-1k`                          | Actual decoder, a roughly 2 MiB frame in 1 KiB fragments, split UTF-8, exact decoded message and concat-copy counts                |
+| `sse-1k`                                   | Actual `readSSE`, a roughly 2 MiB single line in 1 KiB fragments, mixed UTF-8, CRLF and a second event, exact output               |
+| `host-ready-before-close`                  | Actual host, framed request and events, one fake CLI that emits completion and stays alive, actual process-liveness check at ready |
+
+The host's PATH contains only its fake executable and a link to `process.execPath`. Its HOME, CODEX_HOME, and temporary directory are private to the run. No installed provider CLI or authentication file is used. On Windows the fake uses an npm-style shim. On POSIX, the fake waits 250 ms after SIGTERM so ready and process close remain separate observations. Windows uses forced process cleanup; child liveness at ready is an observation there. The host must clean its own temporary directory.
+
+Each run writes `runtime-<mode>-<Cairo timestamp>-<pid>.json` and a `.samples.jsonl` file. The JSON contains every raw sample, per-temperature medians and maxima, source commit and content hash, build hash, OS, CPU, memory, Node, Playwright, Chromium, exact byte sizes, and Cairo timestamps. The JSONL contains the attempted raw samples for separate analysis. Heap snapshots use the same filename prefix. They stay local or in CI artifacts and are not committed. Retention iteration zero saves snapshots before and after its cycles in each temperature. Snapshots may trigger GC and change memory observations.
+
+Interpret these reports as a synthetic baseline. Baseline inefficiencies such as idle chunk messages, repeated native checks, selection layout work, and uncancelled connection tests are observations. Loose counter ceilings catch runaway work. Exact answers, stream decoding, request counts, ready events, popup cleanup, and fake-process cleanup gate smoke. There are no machine-specific speed or heap thresholds, percentile claims, battery claims, or model speed claims. Compare identical fixture hashes and repetition counts on the same environment before drawing timing conclusions. The 2 MiB single-line SSE case deliberately measures today's unbounded behavior; later limit tasks may need to change its expected result explicitly.
+
+CDP listener and DOM counters cover the renderer, not just extension objects. The exact extension listener count is unavailable and is recorded as `null` with a reason. Pending-work counts include only content-world timers, intervals, and animation frames scheduled after instrumentation. They exclude existing work and worker internals. Marker mutation counts measure DOM updates. Exact bundled Preact render-call counts are unavailable and are also `null`, rather than fabricated zeroes. Timing windows and count ceilings are in `bench/runtime/browser.mjs`.
+
+The Playwright configuration and shared launcher reject `process.platform === 'darwin' && process.env.CODEX_SANDBOX === 'seatbelt'` before spawning Chrome, with an instruction to use the unrestricted reviewer. Do not retry sandbox browser failures. SIGINT and SIGTERM are checked before each sample and after asynchronous setup or warmup; an interrupted run closes its owned session and stays incomplete.
+
+A blocked browser launch or failed assertion returns a nonzero exit and preserves an `incomplete` report. A shared browser setup failure blocks the remaining browser scenarios explicitly, with missing sample counts. The full run still executes all ten cold and ten warm core samples. It never substitutes core code for browser measurements. A report with missing browser samples is **not a completed baseline**.
+
+CI runs the fixture checks and a smoke benchmark after its existing build and Chromium installation. Smoke has a three-minute step limit within the existing fifteen-minute job. The report, JSONL, and heap snapshots upload even after failure. The upload action is pinned to the [official v4.6.2 commit](https://github.com/actions/upload-artifact/commit/ea165f8d65b6e75b540449e92b4886f43607fa02). P00b's duplicate-build cleanup is separate.
+
 > Results from 17 October 2026. The bridge and the default have changed since. Today the default is Codex `gpt-6-luna` at effort `none` (`src/core/settings.ts`), and the Fix prompt is in `src/core/prompts.ts`.
 
-# Fix-mode benchmark
+## Paid Fix-mode benchmark
 
 Runs the same CLI commands the bridge runs (`bridge/lib.mjs` `buildCommand` and `parseLine`), on 5 test inputs, and scores each answer.
 
@@ -26,7 +85,7 @@ node bench/report.mjs bench/results/*.jsonl
 node bench/probe.mjs . bench/results/<name>-probe.jsonl 2
 ```
 
-## Results so far (Windows, 2026-10-17)
+### Results so far (Windows, 2026-10-17)
 
 The full table is in `results/2026-10-17-win-report.md`. It has 4 rounds, so 20 tries per setup.
 
@@ -38,7 +97,7 @@ Findings so far:
 - **Haiku missed the email test 4 of 4 times.** It left "hi" lowercase and wrote "reports are". Luna turns the Arabic part of mixed Arabic into Franco-Arabic.
 - Prices: Luna is about $0.10 per 1M input tokens and $0.50 per 1M output. Sol is $2 and $10. These come from secondary sites, not OpenAI.
 
-## Probe results (Mac, 2026-10-17)
+### Probe results (Mac, 2026-10-17)
 
 `results/2026-10-17-mac-probe.jsonl`, 2 rounds of 3 inputs, so 6 tries per setup. Times are medians in seconds.
 
@@ -58,7 +117,7 @@ Findings:
 - Grok without its Claude, Codex and Cursor imports sends about 3,000 fewer input tokens. Once, with imports on, Grok added the `~/.claude/CLAUDE.md` answer format ("**Next:** ... **Result:** ...") to a grammar fix.
 - Codex with `model_instructions_file` sends about 3,500 fewer input tokens, with the same score.
 
-## Fixed
+### Fixed
 
 1. The bridge sends `done` at `message_stop` (Claude Code, Grok) or `turn.completed` (Codex), then stops the CLI. Live, through `bridge/host.mjs`: Haiku `done` at 1.8 s (was about 4.5 s), Luna at 3.3 s.
 2. Grok runs with its Claude, Codex and Cursor imports off (`GROK_IMPORTS_OFF` in `bridge/lib.mjs`). Grok 4.7 `done` at 2.8 s live.
@@ -66,7 +125,7 @@ Findings:
 
 4. From Sol's review (2026-10-17): the bridge finishes early only on `stop_reason` `end_turn` or `stop_sequence`, and reports `max_tokens` as a cut-off answer. Codex no longer gets the prompt twice. Cleanup no longer collapses `,,` in text where it replaced no dash, and keeps a heading such as `Corrected:` when the input starts with one.
 
-## Fix prompt test (Mac, 2026-10-17)
+### Fix prompt test (Mac, 2026-10-17)
 
 `results/2026-10-17-mac-prompt.jsonl`. 7 inputs, 3 rounds, so 21 tries per row. Two new inputs: a subject line, and a fragment cut from a longer sentence (`i has an apple`), where a final period is wrong. `BENCH_PROMPT=v1|sol|v2` picks the prompt. Times are to process exit, so they include the 1 to 3 s the bridge no longer waits for.
 
@@ -80,7 +139,7 @@ Findings:
 - Sol's prompt starts with "Make minimal edits". Haiku then often returns the text unchanged.
 - Haiku misses with every prompt: "reports are" in the email, a final period on the fragment, and sometimes "I has an apple" left as it is. Luna's misses are in the mixed Arabic test.
 
-## Luna effort (Mac, 2026-10-17)
+### Luna effort (Mac, 2026-10-17)
 
 `results/2026-10-17-mac-luna-effort.jsonl`, v2 prompt, 21 tries each.
 
@@ -92,6 +151,6 @@ Findings:
 
 Luna does not think on Fix-sized text at low or medium either, so the three efforts give the same answers, time and tokens. The cost differences between runs come from how much input was cached, not from effort. Rephrase and Tone were not tested.
 
-## Still to do
+### Still to do
 
 1. Maybe later, each needs measuring: more Codex config keys (`features.multi_agent`, `features.goals`, `tools.view_image`), an isolated `GROK_HOME`, Claude `--disable-slash-commands`, and a long-lived bridge process.
