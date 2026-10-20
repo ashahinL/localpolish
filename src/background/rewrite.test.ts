@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
 import { recordUsage } from '../core/usage';
 import { BridgeMissingError } from './providers/cli';
+import { openaiProvider } from './providers/openai';
 import { REWRITE_TIMEOUT_MS, runRewrite, testConnection } from './rewrite';
 import { type StreamFn } from './providers/types';
 
@@ -22,6 +23,180 @@ function settings(
 const request: RewriteRequest = { mode: 'fix', tone: 'polite', text: 'i went home' };
 
 describe('runRewrite', () => {
+  const outputLimitMessage =
+    'The generated text is over the 1 MiB output limit. Try again with a shorter text.';
+
+  it('cancels and releases a held HTTP reader when bounded events exceed total output', async () => {
+    const originalFetch = globalThis.fetch;
+    const cancel = vi.fn();
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          const text = sent++ < 256 ? 'a'.repeat(4096) : 'a';
+          controller.enqueue(
+            new TextEncoder().encode(
+              `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`,
+            ),
+          );
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    );
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(body));
+    globalThis.fetch = fetchMock;
+    const events: RewriteEvent[] = [];
+    const saved = settings({ models: { 'openai-compatible': 'mock-model' } });
+    try {
+      await runRewrite(
+        request,
+        saved,
+        openaiProvider,
+        (event) => events.push(event),
+        new AbortController().signal,
+      );
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(body.locked).toBe(false);
+      expect(sent).toBe(257);
+      expect(events.filter((event) => event.type !== 'chunk')).toEqual([
+        { type: 'error', message: outputLimitMessage },
+      ]);
+      expect(
+        events
+          .filter((event) => event.type === 'chunk')
+          .map((event) => event.text)
+          .join(''),
+      ).toBe('a'.repeat(1048576));
+      expect(recordUsage).toHaveBeenCalledExactlyOnceWith(saved);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it.each(['cancel', 'timeout'])(
+    'preserves %s priority when it overlaps output overflow',
+    async (priority) => {
+      vi.useFakeTimers();
+      const controller = new AbortController();
+      const events: RewriteEvent[] = [];
+      try {
+        await runRewrite(
+          request,
+          settings(),
+          async (_prompt, _settings, onText) => {
+            if (priority === 'cancel') controller.abort();
+            else await vi.advanceTimersByTimeAsync(60000);
+            onText('a'.repeat(1048577));
+          },
+          (event) => events.push(event),
+          controller.signal,
+        );
+        expect(events).toEqual(
+          priority === 'cancel' ? [] : [{ type: 'error', message: 'Timed out after 60 seconds.' }],
+        );
+        expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each([
+    { script: 'ASCII', unit: 'a', unitBytes: 1, extra: 0 },
+    { script: 'ASCII', unit: 'a', unitBytes: 1, extra: 1 },
+    { script: 'Arabic', unit: 'م', unitBytes: 2, extra: 0 },
+    { script: 'Arabic', unit: 'م', unitBytes: 2, extra: 1 },
+    { script: 'emoji', unit: '😀', unitBytes: 4, extra: 0 },
+    { script: 'emoji', unit: '😀', unitBytes: 4, extra: 1 },
+  ])('bounds many $script chunks at 1048576 + $extra bytes', async ({ unit, unitBytes, extra }) => {
+    const block = unit.repeat(1024 / unitBytes);
+    const chunks = [...Array<string>(1024).fill(block), ...(extra ? ['a'] : [])];
+    const events: RewriteEvent[] = [];
+    let upstream!: AbortSignal;
+    await runRewrite(
+      request,
+      settings(),
+      async (_prompt, _settings, onText, signal) => {
+        upstream = signal;
+        for (const chunk of chunks) onText(chunk);
+      },
+      (event) => events.push(event),
+      new AbortController().signal,
+    );
+
+    expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+    expect(events.filter((event) => event.type === 'chunk')).toEqual(
+      Array.from({ length: 1024 }, () => ({ type: 'chunk', text: block })),
+    );
+    expect(events.filter((event) => event.type !== 'chunk')).toEqual(
+      extra
+        ? [{ type: 'error', message: outputLimitMessage }]
+        : [{ type: 'done', text: unit.repeat(1048576 / unitBytes) }],
+    );
+    expect(upstream.aborted).toBe(extra === 1);
+  });
+
+  it.each([
+    { extra: 0, empty: false },
+    { extra: 1, empty: false },
+    { extra: 0, empty: true },
+    { extra: 1, empty: true },
+  ])('counts split surrogate pairs with extra=$extra, empty=$empty', async ({ extra, empty }) => {
+    const prefix = 'a'.repeat(1048572 + extra);
+    const chunks = [prefix, '\ud83d', ...(empty ? ['', ''] : []), '\ude00'];
+    const events: RewriteEvent[] = [];
+    let upstream!: AbortSignal;
+    await runRewrite(
+      request,
+      settings(),
+      async (_prompt, _settings, onText, signal) => {
+        upstream = signal;
+        for (const chunk of chunks) onText(chunk);
+      },
+      (event) => events.push(event),
+      new AbortController().signal,
+    );
+    expect(events.filter((event) => event.type === 'chunk')).toEqual(
+      (extra ? chunks.slice(0, -1) : chunks).map((text) => ({ type: 'chunk', text })),
+    );
+    expect(events.filter((event) => event.type !== 'chunk')).toEqual(
+      extra
+        ? [{ type: 'error', message: outputLimitMessage }]
+        : [{ type: 'done', text: prefix + '😀' }],
+    );
+    expect(upstream.aborted).toBe(extra === 1);
+    expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+  });
+
+  it.each(['rejects Cancelled', 'resolves'])(
+    'reports one raw-output error even when the aborted provider %s',
+    async (outcome) => {
+      const events: RewriteEvent[] = [];
+      let upstream!: AbortSignal;
+      await runRewrite(
+        request,
+        settings(),
+        async (_prompt, _settings, onText, signal) => {
+          upstream = signal;
+          try {
+            onText(' '.repeat(1048577));
+          } catch {
+            if (outcome === 'rejects Cancelled') throw new Error('Cancelled.');
+          }
+        },
+        (event) => events.push(event),
+        new AbortController().signal,
+      );
+      expect(events).toEqual([{ type: 'error', message: outputLimitMessage }]);
+      expect(upstream.aborted).toBe(true);
+      expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+    },
+  );
+
   it('posts each chunk and then the cleaned text', async () => {
     const stream: StreamFn = async (prompt, _settings, onText) => {
       expect(prompt.user).toContain('<text>\ni went home\n</text>');

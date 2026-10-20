@@ -100,7 +100,17 @@ export function cliProvider(cli: CliName): StreamFn {
       port.onMessage.addListener((message: unknown) => {
         if (settled || !isRecord(message)) return;
         if (message.type === 'chunk') {
-          if (typeof message.text === 'string') onText(message.text);
+          if (typeof message.text === 'string') {
+            try {
+              onText(message.text);
+            } catch (err) {
+              if (settled) return;
+              settled = true;
+              signal.removeEventListener('abort', onAbort);
+              reject(err);
+              closePort(port);
+            }
+          }
           return;
         }
         if (message.type === 'done') {

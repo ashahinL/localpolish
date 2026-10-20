@@ -6,7 +6,9 @@ import path from 'node:path';
 import {
   INPUT_LIMIT_MESSAGE,
   MAX_CLI_EVENT_BYTES,
+  MAX_OUTPUT_BYTES,
   MAX_USER_PROMPT_BYTES,
+  OUTPUT_LIMIT_MESSAGE,
   TIMEOUT_MS,
 } from './constants.mjs';
 import {
@@ -160,6 +162,8 @@ function handleRewrite(msg) {
   let stdinClosed = false;
   let spawnFailed = false;
   let killed = false;
+  let outputBytes = 0;
+  let endsWithHighSurrogate = false;
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   let killTimer;
   /** @type {ReturnType<typeof setTimeout> | undefined} */
@@ -249,6 +253,22 @@ function handleRewrite(msg) {
     const parsed = parseLine(cli, line);
     if (!parsed) return;
     if ('text' in parsed) {
+      const text = parsed.text;
+      const remainingBytes = MAX_OUTPUT_BYTES - outputBytes;
+      const first = text.charCodeAt(0);
+      // Separate encodings count a split pair as 3 + 3 bytes instead of 4.
+      const correction = endsWithHighSurrogate && first >= 0xdc00 && first <= 0xdfff ? 2 : 0;
+      const bytes = text.length > remainingBytes ? Infinity : Buffer.byteLength(text) - correction;
+      if (bytes > remainingBytes) {
+        killChild();
+        finish({ type: 'error', message: OUTPUT_LIMIT_MESSAGE });
+        return;
+      }
+      outputBytes += bytes;
+      if (text.length > 0) {
+        const last = text.charCodeAt(text.length - 1);
+        endsWithHighSurrogate = last >= 0xd800 && last <= 0xdbff;
+      }
       for (const text of splitText(parsed.text, CHUNK_CHARS)) {
         process.stdout.write(encodeMessage({ type: 'chunk', text }));
       }

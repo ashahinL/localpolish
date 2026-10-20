@@ -250,6 +250,8 @@ The host already receives that text wrapped as `<text>`, a newline, the text, a 
 
 API streams accept up to 1 MiB of decoded UTF-8 per SSE line and per retained event. A line excludes its terminating LF and one final CR, including at EOF. An event counts its current event name and data, including newlines inserted between data fields. Replacing the name replaces its byte contribution. Comments and unknown fields do not accumulate, but their lines have the same cap. Overflow rejects the stream and cancels its reader. Readers release their locks after completion, error or consumer cancellation. These limits bound retained content, not total network transfer or exact JavaScript heap bytes.
 
+Total generated text is capped at 1 MiB of UTF-8 before output cleanup, including text split across many events. The browser pipeline and direct native host both enforce this cap. Overflow returns one error and stops the upstream stream or CLI process group. It never returns a shortened success, and Accept stays disabled. The started attempt is counted once.
+
 Incoming native JSON payloads are capped at 8 MiB, excluding the four-byte header. Each CLI stdout event line is capped at 8 MiB, excluding CR and LF delimiters. The host rejects an oversized header before allocating its payload. Malformed native JSON and either overflow return a framed error. If a rewrite is running, the host stops its process group and removes its temporary folder before exiting.
 
 Each CLI turns tools off in its own way. Grok can still search X and keeps its session history in `~/.grok`:

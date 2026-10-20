@@ -1,5 +1,10 @@
 import { cleanOutput } from '../core/cleanup';
-import { exceedsInputLimit, INPUT_LIMIT_MESSAGE } from '../core/limits';
+import {
+  exceedsInputLimit,
+  INPUT_LIMIT_MESSAGE,
+  MAX_OUTPUT_BYTES,
+  OUTPUT_LIMIT_MESSAGE,
+} from '../core/limits';
 import { type RewriteEvent, type RewriteRequest, type TestResult } from '../core/messages';
 import { buildPrompt } from '../core/prompts';
 import { type Settings } from '../core/settings';
@@ -33,6 +38,10 @@ export async function runRewrite(
 
   const prompt = buildPrompt(req.mode, req.tone, req.text);
   let raw = '';
+  let outputBytes = 0;
+  let endsWithHighSurrogate = false;
+  let outputExceeded = false;
+  const utf8 = new TextEncoder();
   const inner = new AbortController();
   let timedOut = false;
   const onAbort = () => {
@@ -50,17 +59,39 @@ export async function runRewrite(
       prompt,
       settings,
       (text) => {
+        if (outputExceeded) throw new Error(OUTPUT_LIMIT_MESSAGE);
+        const remainingBytes = MAX_OUTPUT_BYTES - outputBytes;
+        const first = text.charCodeAt(0);
+        // Separate encodings count a split pair as 3 + 3 bytes instead of 4.
+        const correction = endsWithHighSurrogate && first >= 0xdc00 && first <= 0xdfff ? 2 : 0;
+        const bytes =
+          text.length > remainingBytes ? Infinity : utf8.encode(text).byteLength - correction;
+        if (bytes > remainingBytes) {
+          outputExceeded = true;
+          inner.abort();
+          throw new Error(OUTPUT_LIMIT_MESSAGE);
+        }
+        outputBytes += bytes;
+        if (text.length > 0) {
+          const last = text.charCodeAt(text.length - 1);
+          endsWithHighSurrogate = last >= 0xd800 && last <= 0xdbff;
+        }
         raw += text;
         post({ type: 'chunk', text });
       },
       inner.signal,
     );
+    if (outputExceeded) throw new Error(OUTPUT_LIMIT_MESSAGE);
   } catch (err) {
     if (timedOut) {
       post({ type: 'error', message: 'Timed out after 60 seconds.' });
       return;
     }
     if (signal.aborted) return;
+    if (outputExceeded) {
+      post({ type: 'error', message: OUTPUT_LIMIT_MESSAGE });
+      return;
+    }
     const message = err instanceof Error ? err.message : 'The rewrite failed.';
     post(
       err instanceof BridgeMissingError

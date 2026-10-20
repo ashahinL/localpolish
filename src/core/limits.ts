@@ -1,4 +1,8 @@
 export const MAX_INPUT_BYTES = 256 * 1024;
+// Total raw generated text, before output cleanup, counted in UTF-8 bytes.
+export const MAX_OUTPUT_BYTES = 1024 * 1024;
+export const OUTPUT_LIMIT_MESSAGE =
+  'The generated text is over the 1 MiB output limit. Try again with a shorter text.';
 
 // Decoded UTF-8 bytes per SSE line, excluding LF and one final CR, including at EOF.
 export const MAX_SSE_LINE_BYTES = 1024 * 1024;

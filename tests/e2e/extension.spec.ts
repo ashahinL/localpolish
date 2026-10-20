@@ -424,6 +424,37 @@ test('text over 256 KiB shows an error and does not call the provider', async ({
   expect(await storedUsage(sw)).toEqual(usageBefore);
 });
 
+test('output over 1 MiB fails once and cancels the held upstream stream', async ({
+  page,
+  mock,
+  sw,
+}) => {
+  await writeSettings(sw, `${mock.url}/v1`, { idleFix: false });
+  await sw.evaluate(() => {
+    const chrome = (globalThis as unknown as { chrome: ExtensionChrome }).chrome;
+    return chrome.storage.local.set({ usage: [] });
+  });
+  const cancelledBefore = mock.streams.cancelled;
+  mock.reply({
+    chunks: [...Array<string>(256).fill('a'.repeat(4096)), 'a'],
+    hold: true,
+    intervalMs: 1,
+  });
+  await page.locator('#ta').fill(SOURCE);
+  await sendOpenPopup(page, sw, '#ta');
+
+  const popup = page.locator('.lp-popup');
+  await expect(popup.locator('.lp-error')).toContainText('1 MiB');
+  await expect(popup.locator('.lp-error')).toHaveCount(1);
+  await expect(popup.getByRole('button', { name: 'Accept' })).toBeDisabled();
+  await expect.poll(() => mock.streams.cancelled).toBe(cancelledBefore + 1);
+  await expect.poll(() => mock.streams.active).toBe(0);
+  expect(mock.requests).toHaveLength(1);
+  expect(await storedUsage(sw)).toEqual([
+    { provider: 'openai-compatible', model: 'mock-model', requests: 1 },
+  ]);
+});
+
 test('blocklist hides the button but the shortcut still opens', async ({ page, mock, sw }) => {
   await writeSettings(sw, `${mock.url}/v1`, { blocklist: ['localhost'] });
   await openFixture(page);

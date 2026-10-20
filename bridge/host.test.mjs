@@ -119,6 +119,101 @@ async function writeBytes(count) {
 }
 `;
 
+const writeTextEventsSource = `
+async function writeTextEvents(chunks) {
+  for (const text of chunks) {
+    const event = { type: 'stream_event', event: {
+      type: 'content_block_delta', delta: { type: 'text_delta', text }
+    } };
+    if (!process.stdout.write(JSON.stringify(event) + '\\n')) {
+      await new Promise((resolve) => process.stdout.once('drain', resolve));
+    }
+  }
+}
+`;
+
+describe('host total output limit', () => {
+  it.each([
+    { script: 'ASCII', unit: 'a', unitBytes: 1, extra: 0 },
+    { script: 'ASCII', unit: 'a', unitBytes: 1, extra: 1 },
+    { script: 'Arabic', unit: 'م', unitBytes: 2, extra: 0 },
+    { script: 'Arabic', unit: 'م', unitBytes: 2, extra: 1 },
+    { script: 'emoji', unit: '😀', unitBytes: 4, extra: 0 },
+    { script: 'emoji', unit: '😀', unitBytes: 4, extra: 1 },
+    { script: 'split emoji', unit: 'a', unitBytes: 1, extra: 0, split: true },
+    { script: 'split emoji', unit: 'a', unitBytes: 1, extra: 1, split: true },
+    {
+      script: 'split emoji with empty events',
+      unit: 'a',
+      unitBytes: 1,
+      extra: 0,
+      split: true,
+      empty: true,
+    },
+    {
+      script: 'split emoji with empty events',
+      unit: 'a',
+      unitBytes: 1,
+      extra: 1,
+      split: true,
+      empty: true,
+    },
+  ])(
+    'bounds many $script events at 1048576 + $extra bytes',
+    async ({ unit, unitBytes, extra, split, empty }) => {
+      const bin = tempDir('lp-bin-');
+      const pidFile = path.join(bin, 'pid');
+      const block = unit.repeat(1024 / unitBytes);
+      const tail = split
+        ? ['a'.repeat(1020 + extra), '\ud83d', ...(empty ? ['', ''] : []), '\ude00']
+        : extra
+          ? ['a']
+          : [];
+      const chunks = [...Array(split ? 1023 : 1024).fill(block), ...tail];
+      writeCli(
+        bin,
+        'claude',
+        `#!/usr/bin/env node
+require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+${writeTextEventsSource}
+process.stdin.resume();
+process.stdin.on('end', async () => {
+  await writeTextEvents([...Array(${split ? 1023 : 1024}).fill(${JSON.stringify(block)}), ...${JSON.stringify(tail)}]);
+  process.stdout.write(JSON.stringify({ type: 'result' }) + '\\n');
+  setInterval(() => {}, 1000);
+});
+`,
+      );
+      const host = startHost(bin);
+      host.child.stdin.write(rewrite('claude', 'hello'));
+      const pid = await waitForPid(pidFile);
+      pids.push(pid);
+      expect(await host.closed).toBe(0);
+      expect(host.messages).toEqual([
+        ...(extra ? chunks.slice(0, -1) : chunks).map((text) => ({ type: 'chunk', text })),
+        extra
+          ? {
+              type: 'error',
+              message:
+                'The generated text is over the 1 MiB output limit. Try again with a shorter text.',
+            }
+          : { type: 'done' },
+      ]);
+      if (!extra) {
+        expect(
+          host.messages
+            .filter((message) => message.type === 'chunk')
+            .map((message) => message.text)
+            .join(''),
+        ).toBe(split ? 'a'.repeat(1048572) + '😀' : unit.repeat(1048576 / unitBytes));
+      }
+      expect(() => process.kill(pid, 0)).toThrow();
+      expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+      expect(Buffer.concat(host.stderr).toString()).toBe('');
+    },
+  );
+});
+
 function oversizedHeader() {
   const header = Buffer.alloc(4);
   header.writeUInt32LE(MAX_NATIVE_FRAME_BYTES + 1);
@@ -377,69 +472,93 @@ setTimeout(() => {}, 30000);
     expect(() => process.kill(pid, 0)).toThrow();
   });
 
-  it.skipIf(windows).each(['disconnect', 'malformed frame', 'oversized header', 'CLI overflow'])(
-    'kills a resistant grandchild and removes the temp directory after %s',
-    async (failure) => {
-      const bin = tempDir('lp-bin-');
-      const pidFile = path.join(bin, 'pid');
-      const script = `
+  it
+    .skipIf(windows)
+    .each([
+      'disconnect',
+      'malformed frame',
+      'oversized header',
+      'CLI overflow',
+      'total output overflow',
+    ])('kills a resistant grandchild and removes the temp directory after %s', async (failure) => {
+    const bin = tempDir('lp-bin-');
+    const pidFile = path.join(bin, 'pid');
+    const script = `
 process.on('SIGTERM', () => {});
 require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
 setInterval(() => {}, 1000);
 `;
-      writeCli(
-        bin,
-        'claude',
-        `#!/usr/bin/env node
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
 const { spawn } = require('child_process');
 const fs = require('fs');
 ${writeBytesSource}
+${writeTextEventsSource}
 spawn(process.execPath, ['-e', ${JSON.stringify(script)}], { stdio: 'ignore' });
 const ready = setInterval(() => {
   if (fs.existsSync(${JSON.stringify(pidFile)})) {
     clearInterval(ready);
     ${failure === 'CLI overflow' ? `writeBytes(${MAX_CLI_EVENT_BYTES + 1});` : ''}
+    ${failure === 'total output overflow' ? `writeTextEvents([...Array(1024).fill('a'.repeat(1024)), 'a']);` : ''}
     setInterval(() => {}, 1000);
   }
 }, 20);
 `,
-      );
-      const host = startHost(bin, 4000);
-      host.child.stdin.write(rewrite('claude', 'hello'));
-      const pid = await waitForPid(pidFile);
-      pids.push(pid);
-      if (failure === 'disconnect') host.child.stdin.end();
-      if (failure === 'malformed frame') {
-        host.child.stdin.write(invalidJsonFrame());
-      }
-      if (failure === 'oversized header') {
-        host.child.stdin.write(oversizedHeader());
-      }
-      await host.closed;
-      expect(fs.readdirSync(host.hostTemp)).toEqual([]);
-      expect(Buffer.concat(host.stderr).toString()).toBe('');
-      if (failure === 'disconnect') expect(host.messages).toEqual([]);
-      else {
+    );
+    const host = startHost(bin, 4000);
+    host.child.stdin.write(rewrite('claude', 'hello'));
+    const pid = await waitForPid(pidFile);
+    pids.push(pid);
+    if (failure === 'disconnect') host.child.stdin.end();
+    if (failure === 'malformed frame') {
+      host.child.stdin.write(invalidJsonFrame());
+    }
+    if (failure === 'oversized header') {
+      host.child.stdin.write(oversizedHeader());
+    }
+    await host.closed;
+    expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+    expect(Buffer.concat(host.stderr).toString()).toBe('');
+    if (failure === 'disconnect') expect(host.messages).toEqual([]);
+    else {
+      if (failure !== 'total output overflow') {
         expect(host.messages).toEqual([{ type: 'error', message: expect.any(String) }]);
-        if (failure !== 'malformed frame') {
-          expect(host.messages[0].message).toContain('8 MiB limit');
-        }
       }
-      await expect
-        .poll(
-          () => {
-            try {
-              process.kill(pid, 0);
-              return 'alive';
-            } catch (err) {
-              return err.code;
-            }
-          },
-          { timeout: 3000 },
-        )
-        .toBe('ESRCH');
-    },
-  );
+      const terminals = host.messages.filter((message) => message.type !== 'chunk');
+      expect(terminals).toEqual([{ type: 'error', message: expect.any(String) }]);
+      if (failure === 'total output overflow') {
+        expect(terminals[0].message).toBe(
+          'The generated text is over the 1 MiB output limit. Try again with a shorter text.',
+        );
+        expect(
+          host.messages
+            .filter((message) => message.type === 'chunk')
+            .map((message) => message.text)
+            .join(''),
+        ).toBe('a'.repeat(1048576));
+      }
+      if (failure !== 'malformed frame') {
+        expect(terminals[0].message).toContain(
+          failure === 'total output overflow' ? '1 MiB output limit' : '8 MiB limit',
+        );
+      }
+    }
+    await expect
+      .poll(
+        () => {
+          try {
+            process.kill(pid, 0);
+            return 'alive';
+          } catch (err) {
+            return err.code;
+          }
+        },
+        { timeout: 3000 },
+      )
+      .toBe('ESRCH');
+  });
 
   it.runIf(process.platform === 'win32')(
     'kills a grandchild on Windows when Chrome closes stdin',

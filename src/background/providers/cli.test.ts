@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../../core/settings';
 import { BridgeMissingError, cliProvider, pingBridge } from './cli';
 import { type PromptPair } from './types';
+import { type RewriteEvent } from '../../core/messages';
+import { recordUsage } from '../../core/usage';
+import { runRewrite } from '../rewrite';
+
+vi.mock('../../core/usage', () => ({ recordUsage: vi.fn() }));
 
 const prompt: PromptPair = { system: 'Be brief.', user: 'Fix this.' };
 
@@ -28,6 +33,7 @@ let emitDisconnect: () => void;
 let runtime: { lastError?: { message?: string }; connectNative: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {
+  vi.mocked(recordUsage).mockReset().mockResolvedValue(undefined);
   const onMessage: Array<(message: unknown) => void> = [];
   const onDisconnect: Array<() => void> = [];
   port = {
@@ -70,6 +76,78 @@ async function rejection(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('cliProvider', () => {
+  it('rejects the original callback error before a synchronous disconnect and ignores late events', async () => {
+    const controller = new AbortController();
+    const error = new Error('consumer failed');
+    const onText = vi.fn(() => {
+      throw error;
+    });
+    const pending = cliProvider('claude')(prompt, settings(), onText, controller.signal);
+    runtime.lastError = { message: 'Native host has exited.' };
+    expect(() => emitMessage({ type: 'chunk', text: 'first' })).not.toThrow();
+    await expect(pending).rejects.toBe(error);
+    expect(port.disconnect).toHaveBeenCalledOnce();
+    emitMessage({ type: 'done' });
+    emitMessage({ type: 'chunk', text: 'late' });
+    controller.abort();
+    expect(onText).toHaveBeenCalledExactlyOnceWith('first');
+    expect(port.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('swallows callback errors when the callback already aborted and disconnected the port', async () => {
+    const controller = new AbortController();
+    const pending = cliProvider('claude')(
+      prompt,
+      settings(),
+      () => {
+        controller.abort();
+        throw new Error('consumer failed after abort');
+      },
+      controller.signal,
+    );
+    expect(() => emitMessage({ type: 'chunk', text: 'first' })).not.toThrow();
+    expect(await rejection(pending)).toBe('Cancelled.');
+    expect(port.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('does not connect for an already-aborted signal', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const onText = vi.fn();
+    const pending = cliProvider('claude')(prompt, settings(), onText, controller.signal);
+    expect(await rejection(pending)).toBe('Cancelled.');
+    expect(runtime.connectNative).not.toHaveBeenCalled();
+    expect(onText).not.toHaveBeenCalled();
+  });
+
+  it('reports output overflow through runRewrite after synchronous abort disconnect', async () => {
+    const events: RewriteEvent[] = [];
+    const pending = runRewrite(
+      { mode: 'fix', tone: 'polite', text: 'hello' },
+      settings(),
+      cliProvider('claude'),
+      (event) => events.push(event),
+      new AbortController().signal,
+    );
+    await vi.waitFor(() => expect(port.postMessage).toHaveBeenCalledOnce());
+    const text = 'a'.repeat(1048576);
+    emitMessage({ type: 'chunk', text });
+    expect(() => emitMessage({ type: 'chunk', text: 'a' })).not.toThrow();
+    emitMessage({ type: 'done' });
+    emitMessage({ type: 'chunk', text: 'late' });
+    await pending;
+    expect(events).toEqual([
+      { type: 'chunk', text },
+      {
+        type: 'error',
+        message:
+          'The generated text is over the 1 MiB output limit. Try again with a shorter text.',
+      },
+    ]);
+    expect(port.disconnect).toHaveBeenCalledOnce();
+    expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+  });
+
   it.each([
     ['claude', 'claude-cli', 'opus'],
     ['codex', 'codex-cli', 'gpt-6-luna'],
