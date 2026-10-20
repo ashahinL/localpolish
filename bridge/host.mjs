@@ -9,6 +9,7 @@ import {
   buildCommand,
   codexHomeFor,
   codexLoginCommand,
+  codexRewriteCatalog,
   createDecoder,
   encodeMessage,
   findOnPath,
@@ -120,11 +121,17 @@ function handleRewrite(msg) {
   }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'localpolish-'));
   let instructionsFile;
+  let modelCatalogFile;
   if (cli === 'codex') {
     instructionsFile = path.join(dir, 'instructions.md');
     fs.writeFileSync(instructionsFile, system);
+    const catalog = codexRewriteCatalog(env.CODEX_HOME, model);
+    if (catalog) {
+      modelCatalogFile = path.join(dir, 'models.json');
+      fs.writeFileSync(modelCatalogFile, JSON.stringify(catalog));
+    }
   }
-  const { args } = buildCommand(cli, { model, effort, system, instructionsFile });
+  const { args } = buildCommand(cli, { model, effort, system, instructionsFile, modelCatalogFile });
   const child = spawn(run.cmd, [...run.args, ...args], {
     cwd: dir,
     env,

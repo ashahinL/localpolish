@@ -1,0 +1,1982 @@
+{
+  "date": "2026-10-20",
+  "codexVersion": "0.162.1",
+  "baselineCommit": "79189e1",
+  "route": "Codex CLI with existing LocalPolish subscription login",
+  "note": "Local request captures use a fake SSE response. Token counts and latency below come only from real authenticated requests. Small quality sample, not an accuracy or latency guarantee. Timings are exploratory, not a controlled latency benchmark. One native-host smoke request overlapped with the extended Luna comparison.",
+  "summary": [
+    {
+      "model": "gpt-6-luna",
+      "reduced": false,
+      "passed": 4,
+      "total": 5,
+      "inputRange": [9360, 9396],
+      "medianReadyMs": 2997,
+      "misses": ["fragment repeat"]
+    },
+    {
+      "model": "gpt-6-luna",
+      "reduced": true,
+      "passed": 3,
+      "total": 5,
+      "inputRange": [781, 817],
+      "medianReadyMs": 2880,
+      "misses": ["mixed arabic", "subject line"]
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "reduced": false,
+      "passed": 5,
+      "total": 5,
+      "inputRange": [9360, 9398],
+      "medianReadyMs": 3892,
+      "misses": []
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "reduced": true,
+      "passed": 5,
+      "total": 5,
+      "inputRange": [781, 817],
+      "medianReadyMs": 3843,
+      "misses": []
+    }
+  ],
+  "smoke": [
+    {
+      "name": "luna-reduced",
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "input": "i has an apple",
+      "output": "I have an apple.",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2914.910417,
+      "readyMs": 2915.379417,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "name": "sol-baseline",
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": false,
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 9360,
+        "cached_input_tokens": 4864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3416.586459,
+      "readyMs": 3425.0027090000003,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "name": "sol-reduced",
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": true,
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3394.975625,
+      "readyMs": 3397.8260839999994,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    }
+  ],
+  "quality": [
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "gpt-6-luna-tokens-baseline",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 9396,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 45,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3757.216667,
+      "readyMs": 3761.0195000000003,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "gpt-6-luna-tokens-reduced",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this: https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 817,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 46,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2793.220542,
+      "readyMs": 2793.3575419999997,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": true,
+      "name": "gpt-6-luna-mixed-arabic-baseline",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس أنا هكون free بكرة after 3 p.m. if that works for you",
+      "usage": {
+        "input_tokens": 9386,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 34,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2993.2256670000006,
+      "readyMs": 2997.0498750000006,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": false,
+      "name": "gpt-6-luna-mixed-arabic-reduced",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس ana هكون free بكرة after 3 p.m. if that works for you\n",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 35,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2879.3981249999997,
+      "readyMs": 2879.595792,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "gpt-6-luna-subject-line-baseline",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 9368,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3139.1730829999997,
+      "readyMs": 3140.1649579999994,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": false,
+      "name": "gpt-6-luna-subject-line-reduced",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3.",
+      "usage": {
+        "input_tokens": 785,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2906.4378749999996,
+      "readyMs": 2907.4904590000006,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "gpt-6-luna-fragment-baseline",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 9362,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2724.0530419999996,
+      "readyMs": 2725.2982919999995,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "gpt-6-luna-fragment-reduced",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3194.165083,
+      "readyMs": 3194.495082999998,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "caseName": "fragment repeat",
+      "text": "i has an apple",
+      "pass": false,
+      "name": "gpt-6-luna-fragment-repeat-baseline",
+      "input": "i has an apple",
+      "output": "I have an apple.",
+      "usage": {
+        "input_tokens": 9360,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2821.6878340000003,
+      "readyMs": 2824.001291999997,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "caseName": "fragment repeat",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "gpt-6-luna-fragment-repeat-reduced",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2711.8520000000026,
+      "readyMs": 2712.4484170000032,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": false,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "gpt-6.1-sol-tokens-baseline",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 9398,
+        "cached_input_tokens": 4864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 89,
+        "reasoning_output_tokens": 42
+      },
+      "firstMs": 5083.998125000002,
+      "readyMs": 5087.770874999998,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": true,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "gpt-6.1-sol-tokens-reduced",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 817,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 45,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3841.3845409999994,
+      "readyMs": 3842.5919159999976,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": false,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": true,
+      "name": "gpt-6.1-sol-mixed-arabic-baseline",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "Ana mesh fahem leh el meeting et2agel, بس أنا هكون free بكرة after 3 pm if that works for you",
+      "usage": {
+        "input_tokens": 9384,
+        "cached_input_tokens": 4864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 84,
+        "reasoning_output_tokens": 50
+      },
+      "firstMs": 5693.466750000007,
+      "readyMs": 5700.744208000004,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": true,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": true,
+      "name": "gpt-6.1-sol-mixed-arabic-reduced",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "Ana mesh fahem leh el meeting et2agel, بس أنا هكون free بكرة after 3 pm if that works for you",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 109,
+        "reasoning_output_tokens": 75
+      },
+      "firstMs": 6160.624917000001,
+      "readyMs": 6160.974875,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": false,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "gpt-6.1-sol-subject-line-baseline",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 9368,
+        "cached_input_tokens": 4864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3487.9252500000002,
+      "readyMs": 3490.276417000001,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": true,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "gpt-6.1-sol-subject-line-reduced",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 785,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3515.560875000003,
+      "readyMs": 3517.1425000000017,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": false,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "gpt-6.1-sol-fragment-baseline",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 9362,
+        "cached_input_tokens": 4864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3260.751000000004,
+      "readyMs": 3261.5388329999987,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": true,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "gpt-6.1-sol-fragment-reduced",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 4239.667167000007,
+      "readyMs": 4240.261333000002,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": false,
+      "caseName": "fragment repeat",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "gpt-6.1-sol-fragment-repeat-baseline",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 9360,
+        "cached_input_tokens": 4864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3890.642458000002,
+      "readyMs": 3892.2087919999904,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "reduced": true,
+      "caseName": "fragment repeat",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "gpt-6.1-sol-fragment-repeat-reduced",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3338.5413750000007,
+      "readyMs": 3344.134625000006,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    }
+  ],
+  "captures": [
+    {
+      "name": "final-baseline-luna",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "captured": true,
+      "toolItems": [
+        {
+          "chars": 21914,
+          "tools": [
+            {
+              "name": "functions",
+              "tools": ["exec", "wait", "request_user_input", "request_user_input_async"]
+            },
+            {
+              "name": "clock",
+              "tools": ["sleep"]
+            },
+            {
+              "name": "collaboration",
+              "tools": [
+                "followup_task",
+                "interrupt_agent",
+                "list_agents",
+                "send_message",
+                "spawn_agent",
+                "wait_agent"
+              ]
+            }
+          ]
+        }
+      ],
+      "messages": [
+        {
+          "role": "developer",
+          "type": "additional_tools",
+          "chars": 2
+        },
+        {
+          "role": "developer",
+          "type": "message",
+          "chars": 424,
+          "headings": []
+        },
+        {
+          "role": "developer",
+          "type": "message",
+          "chars": 15628,
+          "headings": [
+            "<skills_instructions>",
+            "## Skills",
+            "### Skill roots",
+            "### Available skills",
+            "</skills_instructions>",
+            "<permissions instructions>",
+            "</permissions instructions>",
+            "<collaboration_mode># Collaboration Mode: Default",
+            "## request_user_input availability",
+            "</collaboration_mode>"
+          ]
+        },
+        {
+          "role": "developer",
+          "type": "message",
+          "chars": 2469,
+          "headings": [
+            "<multi_agent_role>You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.",
+            "<payload text>"
+          ]
+        },
+        {
+          "role": "developer",
+          "type": "message",
+          "chars": 304,
+          "headings": [
+            "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>"
+          ]
+        },
+        {
+          "role": "user",
+          "type": "message",
+          "chars": 614,
+          "headings": ["<environment_context>", "</environment_context>"]
+        },
+        {
+          "role": "user",
+          "type": "message",
+          "chars": 64,
+          "headings": ["<text>", "</text>"]
+        }
+      ],
+      "stderr": "",
+      "requestCharacters": 43465
+    },
+    {
+      "name": "final-current-luna",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "captured": true,
+      "toolItems": [],
+      "messages": [
+        {
+          "role": "developer",
+          "type": "message",
+          "chars": 424,
+          "headings": []
+        },
+        {
+          "role": "user",
+          "type": "message",
+          "chars": 64,
+          "headings": ["<text>", "</text>"]
+        }
+      ],
+      "stderr": "",
+      "requestCharacters": 2152
+    },
+    {
+      "name": "final-current-sol",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "captured": true,
+      "toolItems": [],
+      "messages": [
+        {
+          "role": "developer",
+          "type": "message",
+          "chars": 424,
+          "headings": []
+        },
+        {
+          "role": "user",
+          "type": "message",
+          "chars": 64,
+          "headings": ["<text>", "</text>"]
+        }
+      ],
+      "stderr": "",
+      "requestCharacters": 2157
+    },
+    {
+      "name": "final-fallback-luna",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "captured": true,
+      "toolItems": [
+        {
+          "chars": 11476,
+          "tools": [
+            {
+              "name": "functions",
+              "tools": ["exec", "wait", "request_user_input_async"]
+            },
+            {
+              "name": "clock",
+              "tools": ["sleep"]
+            }
+          ]
+        }
+      ],
+      "messages": [
+        {
+          "role": "developer",
+          "type": "additional_tools",
+          "chars": 2
+        },
+        {
+          "role": "developer",
+          "type": "message",
+          "chars": 424,
+          "headings": []
+        },
+        {
+          "role": "user",
+          "type": "message",
+          "chars": 64,
+          "headings": ["<text>", "</text>"]
+        }
+      ],
+      "stderr": "",
+      "requestCharacters": 13629
+    }
+  ],
+  "nativeHostSmoke": {
+    "input": "she dont like it.",
+    "output": "She doesn't like it.",
+    "readyMs": 24688.058666,
+    "messages": [
+      {
+        "type": "chunk",
+        "text": "She doesn't like it."
+      },
+      {
+        "type": "done"
+      }
+    ],
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "stderr": "",
+    "pass": true
+  },
+  "extendedLuna": [
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 1,
+      "caseName": "past tense",
+      "text": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "pass": true,
+      "name": "luna-full-1-past-tense-baseline",
+      "input": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "output": "Yesterday, I went to the meeting, but nobody was there. Can you tell me why? Also, the report doesn’t have the numbers we discussed.",
+      "usage": {
+        "input_tokens": 9388,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 35,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3377.263875,
+      "readyMs": 3381.633084,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 1,
+      "caseName": "past tense",
+      "text": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "pass": true,
+      "name": "luna-full-1-past-tense-reduced",
+      "input": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "output": "Yesterday I went to the meeting, but nobody was there. Can you tell me why? Also, the report doesn’t have the numbers we discussed.",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 34,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3349.0868330000003,
+      "readyMs": 3352.940208,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 1,
+      "caseName": "question",
+      "text": "can you explain me what is the different between let and const in javascript?",
+      "pass": true,
+      "name": "luna-full-1-question-baseline",
+      "input": "can you explain me what is the different between let and const in javascript?",
+      "output": "Can you explain to me the difference between `let` and `const` in JavaScript?",
+      "usage": {
+        "input_tokens": 9372,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3498.7352920000003,
+      "readyMs": 3502.8602089999995,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 1,
+      "caseName": "question",
+      "text": "can you explain me what is the different between let and const in javascript?",
+      "pass": true,
+      "name": "luna-full-1-question-reduced",
+      "input": "can you explain me what is the different between let and const in javascript?",
+      "output": "Can you explain to me what the difference is between let and const in JavaScript?",
+      "usage": {
+        "input_tokens": 791,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 21,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 4392.8634170000005,
+      "readyMs": 4393.337125,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 1,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "luna-full-1-tokens-baseline",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this: https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 9398,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 46,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3496.778540999998,
+      "readyMs": 3502.385790999999,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 1,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "luna-full-1-tokens-reduced",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this: https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 817,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 46,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3354.078333999998,
+      "readyMs": 3354.5344589999986,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 1,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": false,
+      "name": "luna-full-1-mixed-arabic-baseline",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس ana hakoon free بكرة after 3 pm if that works for you",
+      "usage": {
+        "input_tokens": 9386,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3120.5601669999996,
+      "readyMs": 3123.5675420000007,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 1,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": false,
+      "name": "luna-full-1-mixed-arabic-reduced",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس ana هكون free بكرة after 3pm if that works for you",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2719.483292000001,
+      "readyMs": 2719.9757080000018,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 1,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "luna-full-1-subject-line-baseline",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 9364,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3494.054208999998,
+      "readyMs": 3498.608208999998,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 1,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": false,
+      "name": "luna-full-1-subject-line-reduced",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3.",
+      "usage": {
+        "input_tokens": 785,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3685.5932079999984,
+      "readyMs": 3687.1201660000006,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 1,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "luna-full-1-fragment-baseline",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 9360,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 31383.637000000002,
+      "readyMs": 31385.997208,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 1,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "luna-full-1-fragment-reduced",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3138.2808340000047,
+      "readyMs": 3138.5628750000033,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 1,
+      "caseName": "email",
+      "text": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "pass": true,
+      "name": "luna-full-1-email-baseline",
+      "input": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "output": "Hi John,\n\nI wanted to let you know that the report is ready. I’ll send it to you tomorrow morning. Please let me know if there is any problem.\n\nThanks,\nAhmed",
+      "usage": {
+        "input_tokens": 9395,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 41,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3320.088666999989,
+      "readyMs": 3325.03966699999,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 1,
+      "caseName": "email",
+      "text": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "pass": true,
+      "name": "luna-full-1-email-reduced",
+      "input": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "output": "Hi John,\n\nI wanted to let you know that the report is ready. I’ll send it to you tomorrow morning. Please let me know if there is any problem.\n\nThanks,\nAhmed",
+      "usage": {
+        "input_tokens": 816,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 41,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3110.9846249999973,
+      "readyMs": 3111.890167000005,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 2,
+      "caseName": "past tense",
+      "text": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "pass": true,
+      "name": "luna-full-2-past-tense-baseline",
+      "input": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "output": "Yesterday, I went to the meeting, but nobody was there. Can you tell me why? Also, the report doesn’t have the numbers we discussed?",
+      "usage": {
+        "input_tokens": 9384,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 35,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3041.283249999993,
+      "readyMs": 3045.252416000003,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 2,
+      "caseName": "past tense",
+      "text": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "pass": true,
+      "name": "luna-full-2-past-tense-reduced",
+      "input": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "output": "Yesterday I went to the meeting, but nobody was there. Can you tell me why? Also, the report doesn't have the numbers we discussed.",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 33,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2850.7997919999907,
+      "readyMs": 2851.270458999992,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 2,
+      "caseName": "question",
+      "text": "can you explain me what is the different between let and const in javascript?",
+      "pass": true,
+      "name": "luna-full-2-question-baseline",
+      "input": "can you explain me what is the different between let and const in javascript?",
+      "output": "Can you explain the difference between `let` and `const` in JavaScript?",
+      "usage": {
+        "input_tokens": 9374,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 21,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3234.1669589999947,
+      "readyMs": 3237.943625,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 2,
+      "caseName": "question",
+      "text": "can you explain me what is the different between let and const in javascript?",
+      "pass": true,
+      "name": "luna-full-2-question-reduced",
+      "input": "can you explain me what is the different between let and const in javascript?",
+      "output": "Can you explain to me what the difference is between `let` and `const` in JavaScript?",
+      "usage": {
+        "input_tokens": 791,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 25,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2901.152291999999,
+      "readyMs": 2901.8196250000037,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 2,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "luna-full-2-tokens-baseline",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this: https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 9396,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 46,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3735.578625000009,
+      "readyMs": 3740.6173340000096,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 2,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "luna-full-2-tokens-reduced",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this out: https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug. 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 817,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 48,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3247.0918339999916,
+      "readyMs": 3249.2054999999964,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 2,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": false,
+      "name": "luna-full-2-mixed-arabic-baseline",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس ana hakoon free بكرة after 3 pm if that works for you",
+      "usage": {
+        "input_tokens": 9384,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 30572.178625,
+      "readyMs": 30622.366249999992,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 2,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": false,
+      "name": "luna-full-2-mixed-arabic-reduced",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس ana هكون free بكرة after 3 pm if that works for you",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 4207.363250000009,
+      "readyMs": 4207.887917,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 2,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "luna-full-2-subject-line-baseline",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 9366,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3649.4599169999856,
+      "readyMs": 3649.860708999986,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 2,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "luna-full-2-subject-line-reduced",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 785,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3654.1134159999783,
+      "readyMs": 3655.8971249999886,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 2,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": false,
+      "name": "luna-full-2-fragment-baseline",
+      "input": "i has an apple",
+      "output": "I have an apple.",
+      "usage": {
+        "input_tokens": 9360,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3377.566332999995,
+      "readyMs": 3378.121583,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 2,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "luna-full-2-fragment-reduced",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3387.555000000022,
+      "readyMs": 3390.929583000019,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 2,
+      "caseName": "email",
+      "text": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "pass": true,
+      "name": "luna-full-2-email-baseline",
+      "input": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "output": "Hi John,\n\nI wanted to let you know that the report is ready. I’ll send it to you tomorrow morning. Please let me know if there is any problem.\n\nThanks,\nAhmed",
+      "usage": {
+        "input_tokens": 9395,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 41,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3518.0076249999984,
+      "readyMs": 3518.6002500000177,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 2,
+      "caseName": "email",
+      "text": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "pass": true,
+      "name": "luna-full-2-email-reduced",
+      "input": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "output": "Hi John,\n\nI wanted to let you know that the report is ready. I’ll send it to you tomorrow morning. Please let me know if there is any problem.\n\nThanks,\nAhmed",
+      "usage": {
+        "input_tokens": 816,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 41,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3825.1278750000056,
+      "readyMs": 3825.2711249999993,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 3,
+      "caseName": "past tense",
+      "text": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "pass": true,
+      "name": "luna-full-3-past-tense-baseline",
+      "input": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "output": "Yesterday, I went to the meeting, but nobody was there. Can you tell me why? Also, the report doesn’t have the numbers we discussed.",
+      "usage": {
+        "input_tokens": 9384,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 35,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3277.6723749999946,
+      "readyMs": 3281.7531660000095,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 3,
+      "caseName": "past tense",
+      "text": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "pass": true,
+      "name": "luna-full-3-past-tense-reduced",
+      "input": "yesterday i has went to the meeting but nobody were there, can you tell me why? also the report dont have the numbers we discussed",
+      "output": "Yesterday I went to the meeting, but nobody was there. Can you tell me why? Also, the report doesn't have the numbers we discussed.",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 33,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3087.2910830000183,
+      "readyMs": 3087.6750000000175,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 3,
+      "caseName": "question",
+      "text": "can you explain me what is the different between let and const in javascript?",
+      "pass": true,
+      "name": "luna-full-3-question-baseline",
+      "input": "can you explain me what is the different between let and const in javascript?",
+      "output": "Can you explain to me the difference between `let` and `const` in JavaScript?",
+      "usage": {
+        "input_tokens": 9372,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 28786.081542,
+      "readyMs": 28827.471457999985,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 3,
+      "caseName": "question",
+      "text": "can you explain me what is the different between let and const in javascript?",
+      "pass": true,
+      "name": "luna-full-3-question-reduced",
+      "input": "can you explain me what is the different between let and const in javascript?",
+      "output": "Can you explain to me what the difference is between let and const in JavaScript?",
+      "usage": {
+        "input_tokens": 791,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 21,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3439.0994169999904,
+      "readyMs": 3439.5424589999893,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 3,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "luna-full-3-tokens-baseline",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this: https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 9396,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 46,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3621.7180420000223,
+      "readyMs": 3626.3213749999995,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 3,
+      "caseName": "tokens",
+      "text": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "pass": true,
+      "name": "luna-full-3-tokens-reduced",
+      "input": "hey @sara_k check this https://github.com/ashahinL/localpolish/pull/3. i think the `parseLine` function have a bug 🐛 #bugfix",
+      "output": "Hey @sara_k, check this: https://github.com/ashahinL/localpolish/pull/3. I think the `parseLine` function has a bug 🐛 #bugfix",
+      "usage": {
+        "input_tokens": 817,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 46,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 2796.6940000000177,
+      "readyMs": 2797.137041000009,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 3,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": false,
+      "name": "luna-full-3-mixed-arabic-baseline",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس ana هكون free بكرة after 3pm if that works for you",
+      "usage": {
+        "input_tokens": 9384,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 4027.709999999992,
+      "readyMs": 4031.5660419999913,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 3,
+      "caseName": "mixed arabic",
+      "text": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "pass": true,
+      "name": "luna-full-3-mixed-arabic-reduced",
+      "input": "ana mesh fahem leh el meeting et2agel, بس انا هكون free بكرة after 3pm if that work for you",
+      "output": "ana mesh fahem leh el meeting et2agel, بس أنا هكون free بكرة after 3 pm if that works for you\n",
+      "usage": {
+        "input_tokens": 805,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 33,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3085.3764160000137,
+      "readyMs": 3085.811249999999,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 3,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "luna-full-3-subject-line-baseline",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 9364,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3016.4578339999716,
+      "readyMs": 3017.7536669999827,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 3,
+      "caseName": "subject line",
+      "text": "quick question about teh budget for q3",
+      "pass": true,
+      "name": "luna-full-3-subject-line-reduced",
+      "input": "quick question about teh budget for q3",
+      "output": "Quick question about the budget for Q3",
+      "usage": {
+        "input_tokens": 785,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3189.3997499999823,
+      "readyMs": 3192.6147089999868,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 3,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": false,
+      "name": "luna-full-3-fragment-baseline",
+      "input": "i has an apple",
+      "output": "I have an apple.",
+      "usage": {
+        "input_tokens": 9360,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3269.8538750000007,
+      "readyMs": 3271.1359590000066,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 3,
+      "caseName": "fragment",
+      "text": "i has an apple",
+      "pass": true,
+      "name": "luna-full-3-fragment-reduced",
+      "input": "i has an apple",
+      "output": "I have an apple",
+      "usage": {
+        "input_tokens": 781,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 35222.044417,
+      "readyMs": 35223.31908399999,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": false,
+      "round": 3,
+      "caseName": "email",
+      "text": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "pass": true,
+      "name": "luna-full-3-email-baseline",
+      "input": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "output": "Hi John,\n\nI wanted to let you know that the report is ready. I’ll send it to you tomorrow morning. Please let me know if there is any problem.\n\nThanks,\nAhmed",
+      "usage": {
+        "input_tokens": 9395,
+        "cached_input_tokens": 8448,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 41,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3828.167625000002,
+      "readyMs": 3834.2453749999986,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "effort": "none",
+      "reduced": true,
+      "round": 3,
+      "caseName": "email",
+      "text": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "pass": true,
+      "name": "luna-full-3-email-reduced",
+      "input": "hi john,\n\ni wanted to let you know that the report are ready. i send it to you tomorow morning. please let me know if their is any problem.\n\nthanks,\nahmed",
+      "output": "Hi John,\n\nI wanted to let you know that the report is ready. I’ll send it to you tomorrow morning. Please let me know if there is any problem.\n\nThanks,\nAhmed",
+      "usage": {
+        "input_tokens": 816,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 41,
+        "reasoning_output_tokens": 0
+      },
+      "firstMs": 3790.1733329999843,
+      "readyMs": 3790.6789160000044,
+      "timeout": false,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    }
+  ],
+  "extendedLunaSummary": [
+    {
+      "reduced": false,
+      "passed": 16,
+      "total": 21,
+      "inputRange": [9360, 9398],
+      "medianReadyMs": 3502,
+      "maxReadyMs": 31386,
+      "misses": [
+        {
+          "round": 1,
+          "caseName": "mixed arabic",
+          "output": "ana mesh fahem leh el meeting et2agel, بس ana hakoon free بكرة after 3 pm if that works for you"
+        },
+        {
+          "round": 2,
+          "caseName": "mixed arabic",
+          "output": "ana mesh fahem leh el meeting et2agel, بس ana hakoon free بكرة after 3 pm if that works for you"
+        },
+        {
+          "round": 2,
+          "caseName": "fragment",
+          "output": "I have an apple."
+        },
+        {
+          "round": 3,
+          "caseName": "mixed arabic",
+          "output": "ana mesh fahem leh el meeting et2agel, بس ana هكون free بكرة after 3pm if that works for you"
+        },
+        {
+          "round": 3,
+          "caseName": "fragment",
+          "output": "I have an apple."
+        }
+      ]
+    },
+    {
+      "reduced": true,
+      "passed": 18,
+      "total": 21,
+      "inputRange": [781, 817],
+      "medianReadyMs": 3353,
+      "maxReadyMs": 35223,
+      "misses": [
+        {
+          "round": 1,
+          "caseName": "mixed arabic",
+          "output": "ana mesh fahem leh el meeting et2agel, بس ana هكون free بكرة after 3pm if that works for you"
+        },
+        {
+          "round": 1,
+          "caseName": "subject line",
+          "output": "Quick question about the budget for Q3."
+        },
+        {
+          "round": 2,
+          "caseName": "mixed arabic",
+          "output": "ana mesh fahem leh el meeting et2agel, بس ana هكون free بكرة after 3 pm if that works for you"
+        }
+      ]
+    }
+  ]
+}

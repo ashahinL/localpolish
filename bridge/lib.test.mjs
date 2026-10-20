@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCommand,
   CODEX_DISABLED_FEATURES,
+  codexRewriteCatalog,
   createDecoder,
   encodeMessage,
   GROK_DENY_RULES,
@@ -89,6 +90,16 @@ describe('buildCommand', () => {
     '-s',
     'read-only',
     ...CODEX_DISABLED_FEATURES.flatMap((feature) => ['-c', `features.${feature}=false`]),
+    ...[
+      'skills.include_instructions=false',
+      'agents.enabled=false',
+      'include_permissions_instructions=false',
+      'include_apps_instructions=false',
+      'include_collaboration_mode_instructions=false',
+      'include_environment_context=false',
+      'tools.update_plan.enabled=false',
+      'tools.experimental_request_user_input.enabled=false',
+    ].flatMap((setting) => ['-c', setting]),
     '-c',
     'web_search=disabled',
   ];
@@ -162,6 +173,26 @@ describe('buildCommand', () => {
 
   it('rejects an unknown cli', () => {
     expect(() => buildCommand('llama', { model: 'm1', effort: '', system: 'S' })).toThrow(/llama/);
+  });
+});
+
+describe('codexRewriteCatalog', () => {
+  it.each([
+    undefined,
+    '{bad',
+    'null',
+    '{"models":{}}',
+    '{"models":[{"slug":"m1"}]}',
+    '{"fetched_at":"2020-01-01","models":[{"slug":"m1"}]}',
+    JSON.stringify({ fetched_at: new Date().toISOString(), models: [{ slug: 'other' }] }),
+  ])('allows a rewrite without the optional catalog when the cache is %s', (contents) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'lp-catalog-'));
+    try {
+      if (contents !== undefined) fs.writeFileSync(path.join(home, 'models_cache.json'), contents);
+      expect(codexRewriteCatalog(home, 'm1')).toBeNull();
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   });
 });
 

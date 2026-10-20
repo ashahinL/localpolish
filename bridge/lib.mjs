@@ -96,7 +96,52 @@ export const CODEX_DISABLED_FEATURES = [
   'browser_use',
   'computer_use',
   'in_app_browser',
+  'goals',
+  'view_image',
 ];
+
+const CODEX_REWRITE_CONFIG = [
+  'skills.include_instructions=false',
+  'agents.enabled=false',
+  'include_permissions_instructions=false',
+  'include_apps_instructions=false',
+  'include_collaboration_mode_instructions=false',
+  'include_environment_context=false',
+  'tools.update_plan.enabled=false',
+  'tools.experimental_request_user_input.enabled=false',
+];
+const CODEX_CATALOG_MAX_AGE_MS = 5 * 60 * 1000;
+
+/**
+ * Returns null for an unreadable, invalid, stale, or missing model cache so Codex can refresh it.
+ * @param {string} codexHome
+ * @param {string} model
+ * @returns {{ models: Record<string, unknown>[] } | null}
+ */
+export function codexRewriteCatalog(codexHome, model) {
+  let cache;
+  try {
+    cache = JSON.parse(fs.readFileSync(path.join(codexHome, 'models_cache.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+  const fetchedAt = Date.parse(cache?.fetched_at);
+  if (!Number.isFinite(fetchedAt) || Date.now() - fetchedAt > CODEX_CATALOG_MAX_AGE_MS) return null;
+  const selected = Array.isArray(cache?.models)
+    ? cache.models.find((entry) => entry?.slug === model)
+    : null;
+  if (!selected) return null;
+  return {
+    models: [
+      {
+        ...selected,
+        tool_mode: null,
+        apply_patch_tool_type: null,
+        experimental_supported_tools: [],
+      },
+    ],
+  };
+}
 
 // Grok loads Claude, Codex and Cursor rules (such as ~/.claude/CLAUDE.md) into its prompt by default.
 /** @type {Record<string, string>} */
@@ -110,10 +155,10 @@ for (const source of ['CLAUDE', 'CODEX', 'CURSOR']) {
 /**
  * `instructionsFile` replaces Codex's built-in prompt, which is about 3,500 tokens.
  * @param {string} cli
- * @param {{ model: string, effort: string, system: string, instructionsFile?: string }} opts
+ * @param {{ model: string, effort: string, system: string, instructionsFile?: string, modelCatalogFile?: string }} opts
  * @returns {{ cmd: string, args: string[] }}
  */
-export function buildCommand(cli, { model, effort, system, instructionsFile }) {
+export function buildCommand(cli, { model, effort, system, instructionsFile, modelCatalogFile }) {
   if (cli === 'claude') {
     const args = ['-p'];
     if (model) args.push('--model', model);
@@ -157,7 +202,9 @@ export function buildCommand(cli, { model, effort, system, instructionsFile }) {
   if (cli === 'codex') {
     const args = ['exec', '-', '--skip-git-repo-check', '--ephemeral', '-s', 'read-only'];
     for (const feature of CODEX_DISABLED_FEATURES) args.push('-c', `features.${feature}=false`);
+    for (const setting of CODEX_REWRITE_CONFIG) args.push('-c', setting);
     args.push('-c', 'web_search=disabled');
+    if (modelCatalogFile) args.push('-c', `model_catalog_json=${JSON.stringify(modelCatalogFile)}`);
     if (model) args.push('-m', model);
     if (effort) args.push('-c', `model_reasoning_effort=${effort}`);
     if (instructionsFile) {

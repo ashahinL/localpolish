@@ -2,7 +2,7 @@
 
 Date: 20 October 2026, Cairo time.
 Baseline: LocalPolish 1.1.0, source commit `3638cb03036bb675a8923a99dd715146a66b9dc1`. The product code at this commit is the code tagged `v1.1.0`; the later commit records publication checks.
-Status: review complete. These are proposals, not implemented fixes. No release number has been chosen.
+Status: review complete. P11 is implemented and verified locally in the [Codex context plan](../plans/codex-context.md). The other tasks are proposals. No release number has been chosen.
 
 The owner asked for a deep Grok 4.7 review at **xhigh for this run only**, followed by a check of every proposal and an independent sweep. That sequence is complete. Fleet defaults are unchanged.
 
@@ -212,6 +212,8 @@ Done means before/after reports measure the actual ready event, can run without 
 
 ### S06. Follow-up: inspect and reduce Codex's inherited context
 
+Update on 20 October 2026: P11 now removes the inherited context and unused tools when fresh model metadata is available. Live Luna and Sol fragment requests fell to 781 input tokens. See the [implementation, fallback behavior and quality results](../plans/codex-context.md). The investigation below records the earlier findings.
+
 **Include as a request-speed investigation. Priority: high. Effort: medium.**
 
 The owner's follow-up asked whether Luna and Sol use zero reasoning tokens but start with about 13,000 input tokens. Recounting the October 17 raw logs confirms the large historical input, but not the whole reasoning claim:
@@ -238,7 +240,7 @@ Done means a captured request contains only the context required for rewriting, 
 
 ## Proposed next-release order
 
-Each row is a separate implementation task and commit. None is started. Small follow-ups stay within their owning task.
+Each row is a separate implementation task and commit. P11 is implemented and verified locally at the owner's request. The other tasks are not started. Small follow-ups stay within their owning task.
 
 | Order | Work | Required proof |
 | --- | --- | --- |

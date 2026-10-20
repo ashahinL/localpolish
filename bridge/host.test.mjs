@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createDecoder, encodeMessage } from './lib.mjs';
+import { codexHomeFor, createDecoder, encodeMessage } from './lib.mjs';
 
 const windows = process.platform === 'win32';
 const hostPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'host.mjs');
@@ -360,6 +360,66 @@ process.stdin.on('end', () => {
     host.child.stdin.write(rewrite('codex', 'hello'));
     await host.closed;
     expect(host.messages).toEqual([{ type: 'chunk', text: codexHome }, { type: 'done' }]);
+  });
+
+  it('uses a temporary tool-free catalog and preserves the selected model and original cache', async () => {
+    const bin = tempDir('lp-bin-');
+    const home = tempDir('lp-home-');
+    const codexHome = codexHomeFor(home);
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(path.join(codexHome, 'auth.json'), '{}');
+    const cache = {
+      fetched_at: new Date().toISOString(),
+      models: [
+        { slug: 'other' },
+        {
+          slug: 'm1',
+          context_window: 1000000,
+          supported_reasoning_levels: [{ effort: 'medium' }],
+          tool_mode: 'code_mode_only',
+          apply_patch_tool_type: 'freeform',
+          experimental_supported_tools: ['clock'],
+        },
+      ],
+    };
+    const cachePath = path.join(codexHome, 'models_cache.json');
+    fs.writeFileSync(cachePath, JSON.stringify(cache));
+    writeCli(
+      bin,
+      'codex',
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+process.stdin.resume();
+process.stdin.on('end', () => {
+  const option = process.argv.find((arg) => arg.startsWith('model_catalog_json='));
+  const file = JSON.parse(option.slice('model_catalog_json='.length));
+  const text = JSON.stringify({ file, catalog: JSON.parse(fs.readFileSync(file, 'utf8')) });
+  process.stdout.write(JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', text } }) + '\\n');
+  process.stdout.write(JSON.stringify({ type: 'turn.completed', usage: {} }) + '\\n');
+});
+`,
+    );
+    const host = startHost(bin, 5000, home);
+    host.child.stdin.write(rewrite('codex', 'hello'));
+    await host.closed;
+    expect(host.messages).toHaveLength(2);
+    expect(host.messages[0]).toMatchObject({ type: 'chunk' });
+    const { file, catalog } = JSON.parse(host.messages[0].text);
+    expect(catalog).toEqual({
+      models: [
+        {
+          slug: 'm1',
+          context_window: 1000000,
+          supported_reasoning_levels: [{ effort: 'medium' }],
+          tool_mode: null,
+          apply_patch_tool_type: null,
+          experimental_supported_tools: [],
+        },
+      ],
+    });
+    expect(fs.readFileSync(cachePath, 'utf8')).toBe(JSON.stringify(cache));
+    expect(fs.existsSync(file)).toBe(false);
+    expect(host.messages[1]).toEqual({ type: 'done' });
   });
 
   it('reports a missing codex cli', async () => {

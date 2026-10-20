@@ -247,7 +247,7 @@ The bridge is a small Node script. Chrome starts it through native messaging, un
 Each CLI turns tools off in its own way. Grok can still search X and keeps its session history in `~/.grok`:
 
 - Claude Code gets `--tools ""`, which leaves it with no tools.
-- Codex runs in a read-only sandbox, in its own home, with the shell, apps, plugins, browser and web search turned off.
+- Codex runs in a read-only sandbox, in its own home, with the shell, apps, plugins, browser and web search turned off. Rewrite requests omit coding skills, agent instructions and environment descriptions. With fresh cached model metadata, a temporary catalog also removes unused tools. Missing or stale metadata uses Codex's normal model discovery. See the [context reduction checks](docs/plans/codex-context.md) for measured token counts and quality limits.
 - Grok gets every local tool removed by name, plus deny rules for shell, file, web and MCP tools. `grok --tools ""` alone keeps every tool. Grok can still search X. Grok keeps its session history in `~/.grok`. The installer supports macOS and Windows. [ADR 0001, CLI bridge over native messaging](docs/adr/0001-cli-bridge-over-native-messaging.md) explains why.
 
 On macOS, `npm run bridge:install` writes two files.
