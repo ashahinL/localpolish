@@ -1,4 +1,5 @@
 import { readSSE } from '../sse';
+import { readErrorDetail } from './httpError';
 import { type StreamFn } from './types';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -34,7 +35,7 @@ export const anthropicProvider: StreamFn = async (prompt, settings, onText, sign
   });
 
   if (!res.ok) {
-    const detail = (await res.text()).slice(0, 300);
+    const detail = await readErrorDetail(res);
     throw new Error(`HTTP ${res.status}: ${detail}`);
   }
 

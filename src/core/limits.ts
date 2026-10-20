@@ -11,6 +11,13 @@ export const MAX_SSE_LINE_BYTES = 1024 * 1024;
 // These limits do not bound network transfer or exact JavaScript heap usage.
 export const MAX_SSE_EVENT_BYTES = 1024 * 1024;
 
+// UTF-8 bytes retained and decoded from a non-OK HTTP response body.
+// A chunk the transport has already delivered may be larger. This does not cap
+// bytes on the wire or the JavaScript heap.
+export const MAX_HTTP_ERROR_BODY_BYTES = 8 * 1024;
+// Unicode code points shown from that decoded prefix.
+export const MAX_HTTP_ERROR_CODE_POINTS = 300;
+
 export const INPUT_LIMIT_MESSAGE =
   'This text is over the 256 KiB limit, so it was not sent. Shorten it and try again.';
 

@@ -252,6 +252,8 @@ API streams accept up to 1 MiB of decoded UTF-8 per SSE line and per retained ev
 
 Total generated text is capped at 1 MiB of UTF-8 before output cleanup, including text split across many events. The browser pipeline and direct native host both enforce this cap. Overflow returns one error and stops the upstream stream or CLI process group. It never returns a shortened success, and Accept stays disabled. The started attempt is counted once.
 
+HTTP error responses from both API providers keep at most 8 KiB of the response body and decode that prefix. The error text includes the status code and at most 300 Unicode code points from the prefix. A chunk that has already arrived can be larger than 8 KiB. The reader keeps the start of that chunk, cancels the rest, and releases its lock. The 8 KiB figure is the retained prefix. It is not a count of bytes transferred, and it is not a heap cap.
+
 Incoming native JSON payloads are capped at 8 MiB, excluding the four-byte header. Each CLI stdout event line is capped at 8 MiB, excluding CR and LF delimiters. The host rejects an oversized header before allocating its payload. Malformed native JSON and either overflow return a framed error. If a rewrite is running, the host stops its process group and removes its temporary folder before exiting.
 
 Each CLI turns tools off in its own way. Grok can still search X and keeps its session history in `~/.grok`:

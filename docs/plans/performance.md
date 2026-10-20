@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, and P01d are complete. P01e is next. The release version is not chosen.
+Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, P01d, and P01e are complete. P02 is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -11,7 +11,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 - Use one task and one commit at a time. Update its status and verification notes in the same commit. Continue to the next ready task automatically when implementation is requested. This planning change does not start implementation.
 - Use the index order unless a dependency or documented blocker prevents it. A blocker on P08a does not block unrelated tasks. Never edit the same files concurrently in two fleet lanes.
 - Each task section is its dispatch brief. Read its listed functions and tests before writing. Resolve exact line ranges at dispatch, since earlier tasks move them. Do not send a delegate the whole review or a whole large source file.
-- Delegates follow `implement-plan` in its light form: build, test, keep this plan current, report. They skip clean-code-guard, test-guard, docs-guard and final review. The orchestrator reviews every diff and owns integration. Send substantial findings back to the author; fix only very small findings inline.
+- Delegates follow `implement-plan` in its light form: build, test, keep this plan current, report. They skip clean-code-guard, test-guard, docs-guard and final review. Delegates run targeted checks; the orchestrator runs the full integration gates once during review, instead of both running the full suite. Small changes stay inline. The orchestrator reviews every diff and owns integration. Send substantial findings back to the author; fix only very small findings inline.
 - Lanes come from `~/.config/delegate-skills/config.json`. `feature` is Grok 4.7 high; `complex` is Sol high; `art` is Claude Opus high. Dispatch Grok with `--lane feature` and the relay's 500,000-token context setting. Use `second` Sol medium when the feature lane is unavailable, then the configured fallback. Sol effort stays medium or high. The one-time Grok xhigh review is finished.
 - Every delegate report ends with: "Did any of the work you did deserve to become a reusable skill (for this project or any project)? Name it, say what it would cover and why it would recur, or say none." Relay its answer with the reviewer's own view.
 - Use synthetic drafts, local HTTP mocks and fake CLIs. Automated checks must not call real providers or rewrite CLIs. Optional live measurements are described separately below.
@@ -31,7 +31,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P01b](#p01b-bound-native-frames-and-cli-event-lines)         | Bound native frames and CLI event lines; remove repeated frame copying | complex      | P01a                    |
 | [x]    | [P01c](#p01c-bound-sse-events-and-avoid-repeated-line-scans)  | Bound SSE buffering and avoid prefix rescanning                        | complex      | P01a                    |
 | [x]    | [P01d](#p01d-bound-total-rewrite-output)                      | Bound total output and abort oversized answers                         | complex      | P01b, P01c              |
-| [ ]    | [P01e](#p01e-bound-http-error-body-reads)                     | Bound error downloads for both API providers                           | feature      | P01c                    |
+| [x]    | [P01e](#p01e-bound-http-error-body-reads)                     | Bound error downloads for both API providers                           | feature      | P01c                    |
 | [ ]    | [P02](#p02-skip-idle-scheduling-when-disabled)                | Avoid field discovery and timers when idle Fix is off                  | feature      | P00a                    |
 | [ ]    | [P03a](#p03a-run-native-version-probes-together)              | Parallelize independent version commands                               | feature      | P00a                    |
 | [ ]    | [P03b](#p03b-gate-automatic-bridge-checks-by-provider)        | Stop automatic native checks for API providers                         | art          | P00a                    |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: seven completed and 15 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: eight completed and 14 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -108,7 +108,7 @@ Use these release limits, measured in UTF-8 bytes. They are product resource lim
 | Incoming native JSON frame payload              | 8 MiB, excluding its four-byte header | P01b        |
 | One CLI stdout JSON event line                  | 8 MiB                                 | P01b        |
 | An incomplete SSE line or accumulated SSE event | 1 MiB each                            | P01c        |
-| Retained HTTP error response detail             | 8 KiB; display at most 300 characters | P01e        |
+| Retained HTTP error response detail             | 8 KiB prefix, 300 Unicode code points | P01e        |
 
 1. Reject input above 256 KiB before `recordUsage`, provider startup or native spawning. Send a clear error with the input limit. Do not silently ignore an invalid request or shorten the text.
 2. Apply the input check to the background path and the native host boundary. Document the limit in README. Leave model, effort and prompt defaults unchanged.
@@ -165,9 +165,15 @@ Done: many small chunks cannot bypass the total limit; split Unicode remains val
 
 ## P01e. Bound HTTP error-body reads
 
-Source: S01. Files: `src/background/providers/openai.ts`, `src/background/providers/anthropic.ts`, their tests; add one shared bounded-reader helper if both need it.
+Status: complete in this task commit. Grok 4.7 high implemented it; the reviewer checked the source, tests and docs and reran the integration gates.
 
-Replace unbounded `res.text()` on non-success responses with a reader that retains and decodes at most 8 KiB. Stop reading and cancel the remaining body at the limit. A chunk already delivered by the transport can be larger, so do not claim an exact cap on network bytes transferred. Keep the displayed detail at 300 characters and retain status codes, the Ollama hint and current network-error messages. Release readers after errors and cancellation.
+Non-OK responses from the OpenAI-compatible and Anthropic providers share `readErrorDetail`. A missing body yields an empty detail. Otherwise the helper reads with a streaming decoder and retains at most 8 KiB. It stops at that budget without another read. A chunk the transport has already delivered may be larger than 8 KiB. The helper decodes only the prefix of that chunk, then cancels the rest of the body. End of body and a UTF-8 sequence cut by the budget both flush the decoder. The shown detail is at most 300 Unicode code points and does not split a surrogate pair. Read failures and `AbortError` propagate. A failed cancel does not replace the HTTP error or a read failure, and the reader lock is released. HTTP status text, the Ollama 403 hint, OpenAI network `TypeError` wrapping, empty success bodies, provider validation, and success streaming are unchanged. The 8 KiB value is the retained prefix, not an exact count of bytes transferred and not a heap cap.
+
+Allowed checks completed on 2026-10-20 at 12:29 Africa/Cairo. Targeted OpenAI and Anthropic provider tests passed 51. The full unit suite passed 436 with 2 skipped across 25 files. Lint, typecheck, the production build, and formatting passed. Prettier first reported one OpenAI test signature. That wrap was applied before the final formatting check. No browser, Playwright, `bench:runtime`, listening server, real provider, or rewrite CLI check was run. Those stay with the reviewer.
+
+Source: S01. Files: `src/background/providers/openai.ts`, `src/background/providers/anthropic.ts`, `src/background/providers/httpError.ts`, `src/core/limits.ts`, and both API-provider test files.
+
+Replace unbounded `res.text()` on non-success responses with a reader that retains and decodes at most 8 KiB. Stop reading and cancel the remaining body at the limit. A chunk already delivered by the transport can be larger, so do not claim an exact cap on network bytes transferred. Keep the displayed detail at 300 Unicode code points and retain status codes, the Ollama hint and current network-error messages. Release readers after errors and cancellation.
 
 Done: a mock endless error body is cancelled after bounded consumption; both providers show useful bounded diagnostics; multibyte text and an empty body work. Run both provider test files. The limit applies to downloads, not just the final string shown to the user.
 
@@ -328,3 +334,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P01d initial handoff: implemented, pending reviewer browser/runtime and cleanup verification, review, and commit. Changed the browser and host limits, rewrite pipeline, CLI callback error handling, their unit tests, the built-extension held-stream regression, README, and this plan. Targeted tests passed 100 with 1 skipped; all 25 unit files passed, 413 tests with 2 skipped. Lint, typecheck, formatting and build passed. Incremental UTF-8 accounting preserves split surrogate pairs across empty chunks without encoding the growing output. Overflow aborts upstream and reports one error with no done or offending chunk. Fake HTTP cancellation/reader release, synchronous native disconnect, CLI/group termination and empty host-temp assertions passed. The sandbox denied a final process-list check with `operation not permitted`; it was not retried, so independent process cleanup verification remains with the reviewer. No Chrome, Playwright, runtime benchmark, listening server or real provider/CLI was started. Guard skills, final review and git add/commit/push were skipped as dispatched. P01c parent bookkeeping is preserved. No version, model, default, prompt, fleet or other task status changed. Runtime fixtures and results remain unchanged. Reusable skill suggestion: none; existing implementation and bounded-stream test workflows cover this work.
 
 - P01d reviewer verification: lint, typecheck, 413 unit tests with 2 skipped, formatting, build, four benchmark-fixture checks, all 27 built-extension tests, and 30 runtime smoke samples passed. The initial new browser case used an empty field; adding its missing synthetic draft made it exercise the request. No production change was needed after review. HTTP cancellation and reader release, one accepted attempt, split Unicode, fake CLI process-group termination and temp cleanup passed. No task-owned browser or server remains. clean-code-guard: clean. Test/docs guards and manual comment review passed; Comment Sicko is unavailable in this environment. Sol suggested no reusable skill; the reviewer agrees. P01c passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39397647004).
+
+- P01e reviewer verification: lint, typecheck, 436 unit tests with 2 skipped, formatting, build, and the built-extension HTTP error/retry regression passed. Both providers retain an 8 KiB response prefix, display at most 300 Unicode code points, preserve status and existing hints, and release the reader. The endless source stops at 8 KiB; an already delivered 20 KiB chunk does not cause another read. No real provider calls were used. clean-code-guard: clean; test/docs guards and manual comment review passed. Grok proposed a reusable `bound-http-error-body` skill. The reviewer would keep this as a tested code pattern until it recurs across projects, rather than create another skill now. P01d passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39399038001). Following the user’s cost feedback, future delegates run targeted checks and the reviewer owns one full integration pass; small tasks stay inline.
