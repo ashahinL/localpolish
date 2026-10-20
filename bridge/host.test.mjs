@@ -770,6 +770,73 @@ process.stdin.on('end', () => {
     expect(host.messages).toEqual([{ type: 'error', message: 'Unknown request.' }]);
   });
 
+  it.each(['all finish', 'codex hangs'])(
+    'starts all version probes together when %s',
+    async (mode) => {
+      const bin = tempDir('lp-bin-');
+      const log = path.join(bin, 'versions.jsonl');
+      const deadline = path.join(bin, 'version-deadline');
+      for (const name of ['claude', 'codex', 'grok']) {
+        writeCli(
+          bin,
+          name,
+          `#!/usr/bin/env node
+const fs = require('fs');
+const log = (phase) => fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ name: ${JSON.stringify(name)}, phase, at: Date.now(), pid: process.pid, args: process.argv.slice(2) }) + '\\n');
+log('start');
+${mode === 'codex hangs' && name === 'codex' ? 'setInterval(() => {}, 1000);' : `setTimeout(() => { log('finish'); process.stdout.write('${name} 1.2.3\\n'); }, Math.max(0, Number(fs.readFileSync(${JSON.stringify(deadline)}, 'utf8')) - Date.now()));`}
+`,
+        );
+      }
+      const host = startHost(bin, 9500);
+      const started = performance.now();
+      // Include interpreter startup in the fake command's four-second response delay.
+      fs.writeFileSync(deadline, String(Date.now() + 4000));
+      host.child.stdin.write(encodeMessage({ type: 'ping' }));
+      try {
+        expect(await host.closed).toBe(0);
+      } finally {
+        if (fs.existsSync(log)) {
+          for (const event of fs
+            .readFileSync(log, 'utf8')
+            .trim()
+            .split('\n')
+            .map((line) => JSON.parse(line))) {
+            if (event.phase === 'start') pids.push(event.pid);
+          }
+        }
+      }
+      expect(performance.now() - started).toBeLessThan(10_000);
+      const events = fs
+        .readFileSync(log, 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line));
+      expect(events.slice(0, 3).map((event) => event.phase)).toEqual(['start', 'start', 'start']);
+      expect(events.filter((event) => event.phase === 'start').map((event) => event.args)).toEqual([
+        ['--version'],
+        ['--version'],
+        ['--version'],
+      ]);
+      expect(host.messages, JSON.stringify(events)).toEqual([
+        {
+          type: 'pong',
+          clis: {
+            claude: { version: 'claude 1.2.3' },
+            codex: { version: mode === 'codex hangs' ? '' : 'codex 1.2.3' },
+            grok: { version: 'grok 1.2.3' },
+          },
+        },
+      ]);
+      for (const event of events.filter((event) => event.phase === 'start')) {
+        expect(() => process.kill(event.pid, 0)).toThrow();
+      }
+      expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+      expect(Buffer.concat(host.stderr).toString()).toBe('');
+    },
+    12_000,
+  );
+
   it('answers ping with the claude version', async () => {
     const bin = tempDir('lp-bin-');
     writeCli(

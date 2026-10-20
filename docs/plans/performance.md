@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, P01d, P01e, and P02 are complete. P03a is next. The release version is not chosen.
+Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, P01d, P01e, P02, and P03a are complete. P03b is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -33,7 +33,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P01d](#p01d-bound-total-rewrite-output)                      | Bound total output and abort oversized answers                         | complex      | P01b, P01c              |
 | [x]    | [P01e](#p01e-bound-http-error-body-reads)                     | Bound error downloads for both API providers                           | feature      | P01c                    |
 | [x]    | [P02](#p02-skip-idle-scheduling-when-disabled)                | Avoid field discovery and timers when idle Fix is off                  | feature      | P00a                    |
-| [ ]    | [P03a](#p03a-run-native-version-probes-together)              | Parallelize independent version commands                               | feature      | P00a                    |
+| [x]    | [P03a](#p03a-run-native-version-probes-together)              | Parallelize independent version commands                               | feature      | P00a                    |
 | [ ]    | [P03b](#p03b-gate-automatic-bridge-checks-by-provider)        | Stop automatic native checks for API providers                         | art          | P00a                    |
 | [ ]    | [P03c](#p03c-share-and-cache-bridge-health-results)           | Share in-flight health work and briefly cache success                  | complex      | P03a, P03b              |
 | [ ]    | [P04](#p04-debounce-selection-geometry)                       | Measure selection geometry after the debounce                          | art          | P00a                    |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: nine completed and 13 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: ten completed and 12 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -188,6 +188,8 @@ Check `deps.isEnabled()` before finding the editable field or creating/resetting
 Done: ten typed characters while idle Fix is off or the site is blocked create zero new idle timers and zero requests. Disabling during an existing pause prevents its request. Re-enabling fixes the next eligible edit. Run the existing idle-off, blocking, adopted-answer and Draft.js browser regressions, plus P00a's timer counter.
 
 ## P03a. Run native version probes together
+
+Status: complete in this task commit, implemented and reviewed inline. All three independent version probes start together. The five-second per-command timeout and ten-second outer bridge deadline are unchanged.
 
 Source: G01. Files: `bridge/host.mjs::handlePing` and `readVersion`, `bridge/host.test.mjs`.
 
@@ -340,3 +342,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P01e reviewer verification: lint, typecheck, 436 unit tests with 2 skipped, formatting, build, and the built-extension HTTP error/retry regression passed. Both providers retain an 8 KiB response prefix, display at most 300 Unicode code points, preserve status and existing hints, and release the reader. The endless source stops at 8 KiB; an already delivered 20 KiB chunk does not cause another read. No real provider calls were used. clean-code-guard: clean; test/docs guards and manual comment review passed. Grok proposed a reusable `bound-http-error-body` skill. The reviewer would keep this as a tested code pattern until it recurs across projects, rather than create another skill now. P01d passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39399038001). Following the user’s cost feedback, future delegates run targeted checks and the reviewer owns one full integration pass; small tasks stay inline.
 
 - P02 verification: lint, typecheck, 436 unit tests with 2 skipped, formatting, build, 43 idle/blocking/adoption/Draft.js browser regressions, and all 30 runtime smoke samples passed. Ten typed characters scheduled zero new idle timers with idle Fix off and with the site blocked, in both cold and warm samples. Each case observed zero requests for 3,300 ms. The new browser case disables during an existing pause, then verifies the next enabled edit works. [Timer measurements](../../bench/results/p02-idle-timers.json) retain the original baseline counts. No model-latency or battery claim is made. clean-code-guard: clean; test/docs guards and manual comment review passed. No delegate or new reusable skill was needed.
+
+- P03a verification: lint, typecheck, 438 unit tests with 2 skipped, formatting and build passed. Real native-host tests run three fake version executables, verify all starts precede any finish and each receives only `--version`, check exact diagnostic entries, and verify process/temp cleanup. [Offline ping measurements](../../bench/results/p03a-ping.json) record about 4.02 s for three replies and 5.08 s with one hanging command. Fake replies are scheduled four seconds after the request, including interpreter startup; the earlier fixture added four seconds after startup and could exceed the unchanged timeout on this machine. A timed-out installed executable still has an empty version, rather than appearing missing. These measurements cover bridge diagnostics, not rewrite latency. No real CLIs were used. clean-code-guard: clean; test/docs guards and manual comment review passed. No delegate or reusable skill was needed.

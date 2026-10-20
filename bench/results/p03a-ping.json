@@ -1,0 +1,25 @@
+{
+  "syntheticOnly": true,
+  "timezone": "Africa/Cairo",
+  "measurement": "Real native host with three fake CLI executables; version replies scheduled four seconds after the request, including interpreter startup. Test duration includes setup and cleanup.",
+  "checks": [
+    "All three starts precede any finish",
+    "All executables receive only --version",
+    "Installed but timed-out CLI remains present with an empty version",
+    "Native reply before the ten-second bridge deadline",
+    "Fake processes stop and temporary directories are empty"
+  ],
+  "perCommandTimeoutMs": 5000,
+  "scenarios": [
+    {
+      "scenario": "starts all version probes together when all finish",
+      "status": "passed",
+      "testDurationMs": 4021.8711250000006
+    },
+    {
+      "scenario": "starts all version probes together when codex hangs",
+      "status": "passed",
+      "testDurationMs": 5077.931875
+    }
+  ]
+}

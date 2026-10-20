@@ -77,13 +77,13 @@ function readVersion(bin) {
 }
 
 async function handlePing() {
-  /** @type {Record<string, { version: string } | null>} */
-  const clis = {};
-  for (const name of CLI_NAMES) {
-    const bin = findOnPath(name, process.env.PATH);
-    clis[name] = bin ? { version: await readVersion(bin) } : null;
-  }
-  sendAndExit({ type: 'pong', clis });
+  const entries = await Promise.all(
+    CLI_NAMES.map(async (name) => {
+      const bin = findOnPath(name, process.env.PATH);
+      return [name, bin ? { version: await readVersion(bin) } : null];
+    }),
+  );
+  sendAndExit({ type: 'pong', clis: Object.fromEntries(entries) });
 }
 
 /**
