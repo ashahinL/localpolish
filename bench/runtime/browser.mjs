@@ -317,7 +317,7 @@ chrome.runtime.onMessage.addListener((message) => {
           await ui.close();
         }
         const nativeChecks = await worker.evaluate(() => globalThis.__benchNative);
-        assert.ok(nativeChecks <= 12);
+        assert.equal(nativeChecks, 0);
         detail = { pages, nativeChecks };
       } else if (name === 'connection-owner-close') {
         mock.reply({ chunks: ['Still working'], hold: true });

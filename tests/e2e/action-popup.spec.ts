@@ -12,6 +12,7 @@ interface StubConfig {
   failUsageRead?: boolean;
   tabUrl: string | undefined;
   bridge: unknown;
+  holdBridge: boolean;
   test: unknown;
   shortcut: string;
 }
@@ -40,11 +41,16 @@ const test = base.extend<{ page: Page }, { sharedContext: BrowserContext }>({
   },
 });
 
-async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promise<void> {
+async function openPopup(
+  page: Page,
+  overrides: Partial<StubConfig> = {},
+  path: 'popup.html' | 'setup.html' = 'popup.html',
+): Promise<void> {
   const config: StubConfig = {
     failSets: 0,
     tabUrl: 'https://mail.google.com/mail/u/0/',
     bridge: BRIDGE_OK,
+    holdBridge: false,
     test: { ok: true, sample: 'Hello.', ms: 1234 },
     shortcut: '⇧⌘K',
     ...overrides,
@@ -61,11 +67,13 @@ async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promi
     const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
     const opened: string[] = [];
     const runtimeSent: Array<{ type: string }> = [];
+    const bridgeHeld: Array<(reply: unknown) => void> = [];
     Object.assign(window, {
       __runtimeSent: runtimeSent,
       __store: store,
       __opened: opened,
       __bridgeCalls: 0,
+      __bridgeHeld: bridgeHeld,
       chrome: {
         storage: {
           local: {
@@ -96,6 +104,7 @@ async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promi
             runtimeSent.push(copy(message));
             if (message.type === 'bridge-status') {
               (window as unknown as { __bridgeCalls: number }).__bridgeCalls += 1;
+              if (cfg.holdBridge) return new Promise((reply) => bridgeHeld.push(reply));
               return cfg.bridge;
             }
             if (message.type === 'test-connection') {
@@ -120,8 +129,9 @@ async function openPopup(page: Page, overrides: Partial<StubConfig> = {}): Promi
       },
     });
   }, config);
-  await page.goto(`${ORIGIN}/popup.html`);
-  await expect(page.getByRole('tab', { name: 'Home' })).toBeVisible();
+  await page.goto(`${ORIGIN}/${path}`);
+  if (path === 'popup.html') await expect(page.getByRole('tab', { name: 'Home' })).toBeVisible();
+  else await expect(page.getByRole('heading', { name: 'Set up LocalPolish' })).toBeVisible();
 }
 
 function stored(page: Page): Promise<Record<string, unknown> | undefined> {
@@ -137,6 +147,20 @@ function opened(page: Page): Promise<string[]> {
 
 function bridgeCalls(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __bridgeCalls: number }).__bridgeCalls);
+}
+
+async function releaseBridge(page: Page, index: number, reply: unknown): Promise<void> {
+  await page.evaluate(
+    async ([at, value]) => {
+      const held = (window as unknown as { __bridgeHeld: Array<(reply: unknown) => void> })
+        .__bridgeHeld[at as number];
+      if (!held) throw new Error(`No held bridge call ${String(at)}`);
+      held(value);
+      // Let pending state updates render before checking that a stale reply stayed hidden.
+      await new Promise<void>((done) => requestAnimationFrame(() => done()));
+    },
+    [index, reply],
+  );
 }
 
 // The radio itself is hidden. The visible control is its label, same as the options page.
@@ -260,6 +284,64 @@ test('bridge rows and Check again asks again', async ({ page }) => {
   await again.click();
   await expect.poll(() => bridgeCalls(page)).toBe(before + 1);
 });
+
+for (const { path, colorScheme, width } of [
+  { path: 'popup.html', colorScheme: 'light', width: 360 },
+  { path: 'popup.html', colorScheme: 'dark', width: 360 },
+  { path: 'setup.html', colorScheme: 'light', width: 720 },
+  { path: 'setup.html', colorScheme: 'dark', width: 720 },
+] as const) {
+  test(`${path} ${colorScheme}: API skips the bridge check and old replies cannot replace a new one`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: path === 'popup.html' ? 600 : 950 });
+    await page.emulateMedia({ colorScheme });
+    await openPopup(page, { settings: { provider: 'anthropic-api' }, holdBridge: true }, path);
+    if (path === 'popup.html') await page.getByRole('tab', { name: 'Provider' }).click();
+    await expect(page.getByLabel('Model', { exact: true })).toHaveValue('claude-haiku-5-5');
+    expect(await bridgeCalls(page)).toBe(0);
+    await expect(page.getByRole('heading', { name: 'Bridge' })).toHaveCount(0);
+
+    await radioLabel(page, 'Claude Code').click();
+    await expect.poll(() => bridgeCalls(page)).toBe(1);
+    await expect(page.getByText('Checking…')).toBeVisible();
+
+    await radioLabel(page, 'Anthropic API').click();
+    await expect(page.getByRole('heading', { name: 'Bridge' })).toHaveCount(0);
+    expect(await bridgeCalls(page)).toBe(1);
+
+    await radioLabel(page, 'Claude Code').click();
+    await expect.poll(() => bridgeCalls(page)).toBe(2);
+    const again = page.getByRole('button', { name: 'Check again' });
+    await expect(page.getByText('Checking…')).toBeVisible();
+    await expect(again).toBeDisabled();
+
+    await releaseBridge(page, 0, { ok: false, message: BRIDGE_MISSING });
+    await expect(page.getByText(BRIDGE_MISSING)).toHaveCount(0);
+    await expect(page.getByText('Checking…')).toBeVisible();
+    await expect(again).toBeDisabled();
+
+    await releaseBridge(page, 1, BRIDGE_OK);
+    await expect(page.locator('.clis li', { hasText: 'Claude Code' })).toContainText(
+      '2.4.1 (Claude Code)',
+    );
+    await expect(again).toBeEnabled();
+    await expect(page.getByText(BRIDGE_MISSING)).toHaveCount(0);
+
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
+    await page.locator('.clis li').last().scrollIntoViewIfNeeded();
+    await page.screenshot({ path: test.info().outputPath('bridge.png'), fullPage: true });
+
+    await radioLabel(page, 'Anthropic API').click();
+    await page.getByRole('button', { name: 'Open the full options page' }).click();
+    await expect.poll(() => opened(page)).toContain('options');
+    expect(await bridgeCalls(page)).toBe(2);
+  });
+}
 
 test('Sites tab adds a site, rejects a duplicate and removes it', async ({ page }) => {
   await openPopup(page);

@@ -46,7 +46,7 @@ function SetupApp() {
 }
 
 function Steps({ settings }: { settings: Settings }) {
-  const bridge = useBridge();
+  const bridge = useBridge(settings.provider);
   const test = useTest();
   const { title } = providerSummary(settings);
 

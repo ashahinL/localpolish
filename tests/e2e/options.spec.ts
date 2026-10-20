@@ -11,6 +11,7 @@ interface StubConfig {
   usage?: unknown;
   failUsageRead?: boolean;
   bridge: unknown;
+  holdBridge: boolean;
   test: unknown;
   shortcut: string;
 }
@@ -40,6 +41,7 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
   const config: StubConfig = {
     failSets: 0,
     bridge: BRIDGE_OK,
+    holdBridge: false,
     test: { ok: true, sample: 'Hello.', ms: 1234 },
     shortcut: '⇧⌘K',
     ...overrides,
@@ -55,8 +57,10 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
     const listeners: Array<(changes: unknown, area: string) => void> = [];
     const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
     const runtimeSent: Array<{ type: string }> = [];
+    const bridgeHeld: Array<(reply: unknown) => void> = [];
     Object.assign(window, {
       __runtimeSent: runtimeSent,
+      __bridgeHeld: bridgeHeld,
       __store: store,
       chrome: {
         storage: {
@@ -86,7 +90,10 @@ async function openOptions(page: Page, overrides: Partial<StubConfig> = {}): Pro
         runtime: {
           sendMessage: async (message: { type: string }) => {
             runtimeSent.push(copy(message));
-            if (message.type === 'bridge-status') return cfg.bridge;
+            if (message.type === 'bridge-status') {
+              if (cfg.holdBridge) return new Promise((reply) => bridgeHeld.push(reply));
+              return cfg.bridge;
+            }
             if (message.type === 'test-connection') {
               await new Promise((done) => setTimeout(done, 300));
               return cfg.test;
@@ -107,6 +114,29 @@ function stored(page: Page): Promise<Record<string, unknown> | undefined> {
   return page.evaluate(
     () =>
       (window as unknown as { __store: Record<string, Record<string, unknown>> }).__store.settings,
+  );
+}
+
+function bridgeCalls(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      (window as unknown as { __runtimeSent: Array<{ type: string }> }).__runtimeSent.filter(
+        (message) => message.type === 'bridge-status',
+      ).length,
+  );
+}
+
+async function releaseBridge(page: Page, index: number, reply: unknown): Promise<void> {
+  await page.evaluate(
+    async ([at, value]) => {
+      const held = (window as unknown as { __bridgeHeld: Array<(reply: unknown) => void> })
+        .__bridgeHeld[at as number];
+      if (!held) throw new Error(`No held bridge call ${String(at)}`);
+      held(value);
+      // Let pending state updates render before checking that a stale reply stayed hidden.
+      await new Promise<void>((done) => requestAnimationFrame(() => done()));
+    },
+    [index, reply],
   );
 }
 
@@ -181,6 +211,59 @@ test('bridge rows and the install hint when the bridge is missing', async ({ pag
   await expect(missing.getByText('Specified native messaging host not found.')).toBeVisible();
   await expect(missing.getByText('npm run bridge:install')).toBeVisible();
   await missing.close();
+});
+
+test('an API provider skips the bridge check until Check again', async ({ page }) => {
+  await openOptions(page, { settings: { provider: 'anthropic-api' }, holdBridge: true });
+  await expect(page.locator('kbd')).toHaveText(['⇧', '⌘', 'K']);
+  expect(await bridgeCalls(page)).toBe(0);
+  const idle = page.getByText('API providers do not need the bridge.');
+  await expect(idle).toBeVisible();
+  await expect(page.getByText('Checking…')).toHaveCount(0);
+
+  const again = page.getByRole('button', { name: 'Check again' });
+  await again.click();
+  await expect.poll(() => bridgeCalls(page)).toBe(1);
+  await expect(page.getByText('Checking…')).toBeVisible();
+  await expect(again).toBeDisabled();
+
+  await releaseBridge(page, 0, BRIDGE_OK);
+  await expect(page.getByText('2.4.1 (Claude Code)')).toBeVisible();
+  await expect(again).toBeEnabled();
+  expect(await bridgeCalls(page)).toBe(1);
+});
+
+test('provider changes ignore an old bridge reply', async ({ page }) => {
+  await openOptions(page, { settings: { provider: 'anthropic-api' }, holdBridge: true });
+  await expect(page.locator('kbd')).toHaveText(['⇧', '⌘', 'K']);
+  expect(await bridgeCalls(page)).toBe(0);
+  const again = page.getByRole('button', { name: 'Check again' });
+  const idle = page.getByText('API providers do not need the bridge.');
+
+  await provider(page, 'Codex').click();
+  await expect.poll(() => bridgeCalls(page)).toBe(1);
+  await expect(page.getByText('Checking…')).toBeVisible();
+  await expect(again).toBeDisabled();
+
+  await provider(page, 'Anthropic API').click();
+  await expect(idle).toBeVisible();
+  await expect(again).toBeEnabled();
+  await releaseBridge(page, 0, BRIDGE_OK);
+  await expect(page.getByText('2.4.1 (Claude Code)')).toHaveCount(0);
+  await expect(idle).toBeVisible();
+  await expect(again).toBeEnabled();
+
+  await provider(page, 'Codex').click();
+  await expect.poll(() => bridgeCalls(page)).toBe(2);
+  await expect(page.getByText('Checking…')).toBeVisible();
+  await expect(again).toBeDisabled();
+  await releaseBridge(page, 1, {
+    ok: false,
+    message: 'Specified native messaging host not found.',
+  });
+  await expect(page.getByText('Specified native messaging host not found.')).toBeVisible();
+  await expect(page.getByText('npm run bridge:install')).toBeVisible();
+  await expect(again).toBeEnabled();
 });
 
 test('a failed save blocks Test connection and is retried', async ({ page }) => {

@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, P01d, P01e, P02, and P03a are complete. P03b is next. The release version is not chosen.
+Status: implementation in progress. P11, P00a, P00b, P01a, P01b, P01c, P01d, P01e, P02, P03a, and P03b are complete. P03c is next. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -34,7 +34,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P01e](#p01e-bound-http-error-body-reads)                     | Bound error downloads for both API providers                           | feature      | P01c                    |
 | [x]    | [P02](#p02-skip-idle-scheduling-when-disabled)                | Avoid field discovery and timers when idle Fix is off                  | feature      | P00a                    |
 | [x]    | [P03a](#p03a-run-native-version-probes-together)              | Parallelize independent version commands                               | feature      | P00a                    |
-| [ ]    | [P03b](#p03b-gate-automatic-bridge-checks-by-provider)        | Stop automatic native checks for API providers                         | art          | P00a                    |
+| [x]    | [P03b](#p03b-gate-automatic-bridge-checks-by-provider)        | Stop automatic native checks for API providers                         | art          | P00a                    |
 | [ ]    | [P03c](#p03c-share-and-cache-bridge-health-results)           | Share in-flight health work and briefly cache success                  | complex      | P03a, P03b              |
 | [ ]    | [P04](#p04-debounce-selection-geometry)                       | Measure selection geometry after the debounce                          | art          | P00a                    |
 | [ ]    | [P05](#p05-reuse-completed-result-analysis)                   | Lazily reuse completed diffs and static token notes                    | art          | P00a                    |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: ten completed and 12 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: eleven completed and 11 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -199,6 +199,8 @@ Done: three fake four-second commands return their versions within the outer dea
 
 ## P03b. Gate automatic bridge checks by provider
 
+Status: complete in this task commit. Claude Opus 5.5 high implemented it; the reviewer checked source, tests, docs, browser behavior and light/dark screenshots.
+
 Source: G01. Files: `src/popup/useBridge.ts`, its callers in `src/popup/App.tsx`, `src/options/sections.tsx`, `src/setup/App.tsx`; relevant options and toolbar browser tests.
 
 Start an automatic check only when the selected provider is a CLI. Switching API to CLI starts a check; switching away makes an obsolete result unable to replace current UI state. Keep an explicit diagnostics action available to API users. Preserve the current install guidance and layout.
@@ -344,3 +346,7 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P02 verification: lint, typecheck, 436 unit tests with 2 skipped, formatting, build, 43 idle/blocking/adoption/Draft.js browser regressions, and all 30 runtime smoke samples passed. Ten typed characters scheduled zero new idle timers with idle Fix off and with the site blocked, in both cold and warm samples. Each case observed zero requests for 3,300 ms. The new browser case disables during an existing pause, then verifies the next enabled edit works. [Timer measurements](../../bench/results/p02-idle-timers.json) retain the original baseline counts. No model-latency or battery claim is made. clean-code-guard: clean; test/docs guards and manual comment review passed. No delegate or new reusable skill was needed.
 
 - P03a verification: lint, typecheck, 438 unit tests with 2 skipped, formatting and build passed. Real native-host tests run three fake version executables, verify all starts precede any finish and each receives only `--version`, check exact diagnostic entries, and verify process/temp cleanup. [Offline ping measurements](../../bench/results/p03a-ping.json) record about 4.02 s for three replies and 5.08 s with one hanging command. Fake replies are scheduled four seconds after the request, including interpreter startup; the earlier fixture added four seconds after startup and could exceed the unchanged timeout on this machine. A timed-out installed executable still has an empty version, rather than appearing missing. These measurements cover bridge diagnostics, not rewrite latency. No real CLIs were used. clean-code-guard: clean; test/docs guards and manual comment review passed. No delegate or reusable skill was needed.
+
+- P03b initial handoff: implemented, pending reviewer real-browser, visual and runtime verification, review and commit. `useBridge` now takes the selected provider and starts an automatic check only for a CLI provider; an unloaded provider starts none. Check again still works for any provider. A request generation, bumped by every provider change and unmount, stops older replies from writing; state is tagged with its provider, so the previous provider's status and loading never show after a change. Toolbar, setup and options use the same hook, replacing the options copy. Options shows Checking only while checking, or for a CLI before its first reply; an idle API provider shows a short note that Check again runs diagnostics. Layout and install guidance are unchanged. New held-bridge browser tests cover API opens with zero calls, API to CLI with one call, a held CLI reply arriving after API and a fresh CLI check (status and loading), and Check again on API in options; toolbar and setup share one parameterized test. The runtime `api-native-checks` scenario now requires exactly zero native connections; its report fields and the historical baseline are unchanged. Checks run: `npm run typecheck`, ESLint and Prettier on the touched files, all passed. The browser tests and runtime benchmark were written but not run in this sandbox. Guard skills, final review and git add/commit/push were skipped as dispatched. No version, default, model, prompt or fleet changes. No render or latency savings are claimed.
+
+- P03b reviewer verification: lint, typecheck, 438 unit tests with 2 skipped, formatting, build, all 40 options/toolbar/setup browser tests, and all 30 runtime smoke samples passed. Held replies cannot replace current provider state, API opens skip health checks, CLI selection starts a check, and explicit diagnostics still work for API users. [Native-call measurements](../../bench/results/p03b-native-checks.json) record zero connections for all three actual built extension pages in cold and warm samples. Parent test review replaced a 50 ms sleep with a render-frame barrier and added light/dark captures. The initial 320-pixel fixture was corrected to the existing product width of 360 pixels; no production layout change was needed. Toolbar screenshots at 360 x 600 and setup screenshots at 720 pixels were inspected, including scrolled health rows and Check again. clean-code-guard: clean; test/docs guards and manual comment review passed. Claude suggested no reusable skill; the reviewer agrees.

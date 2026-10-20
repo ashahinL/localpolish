@@ -24,7 +24,7 @@ export function App() {
 
 function PopupApp() {
   const { settings, loadError } = useSettingsApi();
-  const bridge = useBridge();
+  const bridge = useBridge(settings?.provider);
   const test = useTest();
   const [tab, setTab] = useState<TabId>('home');
   const [host, setHost] = useState<string | null | undefined>(undefined);

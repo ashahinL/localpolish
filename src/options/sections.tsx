@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'preact/hooks';
-import { type BridgeStatus, type TestResult } from '../core/messages';
+import { type TestResult } from '../core/messages';
 import { type DefaultMode, type Settings } from '../core/settings';
-import { bridgeStatus, openShortcutsPage, polishShortcut, testConnection } from './chrome';
+import { useBridge } from '../popup/useBridge';
+import { openShortcutsPage, polishShortcut, testConnection } from './chrome';
 import { CodeLine, Field, Note, TextInput } from './controls';
 import { formatSeconds, invalidSiteEntries, parseBlocklist, shortcutKeys } from './form';
+import { isCli } from './ProviderSection';
 import { useSettingsApi } from './useSettings';
 
 export const CLIS: Array<{ key: 'claude' | 'codex' | 'grok'; name: string }> = [
@@ -19,31 +21,25 @@ const MODES: Array<{ value: DefaultMode; label: string }> = [
 ];
 
 export function BridgeSection() {
-  const [status, setStatus] = useState<BridgeStatus | null>(null);
-  const [checking, setChecking] = useState(false);
-
-  const check = async () => {
-    setChecking(true);
-    setStatus(await bridgeStatus());
-    setChecking(false);
-  };
-
-  useEffect(() => {
-    void check();
-  }, []);
+  const provider = useSettingsApi().settings?.provider;
+  const { status, checking, check } = useBridge(provider);
+  const cli = provider !== undefined && isCli(provider);
 
   return (
     <section class="card" aria-busy={checking}>
       <div class="card-head">
         <h2>Bridge</h2>
-        <button type="button" class="secondary" disabled={checking} onClick={() => void check()}>
+        <button type="button" class="secondary" disabled={checking} onClick={check}>
           Check again
         </button>
       </div>
       <p class="help">
         The bridge runs your own CLIs. Only Claude Code, Codex and Grok CLI need it.
       </p>
-      {status === null && <p class="muted">Checking…</p>}
+      {status === null && (checking || cli) && <p class="muted">Checking…</p>}
+      {status === null && !checking && !cli && (
+        <p class="muted">API providers do not need the bridge. Check again runs diagnostics.</p>
+      )}
       {status?.ok === false && (
         <Note tone="error">
           <p>{status.message}</p>

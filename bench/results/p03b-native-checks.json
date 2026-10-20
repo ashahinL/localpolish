@@ -1,0 +1,46 @@
+{
+  "syntheticOnly": true,
+  "timezone": "Africa/Cairo",
+  "finishedCairo": "2026-10-20T12:48:37+0300",
+  "baseline": "runtime-full-202610200817580300-63158.json",
+  "beforeNativeConnections": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+  "after": [
+    {
+      "temperature": "cold",
+      "nativeConnections": 0,
+      "pages": [
+        {
+          "page": "options",
+          "cumulativeNativeChecks": 0
+        },
+        {
+          "page": "popup",
+          "cumulativeNativeChecks": 0
+        },
+        {
+          "page": "setup",
+          "cumulativeNativeChecks": 0
+        }
+      ]
+    },
+    {
+      "temperature": "warm",
+      "nativeConnections": 0,
+      "pages": [
+        {
+          "page": "options",
+          "cumulativeNativeChecks": 0
+        },
+        {
+          "page": "popup",
+          "cumulativeNativeChecks": 0
+        },
+        {
+          "page": "setup",
+          "cumulativeNativeChecks": 0
+        }
+      ]
+    }
+  ],
+  "scope": "Actual built extension options, toolbar and setup with an API provider; native connection boundary is intercepted. No real native host or CLI is invoked."
+}
