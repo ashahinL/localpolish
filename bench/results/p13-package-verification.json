@@ -1,0 +1,97 @@
+{
+  "status": "passed",
+  "artifact": "dist/localpolish-1.1.0.zip",
+  "syntheticOnly": true,
+  "historyPauseBeforeAcceptMs": 1100,
+  "editors": [
+    {
+      "name": "textarea",
+      "status": "passed",
+      "accept": "passed",
+      "backspace": "passed",
+      "undoBackspace": "passed",
+      "undoAccept": "passed"
+    },
+    {
+      "name": "plain contenteditable",
+      "status": "passed",
+      "accept": "passed",
+      "backspace": "passed",
+      "undoBackspace": "passed",
+      "undoAccept": "passed"
+    },
+    {
+      "name": "Draft.js",
+      "status": "passed",
+      "accept": "passed",
+      "backspace": "passed",
+      "undoBackspace": "passed",
+      "undoAccept": "passed"
+    },
+    {
+      "name": "Slate",
+      "status": "passed",
+      "accept": "passed",
+      "backspace": "passed",
+      "undoBackspace": "passed",
+      "undoAccept": "passed"
+    },
+    {
+      "name": "ProseMirror",
+      "status": "passed",
+      "accept": "passed",
+      "backspace": "passed",
+      "undoBackspace": "passed",
+      "undoAccept": "passed"
+    },
+    {
+      "name": "Quill",
+      "status": "passed",
+      "accept": "passed",
+      "backspace": "passed",
+      "undoBackspace": "passed",
+      "undoAccept": "passed"
+    },
+    {
+      "name": "Lexical",
+      "status": "passed",
+      "accept": "passed",
+      "backspace": "passed",
+      "undoBackspace": "passed",
+      "undoAccept": "passed"
+    }
+  ],
+  "errors": [],
+  "connectionTest": "passed",
+  "blockedFrames": "passed",
+  "unblockedFrame": "passed",
+  "usage": [
+    {
+      "model": "package-mock",
+      "provider": "openai-compatible",
+      "requests": 9
+    }
+  ],
+  "requests": 9,
+  "finishedCairo": "20/10/2026, 22:33:29 EEST",
+  "candidateCommit": "a7efd78148228ee19f2845a1882012279175ffe3",
+  "zipSha256": "daa02119464b3f2c50159ecbe2637b618253d5ea894959d7bc4d4f4c19ac4d30",
+  "extractedBytesMatchZip": true,
+  "quillHistoryWithoutExtension": [
+    {
+      "withoutExtension": true,
+      "pauseBeforePasteMs": 0,
+      "undoResult": ""
+    },
+    {
+      "withoutExtension": true,
+      "pauseBeforePasteMs": 1100,
+      "undoResult": "this are a test sentence"
+    }
+  ],
+  "limits": [
+    "The scripted Undo sequence pauses 1100 ms before Accept and before Backspace to separate native editor history groups.",
+    "Quill can merge very rapid typing and paste into one Undo entry; reproduced without LocalPolish and not changed here.",
+    "No live model calls, real provider credentials or release publication."
+  ]
+}

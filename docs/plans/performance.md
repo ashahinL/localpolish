@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. Tasks through P12 are complete. P13 candidate verification is next. The release version is not chosen.
+Status: verification complete. All 23 tasks are implemented, reviewed and committed. Code candidate `a7efd78` passed the full checks. The release version is not chosen; nothing was published.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -46,9 +46,9 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
 | [x]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [x]    | [P13a](#p13a-correct-the-windows-lifecycle-fixture) | Make the fake CLI wrapper match the native host parser | Orchestrator | P06 |
-| [~]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
+| [x]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 23 tasks: twenty-two implemented tasks including the P13a fixture correction, and P13 verification in progress. P13a was added after Windows CI found a test setup defect. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 23 completed tasks. P13a was added after Windows CI found a test setup defect. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -332,13 +332,13 @@ Live Luna/Sol runs are optional, require an explicit run budget and use syntheti
 
 ## P13a. Correct the Windows lifecycle fixture
 
-Status: implemented in this task commit, with the targeted macOS lifecycle test, lint and formatting checked. Exact-commit Windows CI is part of P13 and is still required.
+Status: complete, committed and pushed as `a7efd78`. The targeted macOS test, lint and formatting passed. Windows bridge CI passed on that exact commit in run `39483001955`.
 
 The P06 fake `claude.cmd` omitted the literal path separator required by `resolveCommand`'s npm-shim parser. Windows CI on `f8828d4` failed before creating the fake child PID file. Add that separator, matching the working wrapper in the P12 harness. Keep the real host parser and production behavior unchanged.
 
 ## P13. Verify the release candidate
 
-Status: in progress. Local browser rerun owns its fixture server. Full runtime, extracted package and corrected-candidate platform verification remain.
+Status: complete in this verification commit. [Candidate evidence and limits](../audits/performance-candidate.md) records the full tests, runtime comparison, exact-commit CI and extracted package checks. The native Quill history-grouping limit is explicitly retained.
 
 Owner: orchestrator. Files: this plan, performance evidence/results, release documentation when a release version is later authorized.
 
@@ -427,12 +427,14 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 
 - P12: added the offline lifecycle command and [compact parent report](../../bench/results/p12-lifecycle.json). Actual runRewrite, cliProvider and native host ran with private fake Codex/home/auth/PATH. Both model names passed fresh/missing/stale cache checks, real captured argv, one usage attempt, synthetic delay placement, output-ready-before-exit, missing PID and empty host temp. The separate browser API probe observed first preview and enabled Accept. It is not added to CLI timings. Parent checks passed lint, typecheck, formatting, build, 498 unit tests with two existing skips, four runtime fixture checks, and the complete lifecycle command. Raw report: `P12-lifecycle-final/lifecycle-202610202218040300-50634.json` in local fleet artifacts. Parent review fixed failure cleanup to abort outstanding work, capture the latest owned PID, handle host errors/close, and avoid an unneeded cleanup timer. Test and docs review passed; Comment Sicko was unavailable and comments were checked manually. Grok suggested no reusable skill; reviewer agrees. Windows lifecycle measurements and live model latency remain unmeasured. No provider calls or production behavior changes.
 
-## Handoff after lifecycle measurement
+## Handoff after candidate verification
 
-- Current source: P12 is included in this task commit, based on pushed `73e351e`. Resolve the task hash with `git log -1 --format=%h`. P11 and P00a through P12 are complete.
-- Next task: P13, full candidate and package verification. P13 is not done. No release version or publication is authorized.
-- Required checks: P13 full gates, full runtime comparison, exact-commit platform CI and extracted package checks. P12 complete lifecycle report and core cases passed locally on macOS.
-- Active processes: none. No delegates are running.
-- Session override: complex implementation uses Grok 4.7 xhigh. No Sol delegates and no saved fleet/config changes. Wait quietly during each delegate run.
+- Code candidate: pushed `a7efd78148228ee19f2845a1882012279175ffe3`. This final commit adds verification documentation and result summaries only. All P11 and P00a through P13 tasks, including P13a, are complete.
+- Next: the owner can choose the next release version when ready. No version bump, tag or publication is authorized by this plan.
+- Required checks: none outstanding for this candidate. Known limits are live model latency, slower hardware, Windows browser UI and Quill's existing rapid-paste history grouping. See the candidate evidence for exact scope.
+- Active processes: none after verification cleanup. No delegates are running.
+- Session override: complex implementation used Grok 4.7 xhigh after the owner stopped Sol delegation. Saved fleet and AI-config files were not changed.
 
-- P13a: Windows CI `39482491040` found a fake-wrapper path that did not match the real host's npm-shim parser. The parent corrected one separator in `bridge/test-lifecycle.test.mjs`. This is test setup, with no production change. The targeted lifecycle test, lint and formatting passed locally. The corrected Windows run is required before P13 completes. Linux Node 22 passed on the earlier candidate; macOS bridge tests passed before the failing Windows matrix job cancelled the run. Both dependency audits reported zero vulnerabilities.
+- P13a: Windows CI `39482491040` found a fake-wrapper path that did not match the real host's npm-shim parser. The parent corrected one separator in `bridge/test-lifecycle.test.mjs`. This is test setup, with no production change. The targeted lifecycle test, lint and formatting passed locally. The corrected Windows run passed on `a7efd78` in run `39483001955`. Linux Node 22 passed on the earlier candidate; macOS bridge tests passed before the failing Windows matrix job cancelled the run. Both dependency audits reported zero vulnerabilities.
+
+- P13: parent verification passed lint, typecheck, formatting, build, 498 unit tests with two existing skips, all 177 browser tests, zero-vulnerability full/production audits, all 300 runtime samples, and normal/platform CI on exact code candidate `a7efd78`. The unmodified extracted zip passed connection, seven editor Accept/Backspace/Undo sequences, blocked/unblocked embedded editors and exact usage counts. The package scenario separates native history entries by 1.1 seconds; Quill's rapid-paste grouping also occurs without the extension and remains an explicit limitation. Summary reports and candidate evidence are committed. Raw reports/heaps and package verification scripts remain local. Test/docs review and manual comment review passed; Comment Sicko was unavailable. No release, live model run or reusable skill was added.

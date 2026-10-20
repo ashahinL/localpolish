@@ -1,0 +1,1092 @@
+{
+  "status": "passed",
+  "candidateCommit": "a7efd78148228ee19f2845a1882012279175ffe3",
+  "baselineFile": "bench/results/runtime-full-202610200817580300-63158.json",
+  "candidateRawReport": "runtime-full-202610202223280300-56233.json",
+  "syntheticOnly": true,
+  "baselineStartedCairo": "2026-10-20T08:17:58+0300",
+  "candidateStartedCairo": "2026-10-20T22:23:28+0300",
+  "candidateFinishedCairo": "2026-10-20T22:30:42+0300",
+  "samplesEach": 300,
+  "repetitionsPerTemperature": 10,
+  "environmentFieldsMatched": [
+    "platform",
+    "arch",
+    "osRelease",
+    "node",
+    "cpu",
+    "logicalCpus",
+    "totalMemoryBytes",
+    "playwright",
+    "chromium"
+  ],
+  "baselineEnvironment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "25.6.0",
+    "node": "v26.10.0",
+    "cpu": "Apple M4",
+    "logicalCpus": 10,
+    "totalMemoryBytes": 17179869184,
+    "playwright": "1.64.1",
+    "sourceCommit": "8930834d53bad09bdc127614242170447edd0242",
+    "dirty": true,
+    "sourceHash": "0db1800c2e00172d8ceb904c7beed12a6248e7eef6538aa41114885ab2c597e2",
+    "buildHash": "ba82af52bd25b0ea5b4a47a0389f06f2022b55378709e57c3c2257be92f4ae50",
+    "chromium": "156.0.8078.4"
+  },
+  "candidateEnvironment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "25.6.0",
+    "node": "v26.10.0",
+    "cpu": "Apple M4",
+    "logicalCpus": 10,
+    "totalMemoryBytes": 17179869184,
+    "playwright": "1.64.1",
+    "sourceCommit": "a7efd78148228ee19f2845a1882012279175ffe3",
+    "dirty": false,
+    "sourceHash": "903da1225b9e2353694897a57cc28c8922b96e07a9d99b0021b0801b1b5a7f64",
+    "buildHash": "c703fcf058a6f86822953098aaa35bb7f840e1b909dda1acac91b00c85e8d8b1",
+    "chromium": "156.0.8078.4"
+  },
+  "workCounts": {
+    "idlePreviewMessages": {
+      "scenario": "rewrite-1000-idle",
+      "before": {
+        "min": 1000,
+        "median": 1000.0,
+        "max": 1000
+      },
+      "after": {
+        "min": 0,
+        "median": 0.0,
+        "max": 0
+      }
+    },
+    "selectionImmediateGeometryReads": {
+      "scenario": "selection-100",
+      "before": {
+        "min": 100,
+        "median": 100.0,
+        "max": 100
+      },
+      "after": {
+        "min": 0,
+        "median": 0.0,
+        "max": 0
+      }
+    },
+    "selectionSettledGeometryReads": {
+      "scenario": "selection-100",
+      "before": {
+        "min": 101,
+        "median": 101.0,
+        "max": 101
+      },
+      "after": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    },
+    "disabledIdleTimers": {
+      "scenario": "idle-off",
+      "before": {
+        "min": 20,
+        "median": 20.0,
+        "max": 20
+      },
+      "after": {
+        "min": 0,
+        "median": 0.0,
+        "max": 0
+      }
+    },
+    "markerTextReads": {
+      "scenario": "rich-marker",
+      "before": {
+        "min": 6,
+        "median": 6.0,
+        "max": 6
+      },
+      "after": {
+        "min": 3,
+        "median": 3.0,
+        "max": 3
+      }
+    },
+    "apiNativeChecks": {
+      "scenario": "api-native-checks",
+      "before": {
+        "min": 3,
+        "median": 3.0,
+        "max": 3
+      },
+      "after": {
+        "min": 0,
+        "median": 0.0,
+        "max": 0
+      }
+    },
+    "modelSettingsPageReads": {
+      "scenario": "model-settings-frames",
+      "before": {
+        "min": 5,
+        "median": 5.0,
+        "max": 5
+      },
+      "after": {
+        "min": 0,
+        "median": 0.0,
+        "max": 0
+      }
+    },
+    "activeStreamsAfterOwnerClose": {
+      "scenario": "connection-owner-close",
+      "before": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      },
+      "after": {
+        "min": 0,
+        "median": 0.0,
+        "max": 0
+      }
+    },
+    "cancellationsAfterOwnerClose": {
+      "scenario": "connection-owner-close",
+      "before": {
+        "min": 0,
+        "median": 0.0,
+        "max": 0
+      },
+      "after": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "name": "rewrite-1000-manual",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 0.4846249999999941,
+            "max": 0.5261250000000075
+          },
+          "counts.chunk": {
+            "count": 10,
+            "median": 1000,
+            "max": 1000
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 0.05910400000000493,
+            "max": 0.18583399999999983
+          },
+          "counts.chunk": {
+            "count": 10,
+            "median": 1000,
+            "max": 1000
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 0.8413539999999955,
+            "max": 1.0170000000000243
+          },
+          "counts.chunk": {
+            "count": 10,
+            "median": 1000,
+            "max": 1000
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 0.29702050000000213,
+            "max": 0.41712499999999864
+          },
+          "counts.chunk": {
+            "count": 10,
+            "median": 1000,
+            "max": 1000
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "rewrite-1000-idle",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 0.47487449999999853,
+            "max": 0.5055839999999989
+          },
+          "counts.chunk": {
+            "count": 10,
+            "median": 1000,
+            "max": 1000
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 0.0703125,
+            "max": 0.17399999999997817
+          },
+          "counts.chunk": {
+            "count": 10,
+            "median": 1000,
+            "max": 1000
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 0.8107710000000168,
+            "max": 0.8872499999999945
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 0.22316650000000493,
+            "max": 0.36591699999999605
+          },
+          "counts.done": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "native-frame-1k",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 89.03510399999999,
+            "max": 99.16020900000001
+          },
+          "concatCopiedBytes": {
+            "count": 10,
+            "median": 2150628391,
+            "max": 2150628391
+          },
+          "concatCalls": {
+            "count": 10,
+            "median": 2048,
+            "max": 2048
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 72.62595850000005,
+            "max": 104.39333299999998
+          },
+          "concatCopiedBytes": {
+            "count": 10,
+            "median": 2150628391,
+            "max": 2150628391
+          },
+          "concatCalls": {
+            "count": 10,
+            "median": 2048,
+            "max": 2048
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 5.551791999999992,
+            "max": 5.950832999999989
+          },
+          "concatCopiedBytes": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          },
+          "concatCalls": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          },
+          "totalMeasuredCopyBytes": {
+            "count": 10,
+            "median": 2097191,
+            "max": 2097191
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 4.182396000000011,
+            "max": 5.0348749999999995
+          },
+          "concatCopiedBytes": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          },
+          "concatCalls": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          },
+          "totalMeasuredCopyBytes": {
+            "count": 10,
+            "median": 2097191,
+            "max": 2097191
+          }
+        }
+      }
+    },
+    {
+      "name": "sse-1k",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": false,
+      "limits": "The new bounded aggregate series replaces the historical oversized single-event fixture; total times are not comparable.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 183.23977099999996,
+            "max": 190.68720900000002
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 153.51243749999998,
+            "max": 155.85308300000003
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 26.576833000000008,
+            "max": 27.881917000000016
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 15.254666499999985,
+            "max": 21.551333999999997
+          }
+        }
+      }
+    },
+    {
+      "name": "host-ready-before-close",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "readyMs": {
+            "count": 10,
+            "median": 404.62460450000003,
+            "max": 495.14175
+          }
+        },
+        "warm": {
+          "readyMs": {
+            "count": 10,
+            "median": 100.32637499999998,
+            "max": 104.49516599999993
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "readyMs": {
+            "count": 10,
+            "median": 399.549417,
+            "max": 488.13766699999996
+          }
+        },
+        "warm": {
+          "readyMs": {
+            "count": 10,
+            "median": 105.88641649999977,
+            "max": 111.54245800000035
+          }
+        }
+      }
+    },
+    {
+      "name": "rewrite-small",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 240.8137289999995,
+            "max": 255.43120900000213
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 189.75,
+            "max": 190.30000007152557
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 218.20472900000095,
+            "max": 243.65266600000177
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 161.75,
+            "max": 163.69999992847443
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 238.94014600000082,
+            "max": 246.78283299999748
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 187.89999997615814,
+            "max": 190.20000004768372
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 211.07168699999966,
+            "max": 243.58183300000383
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 160.55000001192093,
+            "max": 163.09999990463257
+          }
+        }
+      }
+    },
+    {
+      "name": "rewrite-multilingual",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 235.16964550000193,
+            "max": 248.79000000000087
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 186.44999992847443,
+            "max": 188.5
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 214.494625000003,
+            "max": 242.17699999999604
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 161.19999998807907,
+            "max": 163.69999992847443
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 245.38718750000044,
+            "max": 261.8178340000013
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 186.60000002384186,
+            "max": 192.40000009536743
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 210.5891040000024,
+            "max": 245.79054100000212
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 160.20000004768372,
+            "max": 172.10000002384186
+          }
+        }
+      }
+    },
+    {
+      "name": "diff-1500-no-overlap",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 1239.5170414999993,
+            "max": 1254.6810419999965
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 390.39999997615814,
+            "max": 391.2000000476837
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 1195.544708500005,
+            "max": 1196.7976250000065
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 358.39999997615814,
+            "max": 360.2000000476837
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 643.0897499999992,
+            "max": 663.619666999999
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 388.94999998807907,
+            "max": 396
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 594.782333500003,
+            "max": 611.5432079999955
+          },
+          "readyMs": {
+            "count": 10,
+            "median": 364.0999999642372,
+            "max": 366.1999999284744
+          }
+        }
+      }
+    },
+    {
+      "name": "selection-100",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 584.0072704999984,
+            "max": 589.3222919999971
+          },
+          "immediate.calls.getBoundingClientRect": {
+            "count": 10,
+            "median": 100,
+            "max": 100
+          },
+          "settled.calls.getBoundingClientRect": {
+            "count": 10,
+            "median": 101,
+            "max": 101
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 573.7089994999988,
+            "max": 579.0418330000102
+          },
+          "immediate.calls.getBoundingClientRect": {
+            "count": 10,
+            "median": 100,
+            "max": 100
+          },
+          "settled.calls.getBoundingClientRect": {
+            "count": 10,
+            "median": 101,
+            "max": 101
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 531.8318124999932,
+            "max": 536.7645420000044
+          },
+          "settled.calls.getBoundingClientRect": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 519.2164374999993,
+            "max": 522.624542000005
+          },
+          "settled.calls.getBoundingClientRect": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "idle-off",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": false,
+      "limits": "Candidate includes an added blocked-site leg. Compare timer counts for the original disabled leg, not total time.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 3318.9526455000014,
+            "max": 3324.767499999987
+          },
+          "afterTyping.calls.setTimeout:3000": {
+            "count": 10,
+            "median": 20,
+            "max": 20
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 3317.6868744999956,
+            "max": 3318.7535420000204
+          },
+          "afterTyping.calls.setTimeout:3000": {
+            "count": 10,
+            "median": 20,
+            "max": 20
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 6855.581562499996,
+            "max": 6860.8706250000105
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 6838.114583499977,
+            "max": 6848.939833000011
+          }
+        }
+      }
+    },
+    {
+      "name": "rich-marker",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 4256.239042000001,
+            "max": 4263.065917
+          },
+          "calls.innerText": {
+            "count": 10,
+            "median": 6,
+            "max": 6
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 4244.034417000003,
+            "max": 4254.7437079999945
+          },
+          "calls.innerText": {
+            "count": 10,
+            "median": 6,
+            "max": 6
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 4253.493207999985,
+            "max": 4266.692624999996
+          },
+          "calls.innerText": {
+            "count": 10,
+            "median": 3,
+            "max": 3
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 4234.952332999994,
+            "max": 4251.714124999999
+          },
+          "calls.innerText": {
+            "count": 10,
+            "median": 3,
+            "max": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "api-native-checks",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 1181.5053539999935,
+            "max": 1239.3442089999444
+          },
+          "nativeChecks": {
+            "count": 10,
+            "median": 3,
+            "max": 3
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 1171.0575209999806,
+            "max": 1188.4736660000053
+          },
+          "nativeChecks": {
+            "count": 10,
+            "median": 3,
+            "max": 3
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 1278.795729000005,
+            "max": 1512.6056659999886
+          },
+          "nativeChecks": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 1234.3484370000078,
+            "max": 1334.8084999999846
+          },
+          "nativeChecks": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "connection-owner-close",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 701.9854790000245,
+            "max": 739.5353339999565
+          },
+          "activeAfterOwnerClose": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          },
+          "cancellationsAfterOwnerClose": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 729.4037705000082,
+            "max": 743.4691669999738
+          },
+          "activeAfterOwnerClose": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          },
+          "cancellationsAfterOwnerClose": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 722.2820210000209,
+            "max": 761.9781250000233
+          },
+          "activeAfterOwnerClose": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          },
+          "cancellationsAfterOwnerClose": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 749.510000499984,
+            "max": 775.6013750000275
+          },
+          "activeAfterOwnerClose": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          },
+          "cancellationsAfterOwnerClose": {
+            "count": 10,
+            "median": 1,
+            "max": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "model-settings-frames",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 1084.4696664999938,
+            "max": 1087.1477089999826
+          },
+          "pageSettingsQueries": {
+            "count": 10,
+            "median": 5,
+            "max": 5
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 1075.1058329999796,
+            "max": 1079.527833
+          },
+          "pageSettingsQueries": {
+            "count": 10,
+            "median": 5,
+            "max": 5
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 1091.8290004999726,
+            "max": 1129.9520409999532
+          },
+          "pageSettingsQueries": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 1107.475478999986,
+            "max": 1117.9876250000088
+          },
+          "pageSettingsQueries": {
+            "count": 10,
+            "median": 0,
+            "max": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "open-close-retention",
+      "samplesBefore": 20,
+      "samplesAfter": 20,
+      "timingComparable": true,
+      "limits": "Same original scenario inputs and observation window. Times are local samples, not provider latency or population percentiles.",
+      "before": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 1016.7044795000111,
+            "max": 1194.0184160000063
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 911.9372710000025,
+            "max": 1023.9500419999822
+          }
+        }
+      },
+      "after": {
+        "cold": {
+          "ms": {
+            "count": 10,
+            "median": 946.75,
+            "max": 1384.6902090000222
+          }
+        },
+        "warm": {
+          "ms": {
+            "count": 10,
+            "median": 941.4008749999921,
+            "max": 1204.8637909999816
+          }
+        }
+      }
+    }
+  ],
+  "retention": {
+    "observedCycles": 60,
+    "popupNodesAfterCloseMax": 0,
+    "rootNodesMax": 1,
+    "postInstrumentationPendingWorkMax": 0,
+    "limits": "Renderer-wide DOM/listeners and GC-dependent heaps do not establish an exact extension leak count. Only work scheduled after instrumentation is counted."
+  },
+  "limits": [
+    "No real provider calls or model-speed claim.",
+    "No slower hardware or interactive Windows browser measurement.",
+    "Core 1000-chunk CPU times increased by fractions of a millisecond while output bounding was added; message suppression is a work-count benefit, not a core timing win.",
+    "SSE total timing and expanded idle-off total timing are excluded from direct before/after claims."
+  ]
+}
