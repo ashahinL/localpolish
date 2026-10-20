@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. Tasks through P08b, including P11, are complete. P09 is next. Its first browser run failed in the new fixture; that fixture is corrected and not yet rerun. The release version is not chosen.
+Status: implementation in progress. Tasks through P09, including P11, are complete. P10 is next. Its first browser run failed in the new fixture; that fixture is corrected and not yet rerun. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -42,12 +42,12 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P07](#p07-coalesce-marker-work)                              | Reduce duplicate marker reads and renders                              | art          | P02, P00a               |
 | [x]    | [P08a](#p08a-prove-hidden-document-state-in-a-browser)        | Establish a reliable hidden-page browser fixture                       | complex      | P00a                    |
 | [x]    | [P08b](#p08b-defer-new-idle-requests-while-hidden)            | Gate automatic request starts on visibility                            | feature      | P08a, P02, P07          |
-| [ ]    | [P09](#p09-stop-posting-unused-idle-chunks)                   | Suppress idle preview messages at the worker boundary                  | feature      | P01d                    |
+| [x]    | [P09](#p09-stop-posting-unused-idle-chunks)                   | Suppress idle preview messages at the worker boundary                  | feature      | P01d                    |
 | [ ]    | [P10](#p10-filter-and-order-sanitized-settings-updates)       | Send relevant settings once and preserve newest state                  | complex      | P02, P03c               |
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: eighteen completed and four pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: nineteen completed and three pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -299,6 +299,8 @@ Done: the fixture first proves hidden state, then observes zero new automatic st
 
 ## P09. Stop posting unused idle chunks
 
+Status: complete in this task commit. The small change was implemented inline. Idle requests still accumulate and bound raw output, but post only the terminal answer or error. Manual preview messages are unchanged.
+
 Source: G07. Files: `src/background/rewrite.ts::runRewrite`, `src/entrypoints/background.ts` request dispatch, `src/content/idle.ts::readOutcome`, rewrite and browser tests.
 
 Use the existing `trigger: 'idle'` to suppress preview chunk posts at the worker-to-content boundary. Continue accumulating, bounding and cleaning the provider output. Deliver the same done/error messages. Manual streaming remains unchanged. An open popup borrowing an idle promise still receives its completed result.
@@ -405,3 +407,5 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P08a: actual hidden/visible state is proven for the page and its editor frame. The prior separate-CDP-session focus setting still left documents visible; the supported noDefaults connection resolved the fixture problem. Browser ownership and private-profile cleanup were checked. P08b can now use this fixture. No delegate or reusable skill was needed.
 
 - P08b: automatic idle starts wait while the actual document is hidden. Return rechecks the current focused field and text, using only the remaining pause. Accepted requests keep running; hidden marker polling and field reads stop. The new eight browser cases and the existing real-visibility proof all passed. Fixture review caught identical settings writes and incorrect frame-session discovery; both were corrected without weakening the assertions. The parent added a narrow fallback for frames that share their parent's CDP session. Lint, typecheck, formatting, build, and 478 unit tests passed, with two existing skips. Existing popup/extension regressions passed; the first overlapping browser invocation lost its shared server and was rerun with one server owner. All 30 runtime smoke samples passed, report `P08b-runtime/runtime-smoke-202610201802180300-69842.json` in the local fleet artifact directory. No provider calls were made. Clean-code, test and documentation review passed. Comment Sicko was unavailable, so comments were reviewed manually. Grok suggested no reusable skill; the reviewer agrees.
+
+- P09: `runRewrite` suppresses preview posts only for `trigger: 'idle'`. The 1,000-chunk regression checks zero idle previews and 1,000 manual previews with the same final text and one counted attempt. The runtime message check now requires those exact counts. All 30 runtime smoke samples passed, report `P09-runtime/runtime-smoke-202610201807020300-75427.json` in the local fleet artifacts. Lint, typecheck, formatting, build, 480 unit tests with two existing skips, and all 86 popup/extension browser checks passed, including idle adoption, errors, cancellation and retry. Code, test and docs review passed. Comment Sicko was unavailable; comments were checked manually. No delegate or reusable skill was needed.

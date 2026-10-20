@@ -26,6 +26,29 @@ describe('runRewrite', () => {
   const outputLimitMessage =
     'The generated text is over the 1 MiB output limit. Try again with a shorter text.';
 
+  it.each([undefined, 'idle'] as const)(
+    'keeps the final answer but only previews manual requests (trigger=%s)',
+    async (trigger) => {
+      const events: RewriteEvent[] = [];
+      await runRewrite(
+        { ...request, trigger },
+        settings(),
+        async (_prompt, _settings, onText) => {
+          for (let i = 0; i < 1000; i++) onText('x');
+        },
+        (event) => events.push(event),
+        new AbortController().signal,
+      );
+      expect(events.filter((event) => event.type === 'chunk')).toHaveLength(
+        trigger === 'idle' ? 0 : 1000,
+      );
+      expect(events.filter((event) => event.type !== 'chunk')).toEqual([
+        { type: 'done', text: 'x'.repeat(1000) },
+      ]);
+      expect(recordUsage).toHaveBeenCalledExactlyOnceWith(settings());
+    },
+  );
+
   it('cancels and releases a held HTTP reader when bounded events exceed total output', async () => {
     const originalFetch = globalThis.fetch;
     const cancel = vi.fn();

@@ -41,7 +41,7 @@ export function coreSession(root, temp) {
       );
       assert.equal(output, 'x'.repeat(1000));
       assert.equal(counts.done, 1);
-      assert.ok(counts.chunk <= 1000);
+      assert.equal(counts.chunk ?? 0, trigger === 'idle' ? 0 : 1000);
       assert.equal(counts.error ?? 0, 0);
       return {
         ms: performance.now() - start,

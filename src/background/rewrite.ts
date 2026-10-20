@@ -88,7 +88,7 @@ export async function runRewrite(
               endsWithHighSurrogate = last >= 0xd800 && last <= 0xdbff;
             }
             raw += text;
-            post({ type: 'chunk', text });
+            if (req.trigger !== 'idle') post({ type: 'chunk', text });
           },
           inner.signal,
         ),
