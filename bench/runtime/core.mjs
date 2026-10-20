@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createDecoder, encodeMessage } from '../../bridge/lib.mjs';
 import { compile } from './compile.mjs';
-import { fragmentBytes, payload } from './fixtures.mjs';
+import { fragmentBytes, payload, sseStreams, oversizedSseLine } from './fixtures.mjs';
 
 export function coreSession(root, temp) {
   const load = compile(root, path.join(temp, 'compiled'));
@@ -102,25 +102,102 @@ export function coreSession(root, temp) {
       };
     }
     if (name === 'sse-1k') {
-      // A pathological single line, split UTF-8, CRLF, then another event.
-      const input = new TextEncoder().encode(`data: ${payload}\r\n\r\ndata: tail\n\n`);
-      let at = 0;
-      const stream = new ReadableStream({
-        pull(controller) {
-          if (at >= input.length) return controller.close();
-          controller.enqueue(input.subarray(at, at + fragmentBytes));
-          at += fragmentBytes;
-        },
-      });
-      const events = [];
-      for await (const event of readSSE(stream)) events.push(event);
-      assert.deepEqual(events, [{ data: payload }, { data: 'tail' }]);
+      const probe = async (text, expectedEvents, expectedError) => {
+        const input = new TextEncoder().encode(text);
+        let at = 0;
+        let cancelled = false;
+        const stream = new ReadableStream(
+          {
+            pull(controller) {
+              if (at >= input.length) return controller.close();
+              controller.enqueue(input.subarray(at, at + fragmentBytes));
+              at += fragmentBytes;
+            },
+            cancel() {
+              cancelled = true;
+            },
+          },
+          { highWaterMark: 0 },
+        );
+        const work = {
+          lfSearchCalls: 0,
+          lfSearchedCodeUnits: 0,
+          utf8EncodeCalls: 0,
+          utf8EncodedCodeUnits: 0,
+          utf8EncodedBytes: 0,
+        };
+        const indexOf = String.prototype.indexOf;
+        const encode = TextEncoder.prototype.encode;
+        String.prototype.indexOf = function (search, position = 0) {
+          const found = Reflect.apply(indexOf, this, [search, position]);
+          if (search === '\n') {
+            work.lfSearchCalls++;
+            work.lfSearchedCodeUnits += (found === -1 ? this.length : found + 1) - position;
+          }
+          return found;
+        };
+        TextEncoder.prototype.encode = function (value) {
+          const result = Reflect.apply(encode, this, [value]);
+          work.utf8EncodeCalls++;
+          work.utf8EncodedCodeUnits += value.length;
+          work.utf8EncodedBytes += result.byteLength;
+          return result;
+        };
+        const events = [];
+        let error;
+        const probeStart = performance.now();
+        try {
+          for await (const event of readSSE(stream)) events.push(event);
+        } catch (caught) {
+          error = caught.message;
+        } finally {
+          String.prototype.indexOf = indexOf;
+          TextEncoder.prototype.encode = encode;
+        }
+        assert.equal(error, expectedError);
+        assert.deepEqual(events, expectedEvents);
+        assert.equal(stream.locked, false);
+        assert.equal(cancelled, expectedError !== undefined);
+        // Actual searched ranges and encoder inputs must never revisit prefixes.
+        assert.ok(work.lfSearchedCodeUnits <= text.length);
+        assert.ok(work.utf8EncodedCodeUnits <= text.length);
+        assert.ok(work.utf8EncodedBytes <= input.length);
+        if (expectedError === undefined) {
+          assert.equal(work.lfSearchedCodeUnits, text.length);
+          assert.equal(work.utf8EncodedBytes, input.length - text.split('\n').length + 1);
+        }
+        return {
+          ms: performance.now() - probeStart,
+          inputBytes: input.length,
+          events: events.length,
+          outputBytes: expectedEvents.reduce(
+            (bytes, event) => bytes + Buffer.byteLength(event.data),
+            0,
+          ),
+          error,
+          cancelled,
+          readerReleased: true,
+          ...work,
+        };
+      };
+      const bounded = [];
+      for (const fixture of sseStreams) {
+        bounded.push({ aggregateMiB: fixture.mib, ...(await probe(fixture.text, fixture.events)) });
+      }
+      for (const metric of ['lfSearchedCodeUnits', 'utf8EncodedCodeUnits', 'utf8EncodedBytes']) {
+        assert.equal(
+          bounded[2][metric] - bounded[1][metric],
+          2 * (bounded[1][metric] - bounded[0][metric]),
+        );
+      }
+      const oversized = await probe(oversizedSseLine, [], 'SSE line exceeds the 1 MiB limit.');
       return {
         ms: performance.now() - start,
-        inputBytes: input.length,
         fragmentBytes,
-        events: events.length,
-        outputBytes: Buffer.byteLength(payload) + 4,
+        bounded,
+        oversized,
+        workCountScope:
+          'During readSSE only: actual LF indexOf searched UTF-16 ranges and TextEncoder.encode input code units and returned bytes. Fixtures are encoded before counting. Excludes decoder, joins, field searches, other copies, network transfer and heap usage. Timing alone does not establish linear work.',
       };
     }
     if (name === 'host-ready-before-close') return hostProbe(root, temp);

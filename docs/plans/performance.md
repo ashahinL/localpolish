@@ -1,6 +1,6 @@
 # Performance release plan
 
-Status: implementation in progress. P11, P00a, and P00b are complete. P01a is complete. P01b is complete. P01c is next. The release version is not chosen.
+Status: implementation in progress. P11, P00a, and P00b are complete. P01a is complete. P01b is complete. P01c is implemented pending reviewer verification, review and commit. The release version is not chosen.
 
 Baseline: `227afbc`, after LocalPolish 1.1.0 and the Codex context reduction. Sources: the [review and accepted findings](../audits/performance-1.1.0.md), [original Grok proposals](../audits/performance-1.1.0-grok.md), and [review evidence](../audits/performance-1.1.0-evidence.json). The old [1.1.0 release plan](next-release.md) stays as a completed release record.
 
@@ -29,7 +29,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [x]    | [P00b](#p00b-build-once-in-ci)                                | Remove the duplicate CI build                                          | feature      | None                    |
 | [x]    | [P01a](#p01a-reject-oversized-input-before-an-attempt-starts) | Bound input before usage counting and provider startup                 | feature      | P00a                    |
 | [x]    | [P01b](#p01b-bound-native-frames-and-cli-event-lines)         | Bound native frames and CLI event lines; remove repeated frame copying | complex      | P01a                    |
-| [ ]    | [P01c](#p01c-bound-sse-events-and-avoid-repeated-line-scans)  | Bound SSE buffering and avoid prefix rescanning                        | complex      | P01a                    |
+| [x]    | [P01c](#p01c-bound-sse-events-and-avoid-repeated-line-scans)  | Bound SSE buffering and avoid prefix rescanning                        | complex      | P01a                    |
 | [ ]    | [P01d](#p01d-bound-total-rewrite-output)                      | Bound total output and abort oversized answers                         | complex      | P01b, P01c              |
 | [ ]    | [P01e](#p01e-bound-http-error-body-reads)                     | Bound error downloads for both API providers                           | feature      | P01c                    |
 | [ ]    | [P02](#p02-skip-idle-scheduling-when-disabled)                | Avoid field discovery and timers when idle Fix is off                  | feature      | P00a                    |
@@ -47,7 +47,7 @@ This file is the execution plan. The review records the evidence and decisions. 
 | [ ]    | [P12](#p12-measure-the-request-lifecycle)                     | Measure where request time goes, without changing models               | complex      | P00a, P11, P06, P09     |
 | [ ]    | [P13](#p13-verify-the-release-candidate)                      | Run integration, privacy, platform and package checks                  | Orchestrator | All pending tasks above |
 
-There are 22 tasks: five completed and 17 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
+There are 22 tasks: five completed, P01c implemented pending reviewer verification/review/commit, and 16 pending. P08a and P08b split the review's P08. P00, P01 and P03 are also split. P12 adds request-time measurement because token savings alone did not establish faster replies. P13 records candidate verification, not publication.
 
 ## Shared behavior to preserve
 
@@ -131,6 +131,15 @@ Source: S01. Files: `bridge/lib.mjs::createDecoder`, `bridge/host.mjs` stdout ha
 Done: a valid 2 MiB frame split into 1 KiB pieces is decoded intact with linear copying; a copy-count experiment at 1, 2 and 4 MiB does not show quadratic growth. Oversized headers and endless CLI lines fail within their stated memory bounds. Split UTF-8, CRLF, multiple frames, aborts and resistant descendants still work. Run both bridge test files and the native scenarios from P00a.
 
 ## P01c. Bound SSE events and avoid repeated line scans
+
+Status: implemented pending reviewer verification, review and commit. Only P01c is in scope. Browser, socket and runtime checks are reserved for the reviewer outside the sandbox.
+
+Implemented: line and event caps are each 1 MiB of decoded UTF-8. Lines exclude LF and one final CR, including at EOF. Events count the current name and data with inserted newlines. Replacing the name replaces its contribution. Comments and unknown fields only count toward their line cap. Fresh fragments are searched and encoded once. Pieces join only at line completion or EOF. Completion, overflow, consumer break, cancellation rejection and AbortError release the reader lock. Overflow cancels upstream. These are retained-content limits, not total-transfer or exact heap limits.
+
+Allowed verification passed on 2026-10-20, completed at 11:57 Africa/Cairo: targeted SSE/OpenAI/Anthropic tests, 62 passed; full unit suite, 25 files with 383 passed and 2 skipped; lint, typecheck, formatting and production build. Both provider regressions use existing fetch boundary mocks and observe cancellation with no text delivered. No real provider or CLI was called.
+
+The `sse-1k` benchmark now has bounded 1/2/4 MiB aggregate streams, split Arabic/emoji at 1 KiB boundaries, exact event assertions, a final event at EOF, and an explicit oversized single-line rejection. It records actual LF search ranges and UTF-8 encoder inputs/bytes, checks that no prefix is revisited, and checks exact doubling of work increments. Native copy metrics and historical reports are unchanged. Runtime measurements were not run under the sandbox restriction and remain unverified. The reviewer must run the fragmented-stream runtime scenario and relevant browser/socket checks outside the sandbox, review the diff, and commit P01c.
+
 
 Source: S01. Files: `src/background/sse.ts::readSSE`, `src/background/sse.test.ts`, both API-provider test files.
 
@@ -302,3 +311,8 @@ No resident rewrite process, cross-site draft cache, framework rewrite, iframe r
 - P01b: implemented on `main`, pending reviewer runtime/cleanup verification, review and commit. Tests cover native split headers, coalesced frames, UTF-8, exact 8 MiB payloads, header-only rejection before allocation, malformed JSON, and actual copy work at 1/2/4 MiB. Host tests use fake executables, private homes/temp folders, bounded producers with backpressure, exact-cap lines, overflow, CR/LF/EOF, final-event priority, active decoder failures, and resistant descendants. Native runtime copy metrics now include actual `Buffer.copy` work while preserving the historical concat metric. Allowed checks passed: `npm test -- bridge/lib.test.mjs bridge/host.test.mjs` (68 passed, 1 skipped), `npm run lint`, `npm run typecheck`, `npm test` (25 files, 351 passed, 2 skipped), `npx prettier --check .`, and `npm run build`. The measured native byte-copy totals for 1/2/4 MiB payloads were 1,048,580 / 2,097,156 / 4,194,308, including headers; concat returned-byte work was zero. Fake-process cleanup and empty host-temp folders passed, including resistant descendants. Test-created processes and directories were cleaned up. Guard skills and final review were skipped as dispatched. No git add, commit, push, release, version, provider, default, prompt or fleet changes. Reusable skill suggestion: none; this follows the existing bounded-stream testing workflow. Browser, HTTP/listening and runtime checks are reserved for the reviewer outside this sandbox. No other task status changed.
 
 - P01b reviewer verification: lint, typecheck, 352 unit tests with 2 skipped, formatting, build, and all 15 runtime smoke scenarios with 30 samples passed. The [native copy experiment](../../bench/results/p01b-native-copy.json) measured 1,048,580 / 2,097,156 / 4,194,308 copied bytes for 1/2/4 MiB JSON payloads in 1 KiB fragments, including headers. The roughly 2 MiB benchmark frame copied 2,097,191 bytes, compared with 2,150,628,391 concat bytes in the original baseline. These are copy-work measurements, not model-latency claims. Cleanup tests include resistant descendants, overflow, malformed input, and one terminal reply after coalesced failures. Sol suggested no new skill; the reviewer agrees. P01a also passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39395191716).
+
+
+- P01c: implemented pending reviewer verification, review and commit. Changed `src/core/limits.ts`, `src/background/sse.ts` and its tests, both API-provider test files, `bench/runtime/core.mjs`, `bench/runtime/fixtures.mjs`, `README.md`, `bench/README.md`, and this plan. Allowed checks passed: targeted tests 62; full suite 383 passed with 2 skipped across 25 files; lint, typecheck, formatting and build. The benchmark now instruments actual LF searches and UTF-8 encoding for bounded 1/2/4 MiB streams and retains an oversized-line rejection probe. Measurements, browser/socket checks, final review and commit are left to the reviewer outside the sandbox. No Chrome, Playwright, runtime harness, listening server or real provider/CLI was started. No guard skills, final review or git add/commit/push was run. No task-owned server, browser, worktree or temporary directory needs cleanup; the ignored production build remains in `dist`. No version, model, default, prompt, fleet or other task status changed. Reusable skill suggestion: none; the existing implementation and bounded-stream test workflow covers this work.
+
+- P01c reviewer verification: all 383 unit tests passed with 2 skipped; lint, typecheck, formatting, build, four HTTP/preflight fixture checks, and 30 runtime smoke samples passed. The [SSE work record](../../bench/results/p01c-sse-work.json) confirms linear LF search/UTF-8 encoding work for bounded 1/2/4 MiB blocks, exact decoded events, oversized single-line rejection, upstream cancellation, and reader release. Fixture sizes now include a shared final EOF event; the old baseline is kept unchanged. Sol suggested no new skill; the reviewer agrees. P01b passed [remote CI](https://github.com/ashahinL/localpolish/actions/runs/39396456173).

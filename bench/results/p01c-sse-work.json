@@ -1,0 +1,150 @@
+{
+  "syntheticOnly": true,
+  "measuredCairo": "2026-10-20T12:00:26+0300",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "25.6.0",
+    "node": "v26.10.0",
+    "cpu": "Apple M4",
+    "logicalCpus": 10,
+    "totalMemoryBytes": 17179869184,
+    "playwright": "1.64.1",
+    "sourceCommit": "ec6ca0879b5a0273fd5f17e07ecb86493d430249",
+    "dirty": true,
+    "sourceHash": "6972827bed6d77ce97eee9fb560723afdcb572c0ed7fc8e5f32e9153b5e2df5a",
+    "buildHash": "1e0dfa89c78ca2db5e8422c9045344efab1168e64abf2ad3557c9b2fdc6b62e6",
+    "chromium": "156.0.8078.4"
+  },
+  "fixtureNote": "1/2/4 MiB of bounded 16 KiB wire blocks plus the same 25-byte final EOF event. Historical single-line fixture is deliberately rejected now.",
+  "results": [
+    {
+      "temperature": "cold",
+      "ms": 29.084709000000004,
+      "fragmentBytes": 1024,
+      "bounded": [
+        {
+          "aggregateMiB": 1,
+          "ms": 6.458541999999994,
+          "inputBytes": 1048601,
+          "events": 65,
+          "outputBytes": 1047942,
+          "cancelled": false,
+          "readerReleased": true,
+          "lfSearchCalls": 1090,
+          "lfSearchedCodeUnits": 1048406,
+          "utf8EncodeCalls": 1090,
+          "utf8EncodedCodeUnits": 1048277,
+          "utf8EncodedBytes": 1048472
+        },
+        {
+          "aggregateMiB": 2,
+          "ms": 5.742041999999998,
+          "inputBytes": 2097177,
+          "events": 129,
+          "outputBytes": 2095878,
+          "cancelled": false,
+          "readerReleased": true,
+          "lfSearchCalls": 2178,
+          "lfSearchedCodeUnits": 2096790,
+          "utf8EncodeCalls": 2178,
+          "utf8EncodedCodeUnits": 2096533,
+          "utf8EncodedBytes": 2096920
+        },
+        {
+          "aggregateMiB": 4,
+          "ms": 10.083916999999985,
+          "inputBytes": 4194329,
+          "events": 257,
+          "outputBytes": 4191750,
+          "cancelled": false,
+          "readerReleased": true,
+          "lfSearchCalls": 4354,
+          "lfSearchedCodeUnits": 4193558,
+          "utf8EncodeCalls": 4354,
+          "utf8EncodedCodeUnits": 4193045,
+          "utf8EncodedBytes": 4193816
+        }
+      ],
+      "oversized": {
+        "ms": 1.3905419999999822,
+        "inputBytes": 2097169,
+        "events": 0,
+        "outputBytes": 0,
+        "error": "SSE line exceeds the 1 MiB limit.",
+        "cancelled": true,
+        "readerReleased": true,
+        "lfSearchCalls": 1025,
+        "lfSearchedCodeUnits": 1049600,
+        "utf8EncodeCalls": 1025,
+        "utf8EncodedCodeUnits": 1049600,
+        "utf8EncodedBytes": 1049600
+      },
+      "workCountScope": "During readSSE only: actual LF indexOf searched UTF-16 ranges and TextEncoder.encode input code units and returned bytes. Fixtures are encoded before counting. Excludes decoder, joins, field searches, other copies, network transfer and heap usage. Timing alone does not establish linear work."
+    },
+    {
+      "temperature": "warm",
+      "ms": 19.82295800000003,
+      "fragmentBytes": 1024,
+      "bounded": [
+        {
+          "aggregateMiB": 1,
+          "ms": 2.2676250000000095,
+          "inputBytes": 1048601,
+          "events": 65,
+          "outputBytes": 1047942,
+          "cancelled": false,
+          "readerReleased": true,
+          "lfSearchCalls": 1090,
+          "lfSearchedCodeUnits": 1048406,
+          "utf8EncodeCalls": 1090,
+          "utf8EncodedCodeUnits": 1048277,
+          "utf8EncodedBytes": 1048472
+        },
+        {
+          "aggregateMiB": 2,
+          "ms": 4.787791000000027,
+          "inputBytes": 2097177,
+          "events": 129,
+          "outputBytes": 2095878,
+          "cancelled": false,
+          "readerReleased": true,
+          "lfSearchCalls": 2178,
+          "lfSearchedCodeUnits": 2096790,
+          "utf8EncodeCalls": 2178,
+          "utf8EncodedCodeUnits": 2096533,
+          "utf8EncodedBytes": 2096920
+        },
+        {
+          "aggregateMiB": 4,
+          "ms": 9.157083,
+          "inputBytes": 4194329,
+          "events": 257,
+          "outputBytes": 4191750,
+          "cancelled": false,
+          "readerReleased": true,
+          "lfSearchCalls": 4354,
+          "lfSearchedCodeUnits": 4193558,
+          "utf8EncodeCalls": 4354,
+          "utf8EncodedCodeUnits": 4193045,
+          "utf8EncodedBytes": 4193816
+        }
+      ],
+      "oversized": {
+        "ms": 0.9552079999999705,
+        "inputBytes": 2097169,
+        "events": 0,
+        "outputBytes": 0,
+        "error": "SSE line exceeds the 1 MiB limit.",
+        "cancelled": true,
+        "readerReleased": true,
+        "lfSearchCalls": 1025,
+        "lfSearchedCodeUnits": 1049600,
+        "utf8EncodeCalls": 1025,
+        "utf8EncodedCodeUnits": 1049600,
+        "utf8EncodedBytes": 1049600
+      },
+      "workCountScope": "During readSSE only: actual LF indexOf searched UTF-16 ranges and TextEncoder.encode input code units and returned bytes. Fixtures are encoded before counting. Excludes decoder, joins, field searches, other copies, network transfer and heap usage. Timing alone does not establish linear work."
+    }
+  ]
+}

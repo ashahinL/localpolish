@@ -47,6 +47,39 @@ async function rejection(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('openaiProvider', () => {
+  it('rejects oversized streamed SSE and cancels the response body', async () => {
+    const cancel = vi.fn();
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(pulls++ === 0 ? 'data: ' : 'x'.repeat(64 * 1024)),
+          );
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    );
+    const fetchMock = vi.fn(async () => new Response(body));
+    globalThis.fetch = fetchMock as typeof fetch;
+    const onText = vi.fn();
+    await expect(
+      openaiProvider(
+        prompt,
+        settings({
+          openaiBaseUrl: 'http://localhost:11434/v1',
+          models: { 'openai-compatible': 'llama3.2' },
+        }),
+        onText,
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow('SSE line exceeds the 1 MiB limit.');
+    expect(onText).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(body.locked).toBe(false);
+  });
+
   it('streams content and posts to the base URL without a trailing slash', async () => {
     const sse =
       'data: {"choices":[{"delta":{"content":"I "}}]}\n\n' +

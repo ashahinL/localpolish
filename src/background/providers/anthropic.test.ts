@@ -46,6 +46,36 @@ async function rejection(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('anthropicProvider', () => {
+  it('rejects oversized streamed SSE and cancels the response body', async () => {
+    const cancel = vi.fn();
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(pulls++ === 0 ? 'data: ' : 'x'.repeat(64 * 1024)),
+          );
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    );
+    const fetchMock = vi.fn(async () => new Response(body));
+    globalThis.fetch = fetchMock as typeof fetch;
+    const onText = vi.fn();
+    await expect(
+      anthropicProvider(
+        prompt,
+        settings({ anthropicApiKey: 'sk-ant' }),
+        onText,
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow('SSE line exceeds the 1 MiB limit.');
+    expect(onText).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(body.locked).toBe(false);
+  });
+
   it('streams text deltas and sends the Anthropic request', async () => {
     const sse = [
       'event: content_block_delta\n',
