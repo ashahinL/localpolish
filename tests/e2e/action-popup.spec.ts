@@ -149,6 +149,14 @@ function bridgeCalls(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __bridgeCalls: number }).__bridgeCalls);
 }
 
+function bridgeForces(page: Page): Promise<Array<boolean | undefined>> {
+  return page.evaluate(() =>
+    (window as unknown as { __runtimeSent: Array<{ type: string; force?: boolean }> }).__runtimeSent
+      .filter((message) => message.type === 'bridge-status')
+      .map((message) => message.force),
+  );
+}
+
 async function releaseBridge(page: Page, index: number, reply: unknown): Promise<void> {
   await page.evaluate(
     async ([at, value]) => {
@@ -283,6 +291,7 @@ test('bridge rows and Check again asks again', async ({ page }) => {
   const before = await bridgeCalls(page);
   await again.click();
   await expect.poll(() => bridgeCalls(page)).toBe(before + 1);
+  expect(await bridgeForces(page)).toEqual([false, true]);
 });
 
 for (const { path, colorScheme, width } of [
@@ -304,6 +313,7 @@ for (const { path, colorScheme, width } of [
 
     await radioLabel(page, 'Claude Code').click();
     await expect.poll(() => bridgeCalls(page)).toBe(1);
+    expect(await bridgeForces(page)).toEqual([false]);
     await expect(page.getByText('Checking…')).toBeVisible();
 
     await radioLabel(page, 'Anthropic API').click();
@@ -312,6 +322,7 @@ for (const { path, colorScheme, width } of [
 
     await radioLabel(page, 'Claude Code').click();
     await expect.poll(() => bridgeCalls(page)).toBe(2);
+    expect(await bridgeForces(page)).toEqual([false, false]);
     const again = page.getByRole('button', { name: 'Check again' });
     await expect(page.getByText('Checking…')).toBeVisible();
     await expect(again).toBeDisabled();
@@ -336,10 +347,19 @@ for (const { path, colorScheme, width } of [
     await page.locator('.clis li').last().scrollIntoViewIfNeeded();
     await page.screenshot({ path: test.info().outputPath('bridge.png'), fullPage: true });
 
+    await again.click();
+    await expect.poll(() => bridgeCalls(page)).toBe(3);
+    expect(await bridgeForces(page)).toEqual([false, false, true]);
+    await expect(again).toBeDisabled();
+    await releaseBridge(page, 2, { ok: false, message: BRIDGE_MISSING });
+    await expect(page.getByText(BRIDGE_MISSING)).toBeVisible();
+    await expect(page.getByText('Checking…')).toHaveCount(0);
+    await expect(again).toBeEnabled();
+
     await radioLabel(page, 'Anthropic API').click();
     await page.getByRole('button', { name: 'Open the full options page' }).click();
     await expect.poll(() => opened(page)).toContain('options');
-    expect(await bridgeCalls(page)).toBe(2);
+    expect(await bridgeCalls(page)).toBe(3);
   });
 }
 

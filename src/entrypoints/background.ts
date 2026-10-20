@@ -3,6 +3,7 @@ import { getProvider } from '../background/providers';
 import { runRewrite, testConnection } from '../background/rewrite';
 import {
   REWRITE_PORT,
+  type BridgeStatus,
   type PageSettings,
   type RewriteEvent,
   type RewriteRequest,
@@ -99,6 +100,29 @@ function errorMessage(err: unknown, fallback: string): string {
 }
 
 export default defineBackground(() => {
+  let healthCache: { status: Extract<BridgeStatus, { ok: true }>; expiresAt: number } | undefined;
+  let healthInFlight: Promise<BridgeStatus> | undefined;
+
+  const bridgeHealth = (force: boolean): Promise<BridgeStatus> => {
+    if (healthInFlight) return healthInFlight;
+    if (!force && healthCache && Date.now() < healthCache.expiresAt) {
+      return Promise.resolve(healthCache.status);
+    }
+    healthInFlight = pingBridge()
+      .then((status) => {
+        healthCache = status.ok ? { status, expiresAt: Date.now() + 30_000 } : undefined;
+        return status;
+      })
+      .catch((err: unknown) => {
+        healthCache = undefined;
+        throw err;
+      })
+      .finally(() => {
+        healthInFlight = undefined;
+      });
+    return healthInFlight;
+  };
+
   void extension().storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 
   extension().storage.onChanged.addListener((changes, areaName) => {
@@ -215,7 +239,7 @@ export default defineBackground(() => {
       return true;
     }
 
-    void pingBridge()
+    void bridgeHealth(message.force === true)
       .then(reply)
       .catch((err: unknown) => {
         reply({ ok: false, message: errorMessage(err, 'The bridge stopped unexpectedly.') });

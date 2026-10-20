@@ -126,6 +126,14 @@ function bridgeCalls(page: Page): Promise<number> {
   );
 }
 
+function bridgeForces(page: Page): Promise<Array<boolean | undefined>> {
+  return page.evaluate(() =>
+    (window as unknown as { __runtimeSent: Array<{ type: string; force?: boolean }> }).__runtimeSent
+      .filter((message) => message.type === 'bridge-status')
+      .map((message) => message.force),
+  );
+}
+
 async function releaseBridge(page: Page, index: number, reply: unknown): Promise<void> {
   await page.evaluate(
     async ([at, value]) => {
@@ -224,6 +232,7 @@ test('an API provider skips the bridge check until Check again', async ({ page }
   const again = page.getByRole('button', { name: 'Check again' });
   await again.click();
   await expect.poll(() => bridgeCalls(page)).toBe(1);
+  expect(await bridgeForces(page)).toEqual([true]);
   await expect(page.getByText('Checking…')).toBeVisible();
   await expect(again).toBeDisabled();
 
@@ -242,6 +251,7 @@ test('provider changes ignore an old bridge reply', async ({ page }) => {
 
   await provider(page, 'Codex').click();
   await expect.poll(() => bridgeCalls(page)).toBe(1);
+  expect(await bridgeForces(page)).toEqual([false]);
   await expect(page.getByText('Checking…')).toBeVisible();
   await expect(again).toBeDisabled();
 
@@ -263,6 +273,14 @@ test('provider changes ignore an old bridge reply', async ({ page }) => {
   });
   await expect(page.getByText('Specified native messaging host not found.')).toBeVisible();
   await expect(page.getByText('npm run bridge:install')).toBeVisible();
+  await expect(again).toBeEnabled();
+  expect(await bridgeForces(page)).toEqual([false, false]);
+
+  await again.click();
+  await expect.poll(() => bridgeCalls(page)).toBe(3);
+  expect(await bridgeForces(page)).toEqual([false, false, true]);
+  await releaseBridge(page, 2, BRIDGE_OK);
+  await expect(page.getByText('2.4.1 (Claude Code)')).toBeVisible();
   await expect(again).toBeEnabled();
 });
 

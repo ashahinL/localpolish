@@ -287,6 +287,8 @@ npm run bridge:uninstall
 
 The popup's **Provider** tab and the options page show the bridge status. Each CLI shows its version, or the words "not found". **Test connection** checks the provider you picked.
 
+CLI pages share an ongoing bridge check and reuse successful results for up to 30 seconds. **Check again** bypasses a cached result and shares any check already running. Failed checks are retried on the next request. API providers start no automatic bridge check; you can run diagnostics with **Check again** in options.
+
 ## Sites that need Copy instead of Accept
 
 Some sites ignore the text LocalPolish writes into the field. The popup then copies the new text and tells you to paste it with `Cmd+V`.

@@ -30,7 +30,7 @@ export type PageSettings = Pick<Settings, 'blocklist' | 'idleFix' | 'defaultMode
 
 export type RuntimeMessage =
   | { type: 'test-connection' }
-  | { type: 'bridge-status' }
+  | { type: 'bridge-status'; force?: boolean }
   | { type: 'open-popup' }
   | { type: 'page-settings' }
   | { type: 'page-settings-changed' };

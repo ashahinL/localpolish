@@ -39,8 +39,8 @@ async function ask<T>(message: RuntimeMessage): Promise<T | { ok: false; message
   }
 }
 
-export function bridgeStatus(): Promise<BridgeStatus> {
-  return ask<BridgeStatus>({ type: 'bridge-status' });
+export function bridgeStatus(force = false): Promise<BridgeStatus> {
+  return ask<BridgeStatus>({ type: 'bridge-status', force });
 }
 
 export function testConnection(): Promise<TestResult> {
