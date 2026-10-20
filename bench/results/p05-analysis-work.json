@@ -1,0 +1,58 @@
+{
+  "syntheticOnly": true,
+  "timezone": "Africa/Cairo",
+  "finishedCairo": "2026-10-20 16:51:57",
+  "node": "26.10.0",
+  "platform": "darwin-arm64",
+  "cpu": "Apple M4",
+  "baseline": "runtime-full-202610200817580300-63158.json",
+  "baselineNote": "Baseline browser diff-1500-no-overlap reran the diff on every Changes click: cold median script time about 201 ms per click, three clicks.",
+  "scope": "Calls through the actual compiled wordDiff, findMissingTokens and lostArabicScript, driven by the real popup reducer and analysis cache. One render asks for notes, and for the diff only in a changed Changes view. Excludes Preact rendering, DOM and layout.",
+  "results": [
+    {
+      "name": "final-only",
+      "inputWords": 1500,
+      "wordDiffCalls": 0,
+      "wordDiffMs": [],
+      "wordDiffParts": [],
+      "findMissingTokensCalls": 1,
+      "lostArabicScriptCalls": 1
+    },
+    {
+      "name": "changes-final-3x",
+      "inputWords": 1500,
+      "wordDiffCalls": 1,
+      "wordDiffMs": [201.37666599999997],
+      "wordDiffParts": [2],
+      "findMissingTokensCalls": 1,
+      "lostArabicScriptCalls": 1
+    },
+    {
+      "name": "changes-final-3x-multilingual",
+      "inputWords": 8,
+      "wordDiffCalls": 1,
+      "wordDiffMs": [0.4371250000000373],
+      "wordDiffParts": [4],
+      "findMissingTokensCalls": 1,
+      "lostArabicScriptCalls": 1
+    },
+    {
+      "name": "retry-then-views",
+      "inputWords": 1500,
+      "wordDiffCalls": 2,
+      "wordDiffMs": [200.80091600000003, 201.0017499999999],
+      "wordDiffParts": [2, 2],
+      "findMissingTokensCalls": 2,
+      "lostArabicScriptCalls": 2
+    },
+    {
+      "name": "replaced-choice-then-restore",
+      "inputWords": 1500,
+      "wordDiffCalls": 2,
+      "wordDiffMs": [200.70695899999998, 201.01141699999994],
+      "wordDiffParts": [2, 2],
+      "findMissingTokensCalls": 3,
+      "lostArabicScriptCalls": 3
+    }
+  ]
+}

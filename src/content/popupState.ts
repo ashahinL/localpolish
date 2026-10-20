@@ -143,12 +143,12 @@ export function isUnchanged(state: PopupState): boolean {
   return state.phase === 'done' && state.result === state.input;
 }
 
-export function popupNotes(state: PopupState, isMac: boolean): Note[] {
-  if (state.phase !== 'done') return [];
+/** Notes that depend only on the answer, so one completed answer can reuse them. */
+export function answerNotes(input: string, result: string, choice: Choice): Note[] {
   const notes: Note[] = [];
-  if (state.choice === 'shorter') {
-    const before = [...state.input].length;
-    const after = [...state.result].length;
+  if (choice === 'shorter') {
+    const before = [...input].length;
+    const after = [...result].length;
     const over = after > SHORTER_LIMIT;
     notes.push({
       kind: 'count',
@@ -156,14 +156,21 @@ export function popupNotes(state: PopupState, isMac: boolean): Note[] {
       over,
     });
   }
-  const missing = findMissingTokens(state.input, state.result);
+  const missing = findMissingTokens(input, result);
   if (missing.length > 0) notes.push({ kind: 'missing', tokens: missing });
-  if (lostArabicScript(state.input, state.result)) {
+  if (lostArabicScript(input, result)) {
     notes.push({
       kind: 'warning',
       text: 'The Arabic text was changed to another script. Check it before you accept.',
     });
   }
+  return notes;
+}
+
+/** `answer` is this state's `answerNotes`, when already computed. */
+export function popupNotes(state: PopupState, isMac: boolean, answer?: readonly Note[]): Note[] {
+  if (state.phase !== 'done') return [];
+  const notes = [...(answer ?? answerNotes(state.input, state.result, state.choice))];
   if (state.acceptFailure) {
     notes.push({
       kind: 'warning',

@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
-import { wordDiff } from '../../core/diff';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { createPopupAnalysis, type Answer } from '../popupAnalysis';
 import { placePopup, type Rect } from '../position';
 import {
   canAccept,
@@ -54,6 +54,9 @@ export interface PopupProps {
 export function Popup(props: PopupProps) {
   const { state, anchor, isMac } = props;
   const ref = useRef<HTMLDivElement>(null);
+  const [analysis] = useState(createPopupAnalysis);
+
+  useEffect(() => analysis.clear, [analysis]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -78,7 +81,8 @@ export function Popup(props: PopupProps) {
   }, []);
 
   const ready = canAccept(state);
-  const notes = popupNotes(state, isMac);
+  const answer = analysis.answer(state);
+  const notes = popupNotes(state, isMac, answer?.notes);
   // No pressed tab or chip names the shown answer, so the body says which one it is.
   const showCaption = tabOf(state.choice) !== state.tab;
   const showViews = state.phase === 'done' && !isUnchanged(state);
@@ -141,7 +145,7 @@ export function Popup(props: PopupProps) {
       )}
       <div class="lp-body">
         {showCaption && <p class="lp-caption">Showing: {choiceLabel(state.choice)}</p>}
-        <Body state={state} />
+        <Body state={state} answer={answer} />
       </div>
       {notes.length > 0 && (
         <div class="lp-notes">
@@ -171,7 +175,7 @@ export function Popup(props: PopupProps) {
   );
 }
 
-function Body({ state }: { state: PopupState }) {
+function Body({ state, answer }: { state: PopupState; answer: Answer | null }) {
   if (state.phase === 'error') {
     return (
       <p class="lp-error" role="alert">
@@ -179,7 +183,7 @@ function Body({ state }: { state: PopupState }) {
       </p>
     );
   }
-  if (state.phase === 'streaming') {
+  if (!answer) {
     return (
       <>
         {state.streamed !== '' && <div class="lp-text">{state.streamed}</div>}
@@ -194,7 +198,7 @@ function Body({ state }: { state: PopupState }) {
   if (state.view === 'final') return <div class="lp-text lp-final">{state.result}</div>;
   return (
     <div class="lp-text lp-diff">
-      {wordDiff(state.input, state.result).map((part, index) => {
+      {answer.diff().map((part, index) => {
         if (part.type === 'add') return <ins key={index}>{part.text}</ins>;
         if (part.type === 'del') return <del key={index}>{part.text}</del>;
         return <span key={index}>{part.text}</span>;
