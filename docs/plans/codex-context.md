@@ -1,6 +1,6 @@
 # Remove Codex context from rewrite requests
 
-Status: implemented, verified and committed locally as task P11. Not released. The owner requested this work after a live Luna request used 9,362 input tokens for `i has an apple`.
+Status: implemented, verified and pushed as task P11, commit `227afbc`. Not released. The owner requested this work after a live Luna request used 9,362 input tokens for `i has an apple`. The remaining work is in the [performance release plan](performance.md).
 
 ## Decision
 

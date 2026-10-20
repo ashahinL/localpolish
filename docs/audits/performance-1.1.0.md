@@ -2,7 +2,7 @@
 
 Date: 20 October 2026, Cairo time.
 Baseline: LocalPolish 1.1.0, source commit `3638cb03036bb675a8923a99dd715146a66b9dc1`. The product code at this commit is the code tagged `v1.1.0`; the later commit records publication checks.
-Status: review complete. P11 is implemented and verified locally in the [Codex context plan](../plans/codex-context.md). The other tasks are proposals. No release number has been chosen.
+Status: review complete and converted into the [performance release plan](../plans/performance.md). P11 is implemented, verified and pushed. The remaining implementation tasks have not started. No release number has been chosen.
 
 The owner asked for a deep Grok 4.7 review at **xhigh for this run only**, followed by a check of every proposal and an independent sweep. That sequence is complete. Fleet defaults are unchanged.
 
@@ -238,9 +238,9 @@ Also separate cached from uncached input. One saved Luna request reported 13,040
 
 Done means a captured request contains only the context required for rewriting, no unintended global skill or agent catalog, and unchanged tool restrictions and text quality. Measure actual input tokens and ready-result latency on the same inputs before claiming a speedup. No new inference calls were made for this confirmation. Full recounts and debug summaries are in the evidence file under `codexInputFollowUp`.
 
-## Proposed next-release order
+## Original review task groups
 
-Each row is a separate implementation task and commit. P11 is implemented and verified locally at the owner's request. The other tasks are not started. Small follow-ups stay within their owning task.
+These are the original review groups. The [execution plan](../plans/performance.md) splits P00, P01, P03 and P08 into smaller tasks, adds request-lifecycle measurement and candidate verification, and defines the current dependencies and done checks. Use that plan for implementation. P11 is already committed and pushed.
 
 | Order | Work | Required proof |
 | --- | --- | --- |
@@ -292,7 +292,7 @@ The independent sweep followed the complete runtime path and its supporting tool
 
 Measurements used an Apple M4 Mac on macOS 26.7.1, Node 26.10.0, and Playwright Chromium 156.0.8078.4. DOM counters were installed in the extension's isolated world after startup. Instrumentation adds overhead. Synthetic event bursts and 2 MiB frames are stress cases. Small timing samples are not population percentiles.
 
-Not measured: real provider latency or token savings, real CLI version-command latency, battery/power use, slower hardware, Windows runtime performance, verified hidden-tab behavior, many-tab retained heap, sustained rich-editor scrolling, or live model chunk rates. These gaps affect priorities and acceptance tests; they do not turn code inspection into measurements.
+The initial independent sweep did not measure real provider latency or token savings, real CLI version-command latency, battery/power use, slower hardware, Windows runtime performance, verified hidden-tab behavior, many-tab retained heap, sustained rich-editor scrolling, or live model chunk rates. The later [P11 comparison](../plans/codex-context.md) measured Luna/Sol input reduction and exploratory timings; it did not establish a general speedup. The remaining gaps affect priorities and acceptance tests; they do not turn code inspection into measurements.
 
 No production code, settings defaults, dependency versions, bridge installation, user drafts, or fleet configuration were changed. Tests used fresh profiles, fake text, local mocks, and fake version CLIs. The full product test suite was not rerun for a documentation-only audit. Each implementation task must run its targeted checks and the release must run the full gates.
 

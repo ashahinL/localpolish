@@ -1,7 +1,8 @@
 # LocalPolish plan
 
 Status: T0-T14 done.
-Next release: [audit and findings](audits/1.0.0.md), [draft fix plan](plans/next-release.md).
+Released follow-up: [1.1.0 audit fixes and release record](plans/next-release.md).
+Current next release: [performance plan](plans/performance.md), based on the [performance review](audits/performance-1.1.0.md).
 Started: 2026-10-17
 Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
 
