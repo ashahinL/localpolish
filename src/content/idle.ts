@@ -285,8 +285,8 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     marked.delete(el);
   }
 
-  function clearEmpty(el: HTMLElement, slot: Slot): boolean {
-    if (fieldText(el).trim() !== '') return false;
+  function clearEmpty(el: HTMLElement, slot: Slot, text = fieldText(el)): boolean {
+    if (text.trim() !== '') return false;
     cancel(slot);
     drop(el, slot);
     slot.lastFull = undefined;
@@ -348,10 +348,15 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         deps.openPopup(target, pending);
         return;
       }
-      cancel(slot);
-      const started = send(el, slot, current);
-      if (started) deps.openPopup(target, waitOn(slot, started, ''));
-      return;
+      // The background refuses idle requests while idle Fix is off or the site is blocked.
+      if (deps.isEnabled()) {
+        cancel(slot);
+        const started = send(el, slot, current);
+        if (started) {
+          deps.openPopup(target, waitOn(slot, started, ''));
+          return;
+        }
+      }
     }
     cancel(slot);
     deps.openPopup(target);
@@ -410,7 +415,9 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         else marked.delete(el);
         continue;
       }
-      if (clearEmpty(el, slot)) continue;
+      // One text read per pass: a large rich editor makes each read costly.
+      const current = fieldText(el);
+      if (clearEmpty(el, slot, current)) continue;
       if (slot.running) {
         const spot = markSpot(el);
         if (spot) {
@@ -426,7 +433,6 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         continue;
       }
       if (!result) continue;
-      const current = fieldText(el);
       if ('fixed' in result && appendedEnding(result.fixed, current) !== undefined) {
         slot.result = undefined;
         marked.delete(el);

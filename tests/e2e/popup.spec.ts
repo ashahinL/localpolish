@@ -38,6 +38,7 @@ type PageApi = {
     requests: () => number;
     maxOpen: () => number;
     sent: () => string[];
+    triggers: () => (string | null)[];
     deliver: (index: number, event: FakeEvent) => void;
     draftText: () => string;
   };
@@ -644,8 +645,7 @@ test.describe('idle fix', () => {
           );
           await expect(page.locator('.lp-mark')).toHaveText('3');
         }
-        await page.keyboard.press('ControlOrMeta+Home');
-        await page.keyboard.press('ControlOrMeta+Shift+End');
+        await page.keyboard.press('ControlOrMeta+a');
         await page.clock.runFor(50);
         await page.keyboard.press('Backspace');
         if (editor === '#ta') await expect(field).toHaveValue('');
@@ -665,14 +665,12 @@ test.describe('idle fix', () => {
         await pause(page);
         await expect(page.locator('.lp-mark')).toHaveCount(0);
         expect(await requests(page)).toBe(1);
-        await page.keyboard.press('ControlOrMeta+Home');
-        await page.keyboard.press('ControlOrMeta+Shift+End');
+        await page.keyboard.press('ControlOrMeta+a');
         await page.clock.runFor(50);
         await field.pressSequentially('only three words');
         await pause(page);
         expect(await requests(page)).toBe(1);
-        await page.keyboard.press('ControlOrMeta+Home');
-        await page.keyboard.press('ControlOrMeta+Shift+End');
+        await page.keyboard.press('ControlOrMeta+a');
         await page.clock.runFor(50);
         await field.pressSequentially('i has went home today');
         await pause(page);
@@ -794,6 +792,21 @@ test.describe('idle fix', () => {
     expect(await newText(page)).toBe('I went home today.');
     expect(await requests(page)).toBe(1);
     expect(await maxOpen(page)).toBe(1);
+  });
+
+  test('a whole-field Fix with idle Fix off sends a normal request', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
+    await page.evaluate(() => (window as unknown as PageApi).__lp.setEnabled(false));
+    await page.locator('#ta').click();
+    await page.keyboard.type('i has went home today');
+    await manual(page);
+    await page.clock.fastForward(FAKE_REPLY_MS);
+
+    expect(await newText(page)).toBe('I went home today.');
+    expect(await page.evaluate(() => (window as unknown as PageApi).__lp.triggers())).toEqual([
+      null,
+    ]);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
   test('switching tab while waiting on the idle request cancels it', async ({ page }) => {

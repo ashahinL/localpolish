@@ -151,6 +151,7 @@ const popupApi = {
   requests: () => fake.calls,
   maxOpen: () => fake.maxOpen,
   sent: () => fake.sent.map((message) => message.text),
+  triggers: () => fake.sent.map((message) => message.trigger ?? null),
   deliver: (index, event) => fake.ports[index](event),
 };
 

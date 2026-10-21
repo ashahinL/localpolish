@@ -6,15 +6,36 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
-- Whole-field Fix checks reuse running requests and saved answers after added trailing spaces
-  or one final period. Accept and Copy keep the added ending without doubling the period.
-- Opening a whole-field Fix after other edits cancels the old check and sends the latest
-  full text. Closing its popup keeps the check running for the badge.
-- Clearing a draft cancels its running check and removes saved results and badges.
-  Late replies stay ignored, and empty drafts send no automatic request.
+**Bridge users:** run `git pull` in your LocalPolish folder to get the new bridge code. No `npm run bridge:install` is needed.
 
-- Discord: when Slate ignores Accept's paste, keep the draft editable and use
-  the Copy fallback instead of forcing text into the editor.
+**Faster and lighter**
+
+- Codex requests send only the writing instruction and your text. A short Fix went from about 9,400 input tokens to about 800. Your Codex settings, skills and login are untouched.
+- The bridge health check runs only for CLI providers, runs its version checks at the same time, and reuses a good result.
+- Idle Fix does no work on blocked sites or when it is off, and waits while the tab is hidden.
+- The popup reuses its diff and notes, markers redraw only when something changed, and the selection button measures the page after the pause instead of on every move.
+- A closed toolbar popup or options page cancels its running Test connection.
+- Changing a provider, model or key no longer messages every open tab. Site and idle changes reach tabs in order, so a quick block and unblock ends in the right state.
+
+**Safer**
+
+- Text over 256 KiB is refused before anything is sent, with a message saying so.
+- Answers over 1 MiB are stopped and fail instead of filling the page.
+- Bridge messages, CLI output lines, API stream events and API error bodies all have size limits.
+
+**Fixes**
+
+- Discord: when Slate ignores Accept's paste, the draft stays editable and Accept offers Copy instead of forcing the text in.
+- Whole-field Fix reuses a running check or a saved answer after you add trailing spaces or one final period. Accept and Copy keep the added ending without doubling the period.
+- Opening a whole-field Fix after other edits cancels the old check and sends the latest full text. Closing its popup keeps the check running for the badge.
+- Clearing a draft cancels its running check and removes saved results and badges. Late replies stay ignored, and empty drafts send no automatic request.
+- Usage counts Grok's default model under the model Grok reports.
+
+**For contributors**
+
+- A runtime benchmark (`bench/`) and a request lifecycle benchmark, with results for this release in `bench/results/`.
+- CI builds the extension once and reuses it for the browser tests.
+- The 1.1.0 performance review, its plan, and the release candidate check are in `docs/audits/` and `docs/plans/performance.md`.
 
 ## 1.1.0 — 2026-10-20
 
