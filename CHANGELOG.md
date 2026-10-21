@@ -10,6 +10,8 @@ finished but not released yet waits under Unreleased. How a version ships:
   or one final period. Accept and Copy keep the added ending without doubling the period.
 - Opening a whole-field Fix after other edits cancels the old check and sends the latest
   full text. Closing its popup keeps the check running for the badge.
+- Clearing a draft cancels its running check and removes saved results and badges.
+  Late replies stay ignored, and empty drafts send no automatic request.
 
 - Discord: when Slate ignores Accept's paste, keep the draft editable and use
   the Copy fallback instead of forcing text into the editor.

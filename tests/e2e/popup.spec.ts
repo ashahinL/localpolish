@@ -624,6 +624,64 @@ test.describe('idle fix', () => {
     await expect(page.locator('.lp-mark')).toHaveCount(0);
   });
 
+  for (const editor of ['#ta', '#slate']) {
+    for (const completed of [false, true]) {
+      test(`clearing ${editor} ${completed ? 'after the answer' : 'during a request'} removes the badge and forgets the draft`, async ({
+        page,
+      }) => {
+        await startIdle(page, [[]]);
+        const field = page.locator(editor);
+        await field.click();
+        await field.pressSequentially('i has went home today');
+        await page.clock.fastForward(3000);
+        expect(await requests(page)).toBe(1);
+        if (completed) {
+          await page.evaluate(() =>
+            (window as unknown as PageApi).__lp.deliver(0, {
+              type: 'done',
+              text: 'I went home today.',
+            }),
+          );
+          await expect(page.locator('.lp-mark')).toHaveText('3');
+        }
+        await page.keyboard.press('ControlOrMeta+Home');
+        await page.keyboard.press('ControlOrMeta+Shift+End');
+        await page.clock.runFor(50);
+        await page.keyboard.press('Backspace');
+        if (editor === '#ta') await expect(field).toHaveValue('');
+        else await expect(field).toHaveText('');
+        await page.clock.fastForward(250);
+        await expect(page.locator('.lp-mark')).toHaveCount(0);
+        await page.evaluate(() =>
+          (window as unknown as PageApi).__lp.deliver(0, {
+            type: 'done',
+            text: 'I went home today.',
+          }),
+        );
+        await pause(page);
+        await expect(page.locator('.lp-mark')).toHaveCount(0);
+        expect(await requests(page)).toBe(1);
+        await field.pressSequentially('  \u00a0 ');
+        await pause(page);
+        await expect(page.locator('.lp-mark')).toHaveCount(0);
+        expect(await requests(page)).toBe(1);
+        await page.keyboard.press('ControlOrMeta+Home');
+        await page.keyboard.press('ControlOrMeta+Shift+End');
+        await page.clock.runFor(50);
+        await field.pressSequentially('only three words');
+        await pause(page);
+        expect(await requests(page)).toBe(1);
+        await page.keyboard.press('ControlOrMeta+Home');
+        await page.keyboard.press('ControlOrMeta+Shift+End');
+        await page.clock.runFor(50);
+        await field.pressSequentially('i has went home today');
+        await pause(page);
+        expect(await requests(page)).toBe(2);
+        expect(await maxOpen(page)).toBe(1);
+      });
+    }
+  }
+
   test('inherited spellcheck off sends nothing', async ({ page }) => {
     await startIdle(page, [[{ type: 'done', text: 'I went home today.' }]]);
     await page.locator('#ta-nospell').click();

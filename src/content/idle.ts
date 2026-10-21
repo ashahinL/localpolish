@@ -88,6 +88,10 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     const host = findEditable(event.target);
     if (!host || !isIdleField(host)) return;
     const slot = slotOf(host);
+    if (clearEmpty(host, slot)) {
+      renderMarks();
+      return;
+    }
     slot.lastInput = Date.now();
     queueReposition();
     slot.pending = false;
@@ -281,6 +285,15 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     marked.delete(el);
   }
 
+  function clearEmpty(el: HTMLElement, slot: Slot): boolean {
+    if (fieldText(el).trim() !== '') return false;
+    cancel(slot);
+    drop(el, slot);
+    slot.lastFull = undefined;
+    slot.lastInput = undefined;
+    return true;
+  }
+
   function activate(el: HTMLElement): void {
     if (!deps.isEnabled()) {
       renderMarks();
@@ -289,6 +302,10 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     const slot = slots.get(el);
     const result = slot?.result;
     if (!slot || (!result && !slot.running)) return;
+    if (clearEmpty(el, slot)) {
+      renderMarks();
+      return;
+    }
     const current = fieldText(el);
     const ending = result ? appendedEnding(result.sent, current) : undefined;
     if (result && !slot.running && ending !== undefined) {
@@ -393,6 +410,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         else marked.delete(el);
         continue;
       }
+      if (clearEmpty(el, slot)) continue;
       if (slot.running) {
         const spot = markSpot(el);
         if (spot) {

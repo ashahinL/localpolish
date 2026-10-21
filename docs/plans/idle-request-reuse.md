@@ -32,3 +32,26 @@ checks covered badge reuse after appended spaces and a period, cancellation
 after typing and clipboard paste, closing a running popup, a separate selected
 phrase, and cached answers with no changes needed. Remaining live checks include
 the sparkle button and additional punctuation and newline cases.
+
+## Empty draft regression
+
+The user found that clearing a draft left a dimmed badge, both during and after
+a request. Clearing a field must cancel its request, discard the saved answer
+and draft, and remove the badge. Late replies must stay ignored. Empty or
+whitespace-only fields must send nothing; automatic checks still require four
+words. Explicit fixes of short selections remain allowed.
+
+- [x] Reproduce the clearing bug in textarea and Slate browser tests, fix the
+      draft cleanup, run the full editor/popup suite and code checks, and build.
+
+- [ ] Verify the rebuilt extension in Discord after it is reloaded.
+
+Clearing regressions reproduced before the fix and pass after it in textarea
+and Slate. They cover active and completed requests, late replies, spaces-only
+input, fewer than four words, and retyping the same draft after clearing.
+Verification passed: 70 popup tests, 31 editor tests in installed Brave, 536 unit
+tests with 9 skipped, lint, typecheck, formatting, diff checks, and production
+build. Code and test guard reviews found no further issues. Comment review found
+no changed comments to flag and no reusable skill to extract. The live Discord
+check of this new build remains pending. The user requested committing and
+pushing both changes before that check.
