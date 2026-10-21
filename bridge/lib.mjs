@@ -432,6 +432,47 @@ export function codexLoginCommand(codexHome, platform = process.platform) {
     : `mkdir -p "${codexHome}" && CODEX_HOME="${codexHome}" codex login`;
 }
 
+const AGY_LOGS_KEPT = 5;
+
+/**
+ * Removes what one run leaves in the private agy home. The id must already be checked.
+ * @param {string} saved The agy home's `.gemini/antigravity-cli` folder.
+ * @param {string} conversation
+ */
+export function clearAgyRun(saved, conversation) {
+  fs.rmSync(path.join(saved, 'conversations', `${conversation}.db`), { force: true });
+  fs.rmSync(path.join(saved, 'brain', conversation), { recursive: true, force: true });
+  // agy keeps a generated title for every run here. Node before 22.13 has no node:sqlite.
+  const summaries = path.join(saved, 'conversation_summaries.db');
+  try {
+    const sqlite = process.getBuiltinModule?.('node:sqlite');
+    if (sqlite && fs.existsSync(summaries)) {
+      const db = new sqlite.DatabaseSync(summaries);
+      try {
+        db.prepare('DELETE FROM conversation_summaries WHERE conversation_id = ?').run(
+          conversation,
+        );
+      } finally {
+        db.close();
+      }
+    }
+  } catch {
+    // An older agy may not have this table.
+  }
+  // agy starts a new log file, named by date and time, for every run.
+  try {
+    const logs = path.join(saved, 'log');
+    const files = fs
+      .readdirSync(logs)
+      .filter((name) => name.endsWith('.log'))
+      .sort();
+    for (const name of files.slice(0, -AGY_LOGS_KEPT))
+      fs.rmSync(path.join(logs, name), { force: true });
+  } catch {
+    // No log folder yet.
+  }
+}
+
 /**
  * @param {string} home
  * @param {NodeJS.Platform} [platform]

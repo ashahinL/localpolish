@@ -56,7 +56,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Bridge: `buildCommand`, `parseLine`, `CLI_NAMES`, the ping, and the installer's PATH list. A private home at `LocalPolish/agy-home` and a per-run `.agents/agents/localpolish.md` agent file in the temp working folder. The prompt goes on stdin as stream-json. The conversation files are deleted by id after each run. Fake-CLI tests like Grok's.
   - Extension: a new `antigravity-cli` provider id in settings, the providers index, the toolbar Provider picker and options, and the model suggestions.
   - Docs: the README setup steps, with the one-time login command, and `PRIVACY.md`.
-  - Live check pending: the owner runs the agy login command, then Claude checks a real Fix and the conversation cleanup.
+  - Live check, 22 October 2026: after the owner's login, three real Fixes ran through the installed bridge wrapper (`gemini-3.8-flash-low`, 5.6 to 13 s each). The ping reports agy 1.4.4. The conversation and brain files were deleted after each run, and no draft text was left anywhere in the agy home. The check found two leftovers, both now fixed: a generated title row per run in `conversation_summaries.db`, and one 26 KB log per run. The bridge now deletes the row (needs `node:sqlite`, Node 22.13 or later) and keeps the 5 newest logs. Quality note: the model left "two apple" unfixed in all three runs.
 
 ## 1.3.0, part 2: language switches (T22)
 
@@ -153,7 +153,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 - Current commit: T22c (language switches UI).
 - Finished: T21a (spike), T22a, T22b, T21c (Antigravity provider), T22c. Popup screenshots were retaken for T22c.
 - Last checks (T22c): unit tests (654 passed, 2 skipped), lint, typecheck, Prettier, build, and all 207 browser tests.
-- Waiting on the owner: `npm run bridge:install`, then the one-time agy login. Then Claude checks a real Antigravity Fix, the conversation cleanup, and whether `conversation_summaries.db` in the agy home keeps draft text. The paid bench check of the keep line is also the owner's to schedule.
-- Next task: T24 (release 1.3.0) after those checks. T23 (chat) work can start before the release.
+- The Antigravity live check is done (see T21c). Still the owner's to schedule: the paid bench check of the keep line.
+- Next task: T24 (release 1.3.0), after the owner's hand check. T23 (chat) work can start before the release.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.

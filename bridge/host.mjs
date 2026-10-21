@@ -15,6 +15,7 @@ import {
   agyHomeFor,
   agyLoginCommand,
   buildCommand,
+  clearAgyRun,
   codexHomeFor,
   codexLoginCommand,
   codexRewriteCatalog,
@@ -233,9 +234,7 @@ function handleRewrite(msg) {
         killGroup('SIGKILL');
       }
       if (agyHome && conversation && /^[0-9a-f-]{36}$/i.test(conversation)) {
-        const saved = path.join(agyHome, '.gemini', 'antigravity-cli');
-        fs.rmSync(path.join(saved, 'conversations', `${conversation}.db`), { force: true });
-        fs.rmSync(path.join(saved, 'brain', conversation), { recursive: true, force: true });
+        clearAgyRun(path.join(agyHome, '.gemini', 'antigravity-cli'), conversation);
       }
       removeDir();
       exitWhenFlushed();

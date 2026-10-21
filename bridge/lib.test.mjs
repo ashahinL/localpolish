@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { MAX_NATIVE_FRAME_BYTES } from './constants.mjs';
 import {
   agyHomeFor,
+  clearAgyRun,
   agyLoginCommand,
   buildCommand,
   CODEX_DISABLED_FEATURES,
@@ -466,5 +467,56 @@ describe('Antigravity', () => {
         ? `$env:HOME="${home}"; $env:USERPROFILE="${home}"; mkdir -Force $env:HOME | Out-Null; agy`
         : `mkdir -p "${home}" && HOME="${home}" agy`,
     );
+  });
+});
+
+const sqlite = process.getBuiltinModule?.('node:sqlite');
+
+describe('clearAgyRun', () => {
+  const id = '11111111-2222-3333-4444-555555555555';
+  const other = '66666666-7777-8888-9999-000000000000';
+
+  function savedDir() {
+    const saved = fs.mkdtempSync(path.join(os.tmpdir(), 'lp-agy-saved-'));
+    fs.mkdirSync(path.join(saved, 'conversations'));
+    fs.mkdirSync(path.join(saved, 'brain', id), { recursive: true });
+    fs.writeFileSync(path.join(saved, 'conversations', `${id}.db`), 'fake draft');
+    fs.writeFileSync(path.join(saved, 'brain', id, 'draft'), 'fake draft');
+    return saved;
+  }
+
+  it('removes the run and keeps the newest five logs', () => {
+    const saved = savedDir();
+    fs.mkdirSync(path.join(saved, 'log'));
+    const logs = Array.from({ length: 7 }, (_, i) => `cli-20261022_0${i}0000.log`);
+    for (const name of logs) fs.writeFileSync(path.join(saved, 'log', name), '');
+    clearAgyRun(saved, id);
+    expect(fs.existsSync(path.join(saved, 'conversations', `${id}.db`))).toBe(false);
+    expect(fs.existsSync(path.join(saved, 'brain', id))).toBe(false);
+    expect(fs.readdirSync(path.join(saved, 'log')).sort()).toEqual(logs.slice(2));
+  });
+
+  it.skipIf(!sqlite)("deletes only this run's summary row", () => {
+    const saved = savedDir();
+    const file = path.join(saved, 'conversation_summaries.db');
+    const db = new sqlite.DatabaseSync(file);
+    db.exec('CREATE TABLE conversation_summaries (conversation_id text, title text)');
+    const insert = db.prepare('INSERT INTO conversation_summaries VALUES (?, ?)');
+    insert.run(id, 'Grammar fix');
+    insert.run(other, 'Kept');
+    db.close();
+    clearAgyRun(saved, id);
+    const check = new sqlite.DatabaseSync(file);
+    expect(check.prepare('SELECT conversation_id FROM conversation_summaries').all()).toEqual([
+      { conversation_id: other },
+    ]);
+    check.close();
+  });
+
+  it('ignores a summaries file without the table', () => {
+    const saved = savedDir();
+    fs.writeFileSync(path.join(saved, 'conversation_summaries.db'), '');
+    expect(() => clearAgyRun(saved, id)).not.toThrow();
+    expect(fs.existsSync(path.join(saved, 'conversations', `${id}.db`))).toBe(false);
   });
 });
