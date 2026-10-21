@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: in progress. T21a and T22a are done. OpenCode moved to the backlog (owner, 22 October 2026).
+Status: in progress. T21a, T22a and T22b are done. OpenCode moved to the backlog (owner, 22 October 2026).
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -71,7 +71,8 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 ### Tasks
 
 - [x] **T22a. Language detector.** Sol medium. A pure module `src/content/language.ts` with: main language (`en`, `ar`, `franco` or `other`), plus which other languages appear. Chrome's detector is passed in, so unit tests use a fake. Table tests with English, Arabic, Franco, mixed and very short samples, using made-up text only. It must stay fast: one detection per idle pass, never per keystroke. Depends on: nothing.
-- [ ] **T22b. Settings and the idle skip.** Sol medium. Depends on: T22a.
+- [x] **T22b. Settings and the idle skip.** Sol medium. Depends on: T22a.
+  - Bench check of the keep line: pending, the owner schedules it (paid run).
   - A `languages` setting with checked reads (like `idleFix`), included in `pageSettings`.
   - Idle Fix skips text whose main language is off, and clears its marks.
   - When the main language is on and other parts are off, the idle request adds one line telling the model to leave those parts as they are. Bench-check this line with the existing Fix inputs before merging, because the Fix prompt is kept short on purpose (see `docs/benchmarks/2026-10-17-fix-mode.md`).
@@ -148,8 +149,9 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current commit: `6fce943` (T22a).
-- Finished: T21a (spike), T22a (language detector, 39 unit tests).
-- Next task: T22b (Sol medium), then T21c (Sol medium).
+- Current commit: T22b (language settings and the idle skip).
+- Finished: T21a (spike), T22a (language detector), T22b. T22b clears all idle results when the language switches change. Manual Fix doesn't reuse results or pending requests that have a keep line, and manual whole-field sends no longer carry `trigger: 'idle'`.
+- T22b checks: unit tests (617 passed, 2 skipped), lint, typecheck, Prettier, build, and all 203 browser tests. The 5 new language browser tests fail on the old code and pass on the new code.
+- Next: T21c (Sol medium), then T22c (art lane).
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.

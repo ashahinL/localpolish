@@ -1,4 +1,4 @@
-import { type Mode, type Tone } from './settings';
+import { type LanguageId, type Mode, type Tone } from './settings';
 
 // Kept short on purpose: long rule lists made Haiku copy the text back unchanged.
 // See docs/benchmarks/2026-10-17-fix-mode.md before adding rules.
@@ -48,9 +48,20 @@ export function buildPrompt(
   mode: Mode,
   tone: Tone,
   text: string,
+  keep?: LanguageId[],
 ): { system: string; user: string } {
+  const names: Record<LanguageId, string> = {
+    en: 'English',
+    ar: 'Arabic',
+    franco: 'Franco-Arabic',
+    other: 'other-language',
+  };
+  const parts = keep?.map((id) => names[id]) ?? [];
+  const listed =
+    parts.length < 2 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+  const system = mode === 'tone' ? TONE_PROMPTS[tone] : MODE_PROMPTS[mode];
   return {
-    system: mode === 'tone' ? TONE_PROMPTS[tone] : MODE_PROMPTS[mode],
+    system: parts.length ? `${system} Leave the ${listed} parts exactly as they are.` : system,
     user: `<text>\n${text}\n</text>`,
   };
 }

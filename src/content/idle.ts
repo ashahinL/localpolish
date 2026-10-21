@@ -1,5 +1,6 @@
 import { Fragment, h, render } from 'preact';
 import { wordDiff } from '../core/diff';
+import type { LanguageId } from '../core/settings';
 import { BRIDGE_MISSING } from '../core/messages';
 import { type PortLike, type Preset } from './controller';
 import {
@@ -10,13 +11,16 @@ import {
   wholeFieldTarget,
   type Target,
 } from './editable';
-import { guarded } from './guard';
+import { guarded, settle } from './guard';
+import { detectLanguages, type DetectFn, type LanguageResult } from './language';
 import { appendedEnding, countChanges, preserveEnding, wordCount } from './idleText';
 import { IdleMark } from './ui/IdleMark';
 import { layer } from './ui/root';
 
 export interface IdleDeps {
   connect(): PortLike;
+  languages(): Record<LanguageId, boolean>;
+  detect: DetectFn;
   isEnabled(): boolean;
   isPopupOpen(): boolean;
   isFixDefault(): boolean;
@@ -34,6 +38,8 @@ type Outcome = { fixed: string } | { error: string; code?: typeof BRIDGE_MISSING
 type IdleResult = { sent: string; fixed: string; count: number } | { sent: string; error: string };
 
 interface Slot {
+  language?: LanguageId;
+  keep?: LanguageId[];
   timer: ReturnType<typeof setTimeout> | undefined;
   lastInput: number | undefined;
   running: boolean;
@@ -67,6 +73,8 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
   const ids = new WeakMap<HTMLElement, number>();
   const marked = new Set<HTMLElement>();
   const waiting = new WeakSet<Slot>();
+  let languageSettings = JSON.stringify(deps.languages());
+  let languageVersion = 0;
   let nextId = 1;
   let follow: ReturnType<typeof setInterval> | undefined;
   let frame: number | undefined;
@@ -176,10 +184,50 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     const full = fieldText(el);
     if (appendedEnding(slot.lastFull, full) !== undefined) return;
     if (wordCount(full) < MIN_WORDS) return;
-    send(el, slot, full);
+    if (Object.values(deps.languages()).every(Boolean)) {
+      send(el, slot, full, undefined, 'idle');
+      return;
+    }
+    const complete = guarded((result?: LanguageResult) => {
+      if (
+        document.hidden ||
+        deps.isPopupOpen() ||
+        !deps.isEnabled() ||
+        focusedEditable() !== el ||
+        !el.isConnected ||
+        !isIdleField(el) ||
+        slot.running ||
+        fieldText(el) !== full ||
+        appendedEnding(slot.lastFull, full) !== undefined ||
+        wordCount(full) < MIN_WORDS
+      )
+        return;
+      if (result?.main) slot.language = result.main;
+      const languages = deps.languages();
+      if (result && slot.language && !languages[slot.language]) {
+        hide(el, slot);
+        return;
+      }
+      const keep = result?.parts.filter((id) => !languages[id]);
+      send(el, slot, full, keep, 'idle');
+    });
+    settle(
+      detectLanguages(full, deps.detect).then(
+        complete,
+        guarded(() => complete()),
+      ),
+    );
   }
 
-  function send(el: HTMLElement, slot: Slot, full: string): Promise<Outcome> | undefined {
+  function send(
+    el: HTMLElement,
+    slot: Slot,
+    full: string,
+    keep?: LanguageId[],
+    trigger?: 'idle',
+  ): Promise<Outcome> | undefined {
+    const version = languageVersion;
+    slot.keep = keep;
     slot.running = true;
     slot.pending = false;
     let port: PortLike;
@@ -221,7 +269,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       if (!el.isConnected) {
         drop(el, slot);
         renderMarks();
-      } else {
+      } else if (version === languageVersion) {
         record(el, slot, full, outcome);
       }
       resolveOutcome(outcome);
@@ -243,7 +291,13 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
         finish({ error: STOPPED });
       }),
     );
-    port.postMessage({ mode: 'fix', tone: 'polite', text: full, trigger: 'idle' });
+    port.postMessage({
+      mode: 'fix',
+      tone: 'polite',
+      text: full,
+      ...(trigger ? { trigger } : {}),
+      ...(keep?.length ? { keep } : {}),
+    });
     return promise;
   }
 
@@ -308,7 +362,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     }
     const current = fieldText(el);
     const ending = result ? appendedEnding(result.sent, current) : undefined;
-    if (result && !slot.running && ending !== undefined) {
+    if (result && !slot.keep?.length && !slot.running && ending !== undefined) {
       deps.openPopup(
         wholeFieldTarget(el),
         'error' in result
@@ -338,7 +392,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       target = wholeFieldTarget(el);
       const result = slot.result;
       const ending = result ? appendedEnding(result.sent, current) : undefined;
-      if (result && 'fixed' in result && ending !== undefined) {
+      if (result && !slot.keep?.length && 'fixed' in result && ending !== undefined) {
         cancel(slot);
         deps.openPopup(target, { fixed: preserveEnding(result.fixed, ending) });
         return;
@@ -376,7 +430,8 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
 
   function inflightFor(slot: Slot, text: string): Preset | undefined {
     const ending = appendedEnding(slot.runningText, text);
-    if (slot.inflight && ending !== undefined) return waitOn(slot, slot.inflight, ending);
+    if (slot.inflight && !slot.keep?.length && ending !== undefined)
+      return waitOn(slot, slot.inflight, ending);
     return undefined;
   }
 
@@ -518,7 +573,24 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (slot.result) hide(el, slot);
   }
 
-  return { open, accepted, refresh: renderMarks };
+  function refresh(): void {
+    const current = JSON.stringify(deps.languages());
+    if (current !== languageSettings) {
+      languageSettings = current;
+      languageVersion++;
+      for (const el of marked) {
+        const slot = slots.get(el);
+        if (!slot) continue;
+        if (!waiting.has(slot)) cancel(slot);
+        slot.lastFull = undefined;
+        slot.result = undefined;
+      }
+      marked.clear();
+    }
+    renderMarks();
+  }
+
+  return { open, accepted, refresh };
 }
 
 function markSpot(el: HTMLElement): { top: number; left: number } | null {

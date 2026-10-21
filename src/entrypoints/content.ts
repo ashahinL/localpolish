@@ -6,12 +6,14 @@ import { createIdleFix } from '../content/idle';
 import type { PortLike } from '../content/controller';
 import { captureTarget, deepActiveElement, focusedEditable } from '../content/editable';
 import { guarded } from '../content/guard';
+import type { DetectFn } from '../content/language';
 import { frameHosts } from '../content/site';
 import { showToast } from '../content/ui/toast';
 import { REWRITE_PORT, type PageSettings } from '../core/messages';
 import { DEFAULT_SETTINGS, isBlocked, pageSettings } from '../core/settings';
 
 interface ContentChrome {
+  i18n: { detectLanguage: DetectFn };
   runtime: {
     id?: string;
     connect(info: { name: string }): PortLike;
@@ -52,7 +54,14 @@ function start(): void {
       !Array.isArray(raw.blocklist) ||
       raw.blocklist.some((entry) => typeof entry !== 'string') ||
       raw.idleFix !== normalized.idleFix ||
-      raw.defaultMode !== normalized.defaultMode
+      raw.defaultMode !== normalized.defaultMode ||
+      typeof raw.languages !== 'object' ||
+      raw.languages === null ||
+      Array.isArray(raw.languages) ||
+      Object.keys(raw.languages).length !== Object.keys(normalized.languages).length ||
+      Object.entries(normalized.languages).some(
+        ([id, enabled]) => raw.languages?.[id as keyof typeof normalized.languages] !== enabled,
+      )
     )
       return false;
     settings = normalized;
@@ -86,6 +95,8 @@ function start(): void {
   idle = createIdleFix({
     connect,
     isEnabled: isIdleEnabled,
+    languages: () => (settings ?? DEFAULT_SETTINGS).languages,
+    detect: (text) => ext.i18n.detectLanguage(text),
     isPopupOpen: controller.isOpen,
     isFixDefault: () => (settings ?? DEFAULT_SETTINGS).defaultMode === 'fix',
     openPopup: controller.open,

@@ -1,4 +1,6 @@
-export type Lang = 'en' | 'ar' | 'franco' | 'other';
+import type { LanguageId } from '../core/settings';
+
+export type Lang = LanguageId;
 
 export interface ChromeLanguageResult {
   isReliable: boolean;

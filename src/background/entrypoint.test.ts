@@ -129,6 +129,7 @@ describe('background settings and rewrite ports', () => {
       blocklist: ['blocked.example'],
       idleFix: false,
       defaultMode: 'shorter',
+      languages: { en: true, ar: true, franco: true, other: true },
     });
     const background = await startBackground();
     const reply = vi.fn();
@@ -139,6 +140,7 @@ describe('background settings and rewrite ports', () => {
         blocklist: ['blocked.example'],
         idleFix: false,
         defaultMode: 'shorter',
+        languages: { en: true, ar: true, franco: true, other: true },
       }),
     );
   });
@@ -166,21 +168,36 @@ describe('background settings and rewrite ports', () => {
         1,
         {
           type: 'page-settings-changed',
-          settings: { blocklist: ['blocked.example'], idleFix: true, defaultMode: 'fix' },
+          settings: {
+            blocklist: ['blocked.example'],
+            idleFix: true,
+            defaultMode: 'fix',
+            languages: { en: true, ar: true, franco: true, other: true },
+          },
         },
       ],
       [
         2,
         {
           type: 'page-settings-changed',
-          settings: { blocklist: ['blocked.example'], idleFix: true, defaultMode: 'fix' },
+          settings: {
+            blocklist: ['blocked.example'],
+            idleFix: true,
+            defaultMode: 'fix',
+            languages: { en: true, ar: true, franco: true, other: true },
+          },
         },
       ],
       [
         3,
         {
           type: 'page-settings-changed',
-          settings: { blocklist: ['blocked.example'], idleFix: true, defaultMode: 'fix' },
+          settings: {
+            blocklist: ['blocked.example'],
+            idleFix: true,
+            defaultMode: 'fix',
+            languages: { en: true, ar: true, franco: true, other: true },
+          },
         },
       ],
     ]);
@@ -244,6 +261,38 @@ describe('background settings and rewrite ports', () => {
     port.send(request);
     await vi.waitFor(() => expect(runRewrite).toHaveBeenCalledTimes(1));
     expect(vi.mocked(runRewrite).mock.calls[0]?.[0]).toEqual(request);
+  });
+
+  it('accepts known unique keep ids on idle requests', async () => {
+    const port = await connect({ tab: { url: 'https://site.example/' } });
+    const request = {
+      mode: 'fix',
+      tone: 'polite',
+      text: 'a made up draft',
+      trigger: 'idle',
+      keep: ['ar', 'franco'],
+    };
+    port.send(request);
+    await vi.waitFor(() => expect(runRewrite).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(runRewrite).mock.calls[0]?.[0]).toEqual(request);
+  });
+
+  it.each([
+    { keep: ['ar'] },
+    { keep: [] },
+    { trigger: 'idle', keep: ['unknown'] },
+    { trigger: 'idle', keep: ['ar', 'ar'] },
+    { trigger: 'idle', keep: 'ar' },
+    { trigger: 'idle', keep: null },
+  ])('rejects invalid keep values: %j', async (extra) => {
+    const port = await connect();
+    port.send({ mode: 'fix', tone: 'polite', text: 'a made up draft', ...extra });
+    expect(port.postMessage).toHaveBeenCalledWith({
+      type: 'error',
+      message: 'The rewrite request was not understood.',
+    });
+    expect(runRewrite).not.toHaveBeenCalled();
+    expect(loadSettings).not.toHaveBeenCalled();
   });
 
   it('rejects unknown triggers', async () => {
@@ -514,7 +563,12 @@ describe('page settings at the Chrome boundary', () => {
     [undefined, { idleFix: 'false', defaultMode: 'tone', blocklist: [null, 42] }],
     [
       { idleFix: null, defaultMode: 'bad', blocklist: false },
-      { idleFix: true, defaultMode: 'fix', blocklist: [] },
+      {
+        idleFix: true,
+        defaultMode: 'fix',
+        languages: { en: true, ar: true, franco: true, other: true },
+        blocklist: [],
+      },
     ],
     [
       { blocklist: ['B.example', null, 'a.example', 'B.example'] },
@@ -535,7 +589,11 @@ describe('page settings at the Chrome boundary', () => {
 
   it.each([
     [{ idleFix: true }, { idleFix: false }],
-    [{ defaultMode: 'fix' }, { defaultMode: 'shorter' }],
+    [{ languages: { ar: true } }, { languages: { ar: false } }],
+    [
+      { defaultMode: 'fix', languages: { en: true, ar: true, franco: true, other: true } },
+      { defaultMode: 'shorter', languages: { en: true, ar: true, franco: true, other: true } },
+    ],
     [{ blocklist: ['a', 'b'] }, { blocklist: ['b', 'a'] }],
     [{ blocklist: ['a'] }, undefined],
   ])(
@@ -551,6 +609,7 @@ describe('page settings at the Chrome boundary', () => {
           blocklist: ['B.example', null, 'a.example', 'B.example'],
           idleFix: false,
           defaultMode: 'shorter',
+          languages: { en: true, ar: true, franco: true, other: true },
         },
       });
       background.query.mockResolvedValue([{ id: 10 }, {}, { id: 20 }]);
@@ -567,6 +626,7 @@ describe('page settings at the Chrome boundary', () => {
               blocklist: ['B.example', 'a.example', 'B.example'],
               idleFix: false,
               defaultMode: 'shorter',
+              languages: { en: true, ar: true, franco: true, other: true },
             },
           },
         ],
@@ -578,6 +638,7 @@ describe('page settings at the Chrome boundary', () => {
               blocklist: ['B.example', 'a.example', 'B.example'],
               idleFix: false,
               defaultMode: 'shorter',
+              languages: { en: true, ar: true, franco: true, other: true },
             },
           },
         ],
@@ -587,8 +648,18 @@ describe('page settings at the Chrome boundary', () => {
 
   it('serializes reads, queries, every send and initial replies through rapid block/unblock saves', async () => {
     const background = await startBackground();
-    const blocked = { blocklist: ['site.example'], idleFix: false, defaultMode: 'shorter' };
-    const unblocked = { blocklist: [], idleFix: true, defaultMode: 'fix' };
+    const blocked = {
+      blocklist: ['site.example'],
+      idleFix: false,
+      defaultMode: 'shorter',
+      languages: { en: true, ar: true, franco: true, other: true },
+    };
+    const unblocked = {
+      blocklist: [],
+      idleFix: true,
+      defaultMode: 'fix',
+      languages: { en: true, ar: true, franco: true, other: true },
+    };
     const firstRead = deferred<Record<string, unknown>>();
     const firstQuery = deferred<Array<{ id: number }>>();
     const slowSend = deferred<unknown>();
@@ -641,14 +712,24 @@ describe('page settings at the Chrome boundary', () => {
     expect(background.get).toHaveBeenCalledTimes(1);
     expect(background.query).not.toHaveBeenCalled();
     first.resolve({ settings: {} });
-    expect(await initial).toEqual({ blocklist: [], idleFix: true, defaultMode: 'fix' });
+    expect(await initial).toEqual({
+      blocklist: [],
+      idleFix: true,
+      defaultMode: 'fix',
+      languages: { en: true, ar: true, franco: true, other: true },
+    });
     await settled();
     expect(background.sendMessage.mock.calls).toEqual([
       [
         1,
         {
           type: 'page-settings-changed',
-          settings: { blocklist: [], idleFix: false, defaultMode: 'fix' },
+          settings: {
+            blocklist: [],
+            idleFix: false,
+            defaultMode: 'fix',
+            languages: { en: true, ar: true, franco: true, other: true },
+          },
         },
       ],
     ]);
@@ -670,10 +751,16 @@ describe('page settings at the Chrome boundary', () => {
         blocklist: [],
         idleFix: false,
         defaultMode: 'fix',
+        languages: { en: true, ar: true, franco: true, other: true },
       });
       expect(background.sendMessage).toHaveBeenLastCalledWith(1, {
         type: 'page-settings-changed',
-        settings: { blocklist: [], idleFix: false, defaultMode: 'fix' },
+        settings: {
+          blocklist: [],
+          idleFix: false,
+          defaultMode: 'fix',
+          languages: { en: true, ar: true, franco: true, other: true },
+        },
       });
       expect(background.get).toHaveBeenCalledTimes(3);
     },
@@ -691,7 +778,12 @@ describe('page settings at the Chrome boundary', () => {
     await settled();
     expect(background.sendMessage).toHaveBeenCalledExactlyOnceWith(1, {
       type: 'page-settings-changed',
-      settings: { blocklist: [], idleFix: false, defaultMode: 'fix' },
+      settings: {
+        blocklist: [],
+        idleFix: false,
+        defaultMode: 'fix',
+        languages: { en: true, ar: true, franco: true, other: true },
+      },
     });
   });
 });

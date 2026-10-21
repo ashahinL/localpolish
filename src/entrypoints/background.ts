@@ -10,7 +10,14 @@ import {
   type RewriteRequest,
   type RuntimeMessage,
 } from '../core/messages';
-import { isBlocked, loadSettings, pageSettings, type Mode, type Tone } from '../core/settings';
+import {
+  DEFAULT_SETTINGS,
+  isBlocked,
+  loadSettings,
+  pageSettings,
+  type Mode,
+  type Tone,
+} from '../core/settings';
 
 const MODES = new Set<Mode>(['fix', 'rephrase', 'shorter', 'tone']);
 const TONES = new Set<Tone>(['polite', 'formal', 'casual', 'angry-civil']);
@@ -70,14 +77,27 @@ function extension(): ExtensionChrome {
 
 function isRewriteRequest(value: unknown): value is RewriteRequest {
   if (typeof value !== 'object' || value === null) return false;
-  const message = value as { mode?: unknown; tone?: unknown; text?: unknown; trigger?: unknown };
+  const message = value as {
+    mode?: unknown;
+    tone?: unknown;
+    text?: unknown;
+    trigger?: unknown;
+    keep?: unknown;
+  };
   return (
     typeof message.mode === 'string' &&
     MODES.has(message.mode as Mode) &&
     typeof message.tone === 'string' &&
     TONES.has(message.tone as Tone) &&
     typeof message.text === 'string' &&
-    (message.trigger === undefined || message.trigger === 'idle')
+    (message.trigger === undefined || message.trigger === 'idle') &&
+    (message.keep === undefined ||
+      (message.trigger === 'idle' &&
+        Array.isArray(message.keep) &&
+        message.keep.every(
+          (id) => typeof id === 'string' && Object.hasOwn(DEFAULT_SETTINGS.languages, id),
+        ) &&
+        new Set(message.keep).size === message.keep.length))
   );
 }
 

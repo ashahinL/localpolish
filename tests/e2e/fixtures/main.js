@@ -130,6 +130,8 @@ const popupApi = {
       isPopupOpen: controller.isOpen,
       isFixDefault: () => fake.settings.defaultMode === 'fix',
       openPopup: controller.open,
+      languages: () => ({ en: true, ar: true, franco: true, other: true }),
+      detect: async () => ({ isReliable: false, languages: [] }),
     });
   },
   setEnabled(on, refresh = true) {

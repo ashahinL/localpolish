@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SETTINGS, isBlocked, loadSettings, saveSettings, type Settings } from './settings';
+import {
+  DEFAULT_SETTINGS,
+  isBlocked,
+  loadSettings,
+  pageSettings,
+  saveSettings,
+  type Settings,
+} from './settings';
 
 let memory: Map<string, unknown>;
 let delayedGet: boolean;
@@ -247,5 +254,51 @@ describe('isBlocked', () => {
     expect(isBlocked('mail.example.com', ['www.example.com'])).toBe(true);
     expect(isBlocked('notexample.com', ['*.example.com'])).toBe(false);
     expect(isBlocked('mail.example.com', ['*.www.example.com'])).toBe(true);
+  });
+});
+
+describe('language settings', () => {
+  it('defaults all four languages on and copies the defaults', async () => {
+    const settings = await loadSettings();
+    expect(settings.languages).toEqual({ en: true, ar: true, franco: true, other: true });
+    settings.languages.ar = false;
+    expect((await loadSettings()).languages.ar).toBe(true);
+  });
+
+  it.each([null, [], 'off', { ar: 'false', en: 0, franco: null, other: false, unknown: true }])(
+    'ignores damaged language values: %j',
+    async (languages) => {
+      memory.set('settings', { languages });
+      expect((await loadSettings()).languages).toEqual({
+        en: true,
+        ar: true,
+        franco: true,
+        other:
+          typeof languages === 'object' && languages !== null && !Array.isArray(languages)
+            ? false
+            : true,
+      });
+    },
+  );
+
+  it('saves each switch without losing the others', async () => {
+    await saveSettings({ languages: { ar: false } });
+    await saveSettings({ languages: { franco: false } });
+    await saveSettings({ temperature: 0 });
+    expect((await loadSettings()).languages).toEqual({
+      en: true,
+      ar: false,
+      franco: false,
+      other: true,
+    });
+  });
+
+  it('includes sanitized languages in page settings', () => {
+    expect(pageSettings({ languages: { ar: false, bogus: false } })).toEqual({
+      blocklist: [],
+      idleFix: true,
+      defaultMode: 'fix',
+      languages: { en: true, ar: false, franco: true, other: true },
+    });
   });
 });

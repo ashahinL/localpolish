@@ -41,6 +41,7 @@ interface PageSettings {
   blocklist: string[];
   idleFix: boolean;
   defaultMode: string;
+  languages: Record<'en' | 'ar' | 'franco' | 'other', boolean>;
 }
 
 interface UsageRow {
@@ -485,6 +486,7 @@ async function applySettings(
     blocklist: extra.blocklist ?? [],
     idleFix: extra.idleFix ?? true,
     defaultMode: 'fix',
+    languages: { en: true, ar: true, franco: true, other: true },
   };
   for (const world of worlds.values()) {
     await world.evaluate('globalThis.__lpPageSettings = undefined');

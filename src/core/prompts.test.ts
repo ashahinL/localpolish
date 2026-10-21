@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { LanguageId } from './settings';
 import { buildPrompt, MODE_PROMPTS, TONE_PROMPTS } from './prompts';
 
 describe('buildPrompt', () => {
@@ -26,4 +27,19 @@ describe('buildPrompt', () => {
       expect(prompt).toContain('Do not reply to the text');
     }
   });
+});
+
+it('adds no keep sentence for an empty list', () => {
+  expect(buildPrompt('fix', 'polite', 'a made up draft', []).system).toBe(MODE_PROMPTS.fix);
+});
+
+it.each<[LanguageId[], string]>([
+  [['ar'], 'Arabic'],
+  [['ar', 'franco'], 'Arabic and Franco-Arabic'],
+  [['en', 'ar', 'franco'], 'English, Arabic and Franco-Arabic'],
+  [['other'], 'other-language'],
+])('adds the exact keep sentence for %j', (keep, names) => {
+  expect(buildPrompt('fix', 'polite', 'a made up draft', keep).system).toBe(
+    `${MODE_PROMPTS.fix} Leave the ${names} parts exactly as they are.`,
+  );
 });

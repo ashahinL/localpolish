@@ -44,7 +44,7 @@ export async function runRewrite(
   );
   if (signal.aborted) return;
 
-  const prompt = buildPrompt(req.mode, req.tone, req.text);
+  const prompt = buildPrompt(req.mode, req.tone, req.text, req.keep);
   let raw = '';
   let outputBytes = 0;
   let endsWithHighSurrogate = false;

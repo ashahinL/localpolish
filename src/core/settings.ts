@@ -5,6 +5,8 @@ export type ProviderId =
 
 export type CliProviderId = 'claude-cli' | 'codex-cli' | 'grok-cli';
 
+export type LanguageId = 'en' | 'ar' | 'franco' | 'other';
+
 export type Mode = 'fix' | 'rephrase' | 'shorter' | 'tone';
 
 export type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
@@ -21,6 +23,7 @@ export interface Settings {
   temperature: number;
   defaultMode: DefaultMode;
   idleFix: boolean;
+  languages: Record<LanguageId, boolean>;
   blocklist: string[];
 }
 
@@ -44,6 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
   temperature: 0.3,
   defaultMode: 'fix',
   idleFix: true,
+  languages: { en: true, ar: true, franco: true, other: true },
   blocklist: [],
 };
 
@@ -93,6 +97,14 @@ function storedPatch(value: unknown): Partial<Settings> {
       ),
     ) as Settings['efforts'];
   }
+  if (isRecord(value.languages)) {
+    patch.languages = Object.fromEntries(
+      Object.entries(value.languages).filter(
+        ([key, enabled]) =>
+          Object.hasOwn(DEFAULT_SETTINGS.languages, key) && typeof enabled === 'boolean',
+      ),
+    ) as Settings['languages'];
+  }
   for (const key of ['openaiBaseUrl', 'openaiApiKey', 'anthropicApiKey'] as const) {
     if (typeof value[key] === 'string') patch[key] = value[key];
   }
@@ -126,6 +138,7 @@ function mergeSettings(patch: Partial<Settings>): Settings {
       ...DEFAULT_SETTINGS.efforts,
       ...patch.efforts,
     },
+    languages: { ...DEFAULT_SETTINGS.languages, ...patch.languages },
     blocklist: Array.isArray(patch.blocklist)
       ? [...patch.blocklist]
       : [...DEFAULT_SETTINGS.blocklist],
@@ -138,8 +151,8 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 export function pageSettings(value: unknown): PageSettings {
-  const { blocklist, idleFix, defaultMode } = mergeSettings(storedPatch(value));
-  return { blocklist, idleFix, defaultMode };
+  const { blocklist, idleFix, defaultMode, languages } = mergeSettings(storedPatch(value));
+  return { blocklist, idleFix, defaultMode, languages };
 }
 
 let settingsQueue: Promise<void> = Promise.resolve();
@@ -156,7 +169,9 @@ function withSettingsLock<T>(work: () => Promise<T>): Promise<T> {
   return result;
 }
 
-export async function saveSettings(patch: Partial<Settings>): Promise<void> {
+export async function saveSettings(
+  patch: Omit<Partial<Settings>, 'languages'> & { languages?: Partial<Settings['languages']> },
+): Promise<void> {
   return withSettingsLock(async () => {
     const current = await loadSettings();
     const next = mergeSettings({
@@ -166,6 +181,7 @@ export async function saveSettings(patch: Partial<Settings>): Promise<void> {
         ...current.models,
         ...patch.models,
       },
+      languages: { ...current.languages, ...patch.languages },
       efforts: {
         ...current.efforts,
         ...patch.efforts,

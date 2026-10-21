@@ -281,6 +281,7 @@ test('content scripts cannot read local storage or receive stored keys', async (
       blocklist: ['blocked.example'],
       idleFix: false,
       defaultMode: 'shorter',
+      languages: { en: true, ar: true, franco: true, other: true },
     });
     const refreshed = await session.send('Runtime.evaluate', {
       contextId,
@@ -301,7 +302,12 @@ test('content scripts cannot read local storage or receive stored keys', async (
     expect(refreshed.result.value).toEqual({
       notice: {
         type: 'page-settings-changed',
-        settings: { blocklist: ['blocked.example'], idleFix: false, defaultMode: 'shorter' },
+        settings: {
+          blocklist: ['blocked.example'],
+          idleFix: false,
+          defaultMode: 'shorter',
+          languages: { en: true, ar: true, franco: true, other: true },
+        },
       },
       storageChanges: [],
       settingsRequests: 0,
@@ -429,7 +435,12 @@ test('settings snapshots reach nested and cross-host frames without frame reread
       await expect(frame.locator('.lp-fab')).toBeVisible();
     }
     await sw.evaluate('globalThis.__lpSettingsReads = 0');
-    const blocked = { blocklist: ['localhost'], idleFix: false, defaultMode: 'shorter' };
+    const blocked = {
+      blocklist: ['localhost'],
+      idleFix: false,
+      defaultMode: 'shorter',
+      languages: { en: true, ar: true, franco: true, other: true },
+    };
     await writeSettings(sw, `${mock.url}/v1`, blocked);
     for (const read of worlds) {
       await expect
@@ -460,7 +471,12 @@ test('settings snapshots reach nested and cross-host frames without frame reread
       });
     }
 
-    const unblocked = { blocklist: [], idleFix: false, defaultMode: 'shorter' };
+    const unblocked = {
+      blocklist: [],
+      idleFix: false,
+      defaultMode: 'shorter',
+      languages: { en: true, ar: true, franco: true, other: true },
+    };
     await writeSettings(sw, `${mock.url}/v1`, unblocked);
     for (const read of worlds) {
       await expect
@@ -842,6 +858,61 @@ test('the shortcut in an iframe opens one popup and no parent toast', async ({ p
 });
 
 test.describe('idle Fix', () => {
+  test('Arabic off skips idle requests and marks', async ({ page, mock, sw }) => {
+    await writeSettings(sw, `${mock.url}/v1`, { languages: { ar: false } });
+    await openFixture(page);
+    await page.locator('#ta').fill('هذه جمله خياليه عن القمر');
+    await page.waitForTimeout(4500);
+    expect(mock.requests).toHaveLength(0);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('Arabic off still allows the manual Polish shortcut without a keep line', async ({
+    page,
+    mock,
+    sw,
+  }) => {
+    await writeSettings(sw, `${mock.url}/v1`, { languages: { ar: false } });
+    await openFixture(page);
+    await page.locator('#ta').fill('هذه جمله خياليه عن القمر');
+    await page.waitForTimeout(4500);
+    const before = mock.requests.length;
+    await sendOpenPopup(page, sw, '#ta');
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(mock.requests).toHaveLength(before + 1);
+    expect(mock.requests.at(-1)?.body.messages[0].content).not.toContain('Leave the ');
+  });
+
+  test('Arabic off preserves Arabic parts in an English idle draft', async ({ page, mock, sw }) => {
+    await writeSettings(sw, `${mock.url}/v1`, { languages: { ar: false } });
+    await openFixture(page);
+    await page.locator('#ta').fill('the purple moon have a small قمر today');
+    await expect.poll(() => mock.requests.length, { timeout: 10_000 }).toBe(1);
+    expect(mock.requests[0]?.body.messages[0].content).toMatch(
+      /Leave the Arabic parts exactly as they are\.$/,
+    );
+  });
+
+  test('turning Arabic off clears an existing idle mark', async ({ page, mock, sw }) => {
+    await page.locator('#ta').fill('هذه جمله خياليه عن القمر');
+    await expect.poll(() => mock.requests.length, { timeout: 10_000 }).toBe(1);
+    await expect(page.locator('.lp-mark')).toBeVisible();
+    await writeSettings(sw, `${mock.url}/v1`, { languages: { ar: false } });
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('manual Fix does not reuse an idle result with a keep line', async ({ page, mock, sw }) => {
+    await writeSettings(sw, `${mock.url}/v1`, { languages: { ar: false } });
+    await openFixture(page);
+    await page.locator('#ta').fill('the purple moon have a small قمر today');
+    await expect(page.locator('.lp-mark')).toBeVisible();
+    expect(mock.requests).toHaveLength(1);
+    await sendOpenPopup(page, sw, '#ta');
+    await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+    expect(mock.requests).toHaveLength(2);
+    expect(mock.requests[1]?.body.messages[0].content).not.toContain('Leave the ');
+  });
+
   test('a pause sends one Fix and shows the marker', async ({ page, mock, sw }) => {
     await writeSettings(sw, `${mock.url}/v1`);
     await openFixture(page);

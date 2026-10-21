@@ -64,6 +64,7 @@ interface PageSettings {
   blocklist: string[];
   idleFix: boolean;
   defaultMode: string;
+  languages: Record<'en' | 'ar' | 'franco' | 'other', boolean>;
 }
 
 interface RaceHook {
@@ -82,8 +83,18 @@ interface ExtensionChrome {
   };
 }
 
-const OLD: PageSettings = { blocklist: [], idleFix: false, defaultMode: 'fix' };
-const BLOCKED: PageSettings = { blocklist: ['localhost'], idleFix: false, defaultMode: 'fix' };
+const OLD: PageSettings = {
+  blocklist: [],
+  idleFix: false,
+  defaultMode: 'fix',
+  languages: { en: true, ar: true, franco: true, other: true },
+};
+const BLOCKED: PageSettings = {
+  blocklist: ['localhost'],
+  idleFix: false,
+  defaultMode: 'fix',
+  languages: { en: true, ar: true, franco: true, other: true },
+};
 
 test('a late initial settings reply cannot undo a newer block', async () => {
   test.setTimeout(60_000);
