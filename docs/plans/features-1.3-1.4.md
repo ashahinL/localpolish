@@ -78,7 +78,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Idle Fix skips text whose main language is off, and clears its marks.
   - When the main language is on and other parts are off, the idle request adds one line telling the model to leave those parts as they are. Bench-check this line with the existing Fix inputs before merging, because the Fix prompt is kept short on purpose (see `docs/benchmarks/2026-10-17-fix-mode.md`).
   - e2e: an Arabic draft with Arabic off gets no idle request, but manual Fix still sends one.
-- [ ] **T22c. Language switches in the UI.** Art lane (Claude Opus). Four switches in options, under idle Fix, and the same four in the toolbar popup's Home tab if they fit. Depends on: T22b.
+- [ ] **T22c. Language switches in the UI.** Art lane (Claude Opus). Brief: [T22c-language-ui.md](../briefs/T22c-language-ui.md). Four switches in options, under idle Fix, and the same four in the toolbar popup's Home tab if they fit. Depends on: T22b.
 
 ## 1.3.0 release (T24)
 
