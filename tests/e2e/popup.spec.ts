@@ -38,6 +38,7 @@ type PageApi = {
     requests: () => number;
     maxOpen: () => number;
     sent: () => string[];
+    deliver: (index: number, event: FakeEvent) => void;
     draftText: () => string;
   };
 };
@@ -757,17 +758,184 @@ test.describe('idle fix', () => {
   test('manual with part of the field selected keeps one open port', async ({ page }) => {
     await startIdle(page, [
       [{ type: 'done', text: 'I went home today.' }],
-      [{ type: 'done', text: 'I went.' }],
+      [{ type: 'done', text: 'I went home today.' }],
     ]);
     await page.locator('#ta').click();
-    await page.keyboard.type('i has went home today');
+    await page.keyboard.type('i has went home today. she are late');
     await page.clock.fastForward(3000);
     await page.locator('#ta').evaluate((el: HTMLTextAreaElement) => {
-      el.setSelectionRange(0, 4);
+      el.setSelectionRange(0, 22);
     });
     await manual(page);
     expect(await requests(page)).toBe(2);
     expect(await maxOpen(page)).toBe(1);
+    expect(await page.evaluate(() => (window as unknown as PageApi).__lp.sent())).toEqual([
+      'i has went home today. she are late',
+      'i has went home today.',
+    ]);
+    await page.clock.fastForward(FAKE_REPLY_MS);
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today. she are late');
+  });
+
+  for (const ending of ['   ', '  .  ']) {
+    for (const openWith of ['badge', 'manual'] as const) {
+      test(`${openWith} reuses an in-flight request after ending ${JSON.stringify(ending)}`, async ({
+        page,
+      }) => {
+        await startIdle(page, [[]]);
+        await page.locator('#ta').fill('i has went home today');
+        await page.clock.fastForward(3000);
+        await page.locator('#ta').press('End');
+        await page.keyboard.type(ending);
+        if (openWith === 'badge') await page.locator('.lp-mark').click({ force: true });
+        else await manual(page);
+        expect(await requests(page)).toBe(1);
+        await page.evaluate(() =>
+          (window as unknown as PageApi).__lp.deliver(0, {
+            type: 'done',
+            text: 'I went home today.',
+          }),
+        );
+        await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+        await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+        await expect(page.locator('#ta')).toHaveValue(
+          ending.includes('.') ? 'I went home today  .  ' : 'I went home today.   ',
+        );
+        await pause(page);
+        expect(await requests(page)).toBe(1);
+        await expect(page.locator('.lp-mark')).toHaveCount(0);
+      });
+    }
+  }
+
+  test('a cached answer stays fresh after an added period and spaces', async ({ page }) => {
+    await markTextarea(page);
+    await page.keyboard.type('.  ');
+    await page.clock.fastForward(300);
+    await expect(page.locator('.lp-mark')).not.toHaveClass(/lp-mark-stale/);
+    await page.locator('.lp-mark').click();
+    expect(await requests(page)).toBe(1);
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            document.body.dataset.copied = text;
+          },
+        },
+      });
+    });
+    await page.locator('.lp-popup').getByRole('button', { name: 'Copy', exact: true }).click();
+    await expect(page.locator('body')).toHaveAttribute('data-copied', 'I went home today.  ');
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today.  ');
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+  });
+
+  test('Slate preserves an ending added in flight and stays editable after Accept', async ({
+    page,
+  }) => {
+    await startIdle(page, [[]]);
+    const editor = page.locator('#slate');
+    await editor.click();
+    await page.keyboard.type('i has went home today');
+    await page.clock.fastForward(3000);
+    await page.keyboard.type('. ');
+    await manual(page);
+    expect(await requests(page)).toBe(1);
+    await page.evaluate(() =>
+      (window as unknown as PageApi).__lp.deliver(0, { type: 'done', text: 'I went home today.' }),
+    );
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect.poll(() => editor.innerText()).toBe('I went home today. ');
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+    await page.keyboard.press('End');
+    await page.keyboard.type('nowx');
+    await page.keyboard.press('Backspace');
+    expect(await editor.innerText()).toBe('I went home today. now');
+    await page.clock.fastForward(3000);
+    expect(await requests(page)).toBe(2);
+    expect(await page.evaluate(() => (window as unknown as PageApi).__lp.sent())).toEqual([
+      'i has went home today',
+      'I went home today. now',
+    ]);
+  });
+
+  for (const edit of ['typing', 'paste'] as const) {
+    for (const openWith of ['badge', 'manual', 'whole selection'] as const) {
+      test(`${openWith} immediately replaces an in-flight request after ${edit}`, async ({
+        page,
+      }) => {
+        await startIdle(page, [[], []]);
+        await page.evaluate(() => (window as unknown as PageApi).__lp.startButton());
+        await page.locator('#ta').fill('i has went home today');
+        await page.clock.fastForward(3000);
+        await page.locator('#ta').press('End');
+        if (edit === 'typing') await page.keyboard.type(' with friends');
+        else {
+          await page.locator('#ta').evaluate((el: HTMLTextAreaElement) => {
+            const transfer = new DataTransfer();
+            transfer.setData('text/plain', ' with friends');
+            el.dispatchEvent(
+              new ClipboardEvent('paste', { bubbles: true, clipboardData: transfer }),
+            );
+            el.setRangeText(' with friends', el.selectionStart, el.selectionEnd, 'end');
+            el.dispatchEvent(
+              new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }),
+            );
+          });
+        }
+        if (openWith === 'badge') await page.locator('.lp-mark').click({ force: true });
+        else if (openWith === 'manual') await manual(page);
+        else {
+          await page.keyboard.press('ControlOrMeta+a');
+          await page.clock.fastForward(300);
+          await page.locator('.lp-fab').click();
+        }
+        expect(await requests(page)).toBe(2);
+        expect(await maxOpen(page)).toBe(1);
+        expect(await page.evaluate(() => (window as unknown as PageApi).__lp.sent())).toEqual([
+          'i has went home today',
+          'i has went home today with friends',
+        ]);
+        await page.evaluate(() => {
+          const api = (window as unknown as PageApi).__lp;
+          api.deliver(1, { type: 'done', text: 'I went home today with friends.' });
+          api.deliver(0, { type: 'done', text: 'OLD reply' });
+        });
+        await expect(page.locator('.lp-popup .lp-diff')).toBeVisible();
+        expect(await newText(page)).toBe('I went home today with friends.');
+        await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+        await expect(page.locator('#ta')).toHaveValue('I went home today with friends.');
+      });
+    }
+  }
+
+  test('closing a fresh whole-field manual request keeps it for the badge', async ({ page }) => {
+    await startIdle(page, [[]]);
+    await page.locator('#ta').fill('i has went home today');
+    await manual(page);
+    expect(await requests(page)).toBe(1);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.lp-popup')).toHaveCount(0);
+    await page.evaluate(() =>
+      (window as unknown as PageApi).__lp.deliver(0, { type: 'done', text: 'I went home today.' }),
+    );
+    await expect(page.locator('.lp-mark')).toBeVisible();
+    await page.locator('.lp-mark').click();
+    expect(await newText(page)).toBe('I went home today.');
+    expect(await requests(page)).toBe(1);
+    await page.locator('#ta').click();
+    await expect(page.locator('.lp-popup')).toHaveCount(0);
+    await page.locator('#ta').press('End');
+    await page.keyboard.type(' now');
+    await page.clock.fastForward(2900);
+    expect(await requests(page)).toBe(1);
+    await page.clock.fastForward(100);
+    expect(await requests(page)).toBe(2);
   });
 
   test('an error shows a red marker and the message in the popup', async ({ page }) => {
@@ -1063,6 +1231,21 @@ test.describe('idle fix', () => {
     await pause(page);
     expect(await requests(page)).toBe(1);
     await expect(page.locator('.lp-mark')).toHaveCount(0);
+  });
+
+  test('an unchanged idle answer reuses an added ending without a marker', async ({ page }) => {
+    await startIdle(page, [[{ type: 'done', text: 'I went home today' }]]);
+    await page.locator('#ta').fill('I went home today');
+    await pause(page);
+    await page.locator('#ta').press('End');
+    await page.keyboard.type('. ');
+    await pause(page);
+    expect(await requests(page)).toBe(1);
+    await expect(page.locator('.lp-mark')).toHaveCount(0);
+    await manual(page);
+    expect(await requests(page)).toBe(1);
+    await page.locator('.lp-popup').getByRole('button', { name: 'Accept' }).click();
+    await expect(page.locator('#ta')).toHaveValue('I went home today. ');
   });
 
   test('sends the whole field, every paragraph', async ({ page }) => {

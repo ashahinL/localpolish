@@ -1,6 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import { type DiffPart } from '../core/diff';
-import { countChanges, wordCount } from './idleText';
+import { appendedEnding, countChanges, preserveEnding, wordCount } from './idleText';
+
+describe('appendedEnding', () => {
+  it.each([
+    ['hello', 'hello', ''],
+    ['hello', 'hello   ', '   '],
+    ['hello', 'hello\u00a0', '\u00a0'],
+    ['hello', 'hello.', '.'],
+    ['hello', 'hello  .  ', '  .  '],
+    ['hello.', 'hello.  ', '  '],
+    ['hello ', 'hello . ', '. '],
+  ])('preserves the literal harmless ending of %j → %j', (sent, current, ending) => {
+    expect(appendedEnding(sent, current)).toBe(ending);
+  });
+
+  it.each([
+    [undefined, 'hello'],
+    ['hello', 'hell'],
+    ['hello', 'Hello'],
+    ['hello', 'he llo'],
+    ['hello', 'hello now'],
+    ['hello', 'hello\n'],
+    ['hello', 'hello\t'],
+    ['hello', 'hello!'],
+    ['hello', 'hello…'],
+    ['hello', 'hello..'],
+    ['hello', 'hello . . '],
+    ['hello.', 'hello..'],
+    ['hello. ', 'hello. .'],
+  ])('rejects a meaningful change from %j to %j', (sent, current) => {
+    expect(appendedEnding(sent, current)).toBeUndefined();
+  });
+});
+
+describe('preserveEnding', () => {
+  it.each([
+    ['Fixed.', '', 'Fixed.'],
+    ['Fixed.', '  ', 'Fixed.  '],
+    ['Fixed.', '\u00a0', 'Fixed.\u00a0'],
+    ['Fixed', '.', 'Fixed.'],
+    ['Fixed.', '.', 'Fixed.'],
+    ['Fixed', '  .  ', 'Fixed  .  '],
+    ['Fixed.', '  .  ', 'Fixed  .  '],
+  ])('preserves %j with ending %j', (fixed, ending, expected) => {
+    expect(preserveEnding(fixed, ending)).toBe(expected);
+  });
+});
 
 describe('wordCount', () => {
   it('counts words split on whitespace', () => {

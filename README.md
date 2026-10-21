@@ -57,6 +57,10 @@
   leave it.
 - It skips single-line inputs, search boxes, code editors, fields with spellcheck off, and text
   under four words.
+- Adding spaces or one period at the end reuses the current check. Accept keeps that ending.
+  After other edits, clicking the marker cancels the old check and sends the full updated text.
+- Closing a whole-field Fix popup lets its check finish in the background. Selecting part of
+  the text starts a separate request for that selection.
 
 **Toolbar popup**
 

@@ -32,12 +32,21 @@ options.diffed = (vnode) => {
 };
 
 // Each connect() replays the next script; the last one repeats.
-const fake = { scripts: [], settings: DEFAULT_SETTINGS, calls: 0, open: 0, maxOpen: 0, sent: [] };
+const fake = {
+  scripts: [],
+  settings: DEFAULT_SETTINGS,
+  calls: 0,
+  open: 0,
+  maxOpen: 0,
+  sent: [],
+  ports: [],
+};
 
 function fakePort(script) {
   fake.open += 1;
   if (fake.open > fake.maxOpen) fake.maxOpen = fake.open;
   const messageListeners = [];
+  fake.ports.push((event) => messageListeners.forEach((listener) => listener(event)));
   const disconnectListeners = [];
   let open = true;
   let closed = false;
@@ -98,6 +107,7 @@ const popupApi = {
     fake.open = 0;
     fake.maxOpen = 0;
     fake.sent = [];
+    fake.ports = [];
   },
   startButton() {
     button = createButton({
@@ -106,7 +116,10 @@ const popupApi = {
       isPopupOpen: controller.isOpen,
       onActivate() {
         const target = captureTarget({ wholeFieldIfEmpty: false });
-        if (target) controller.open(target);
+        if (target) {
+          if (idle) idle.open(target);
+          else controller.open(target);
+        }
       },
     });
   },
@@ -138,6 +151,7 @@ const popupApi = {
   requests: () => fake.calls,
   maxOpen: () => fake.maxOpen,
   sent: () => fake.sent.map((message) => message.text),
+  deliver: (index, event) => fake.ports[index](event),
 };
 
 // Facebook's composer is Lexical.

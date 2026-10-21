@@ -6,6 +6,11 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+- Whole-field Fix checks reuse running requests and saved answers after added trailing spaces
+  or one final period. Accept and Copy keep the added ending without doubling the period.
+- Opening a whole-field Fix after other edits cancels the old check and sends the latest
+  full text. Closing its popup keeps the check running for the badge.
+
 - Discord: when Slate ignores Accept's paste, keep the draft editable and use
   the Copy fallback instead of forcing text into the editor.
 

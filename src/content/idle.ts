@@ -11,7 +11,7 @@ import {
   type Target,
 } from './editable';
 import { guarded } from './guard';
-import { countChanges, wordCount } from './idleText';
+import { appendedEnding, countChanges, preserveEnding, wordCount } from './idleText';
 import { IdleMark } from './ui/IdleMark';
 import { layer } from './ui/root';
 
@@ -170,7 +170,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       return;
     }
     const full = fieldText(el);
-    if (full.trim() === slot.lastFull?.trim()) return;
+    if (appendedEnding(slot.lastFull, full) !== undefined) return;
     if (wordCount(full) < MIN_WORDS) return;
     send(el, slot, full);
   }
@@ -261,12 +261,9 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     }
     const count =
       outcome.fixed.trim() === sent.trim() ? 0 : countChanges(wordDiff(sent, outcome.fixed));
-    if (count === 0) {
-      hide(el, slot);
-      return;
-    }
     slot.result = { sent, fixed: outcome.fixed, count };
-    marked.add(el);
+    if (count === 0) marked.delete(el);
+    else marked.add(el);
     renderMarks();
   }
 
@@ -293,57 +290,71 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     const result = slot?.result;
     if (!slot || (!result && !slot.running)) return;
     const current = fieldText(el);
-    if (result && !slot.running && result.sent === current) {
+    const ending = result ? appendedEnding(result.sent, current) : undefined;
+    if (result && !slot.running && ending !== undefined) {
       deps.openPopup(
         wholeFieldTarget(el),
-        'error' in result ? { error: result.error } : { fixed: result.fixed },
+        'error' in result
+          ? { error: result.error }
+          : { fixed: preserveEnding(result.fixed, ending) },
       );
       return;
     }
     const pending = inflightFor(slot, current);
     if (pending) {
-      deps.openPopup(wholeFieldTarget(el), waitOn(slot, pending));
+      deps.openPopup(wholeFieldTarget(el), pending);
       return;
     }
     cancel(slot);
     const started = send(el, slot, current);
     if (!started) return;
-    deps.openPopup(wholeFieldTarget(el), waitOn(slot, started));
+    deps.openPopup(wholeFieldTarget(el), waitOn(slot, started, ''));
   }
 
   function open(target: Target): void {
     const el = target.kind === 'field' ? target.el : target.root;
     const slot = slotOf(el);
     const current = fieldText(el);
-    if (deps.isFixDefault() && target.text === current) {
+    const whole =
+      target.kind === 'rich' ? target.whole : target.start === 0 && target.end === current.length;
+    if (deps.isFixDefault() && whole) {
+      target = wholeFieldTarget(el);
       const result = slot.result;
-      if (result && 'fixed' in result && result.sent === current) {
+      const ending = result ? appendedEnding(result.sent, current) : undefined;
+      if (result && 'fixed' in result && ending !== undefined) {
         cancel(slot);
-        deps.openPopup(target, { fixed: result.fixed });
+        deps.openPopup(target, { fixed: preserveEnding(result.fixed, ending) });
         return;
       }
       const pending = inflightFor(slot, current);
       if (pending) {
-        deps.openPopup(target, waitOn(slot, pending));
+        deps.openPopup(target, pending);
         return;
       }
+      cancel(slot);
+      const started = send(el, slot, current);
+      if (started) deps.openPopup(target, waitOn(slot, started, ''));
+      return;
     }
     cancel(slot);
     deps.openPopup(target);
   }
 
-  function waitOn(slot: Slot, pending: Promise<Outcome>): Preset {
+  function waitOn(slot: Slot, pending: Promise<Outcome>, ending: string): Preset {
     waiting.add(slot);
     return {
-      pending,
+      pending: pending.then((outcome) =>
+        'fixed' in outcome ? { fixed: preserveEnding(outcome.fixed, ending) } : outcome,
+      ),
       cancel() {
         if (slot.inflight === pending) cancel(slot);
       },
     };
   }
 
-  function inflightFor(slot: Slot, text: string): Promise<Outcome> | undefined {
-    if (slot.inflight && slot.runningText === text) return slot.inflight;
+  function inflightFor(slot: Slot, text: string): Preset | undefined {
+    const ending = appendedEnding(slot.runningText, text);
+    if (slot.inflight && ending !== undefined) return waitOn(slot, slot.inflight, ending);
     return undefined;
   }
 
@@ -398,14 +409,14 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
       }
       if (!result) continue;
       const current = fieldText(el);
-      if ('fixed' in result && current.trim() === result.fixed.trim()) {
+      if ('fixed' in result && appendedEnding(result.fixed, current) !== undefined) {
         slot.result = undefined;
         marked.delete(el);
         continue;
       }
       const spot = markSpot(el);
       if (!spot) continue;
-      const stale = current !== result.sent;
+      const stale = appendedEnding(result.sent, current) === undefined;
       if ('error' in result) {
         views.push({
           el,
