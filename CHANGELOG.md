@@ -6,6 +6,9 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+- Discord: when Slate ignores Accept's paste, keep the draft editable and use
+  the Copy fallback instead of forcing text into the editor.
+
 ## 1.1.0 — 2026-10-20
 
 **New**

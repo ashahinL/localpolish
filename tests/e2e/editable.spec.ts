@@ -119,6 +119,29 @@ for (const [name, selector, reader] of [
   });
 }
 
+test('Slate keeps the draft editable when a page ignores the paste', async ({ page }) => {
+  const editor = page.locator('#slate');
+  const editorText = () => page.evaluate(() => (window as unknown as PageApi).__lp.slateText());
+  await editor.click();
+  await page.keyboard.type('i has went home');
+  expect(await captureText(page, true)).toBe('i has went home');
+  await page.locator('#outside').click();
+  await editor.evaluate((el) => {
+    el.addEventListener('paste', (event) => event.stopImmediatePropagation(), { once: true });
+  });
+
+  expect.soft(await apply(page, 'I went home.')).toEqual({ ok: false, reason: 'rejected' });
+  await expect.soft(editor).toHaveText('i has went home');
+  expect.soft(await editorText()).toBe('i has went home');
+
+  await editor.click();
+  await page.keyboard.press('End', { delay: 150 });
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('!');
+  await expect.poll(editorText).toBe('i has went hom!');
+  await expect(editor).toHaveText('i has went hom!');
+});
+
 test('Lexical keeps line breaks and undoes the change', async ({ page }) => {
   const blocks = () => page.evaluate(() => (window as unknown as PageApi).__lp.lexicalBlocks());
   await page.locator('#lexical').click();

@@ -229,6 +229,9 @@ async function applyRich(
   if (!selectionMatches(root, selection, target.text)) {
     return { ok: false, reason: 'changed' };
   }
+  if (root.matches('[data-slate-editor="true"]')) {
+    return { ok: false, reason: 'rejected' };
+  }
   document.execCommand('insertText', false, text);
   await waitForRender();
   return replaced(root, before, text, target.text)
