@@ -40,7 +40,7 @@ List Antigravity models by their plain names, and show an effort choice only whe
    - Replace every use of `CLI_EFFORTS[provider]` with `cliEfforts(provider, model)`: `ProviderSection.tsx` about line 112, and `src/popup/summary.ts` line 62.
 2. **Settings** (`src/core/settings.ts`):
    - The default `antigravity-cli` model is `gemini-3.8-flash`, with effort `low`.
-   - In `storedPatch`, migrate a stored Antigravity model `gemini-3.8-flash-low`, `-medium` or `-high` to `gemini-3.8-flash`, with that level as its effort. Migrate `gpt-oss-120b-medium` to `gpt-oss-120b` with effort `''`. Only the owner has these values from the unreleased build, but the migration is a few lines and keeps a reload from breaking his Fix.
+   - In `storedPatch`, migrate a stored Antigravity model `gemini-3.8-flash-low`, `-medium` or `-high` to `gemini-3.8-flash`, with that level as its effort. Migrate `gpt-oss-120b-medium` to `gpt-oss-120b` with effort `''`. Only the owner has these values from the unreleased build, but the migration is a few lines and keeps a reload from breaking the owner's Fix.
 3. **Provider section** (`src/options/ProviderSection.tsx`, `CliSettings` about line 89; the popup's Provider tab reuses it):
    - Hide the effort picker and its help line when `cliEfforts(...)` is empty.
    - When the model changes, keep the current effort if the new model still offers it. Otherwise set it to the new model's first option, or to `''` when the list is empty. Do this inside the same `change((current) => …)` call as the model, so it is one save. Look at `useModelChange` and fit the change there.
