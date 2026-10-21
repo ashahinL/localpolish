@@ -56,7 +56,7 @@ export function AboutTab() {
         <p class="help works">
           Select text and press the shortcut, or click the LocalPolish button next to a field. With{' '}
           <b>Fix while I type</b> on, a field is fixed after a 3 s pause and you accept or undo the
-          change.
+          change. You can turn languages off for Fix while I type in the Home tab and in Options.
         </p>
       </section>
       <p class="foot">LocalPolish {extensionVersion()}</p>

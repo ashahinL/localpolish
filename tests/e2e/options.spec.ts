@@ -392,6 +392,48 @@ for (const idleFix of [true, false]) {
   });
 }
 
+const LANGUAGE_NAMES = {
+  en: 'English',
+  ar: 'Arabic',
+  franco: 'Franco-Arabic',
+  other: 'Other languages',
+};
+
+test('language checkboxes show the stored values and save one language', async ({ page }) => {
+  const languages = { en: true, ar: false, franco: true, other: false };
+  await openOptions(page, { settings: { languages } });
+  const group = page.getByRole('group', { name: 'Languages to fix while I type' });
+  for (const [id, name] of Object.entries(LANGUAGE_NAMES)) {
+    await expect(group.getByRole('checkbox', { name, exact: true })).toBeChecked({
+      checked: languages[id as keyof typeof languages],
+    });
+  }
+
+  await group.getByRole('checkbox', { name: 'Arabic', exact: true }).click();
+  await expect
+    .poll(async () => (await stored(page))?.languages)
+    .toEqual({ en: true, ar: true, franco: true, other: false });
+
+  await group.getByRole('checkbox', { name: 'English' }).click();
+  await expect
+    .poll(async () => (await stored(page))?.languages)
+    .toEqual({ en: false, ar: true, franco: true, other: false });
+});
+
+test('language checkboxes are disabled while Fix while I type is off', async ({ page }) => {
+  await openOptions(page, { settings: { idleFix: false, languages: { ar: false } } });
+  const group = page.getByRole('group', { name: 'Languages to fix while I type' });
+  await expect(group).toBeVisible();
+  for (const name of Object.values(LANGUAGE_NAMES)) {
+    await expect(group.getByRole('checkbox', { name, exact: true })).toBeDisabled();
+  }
+  await expect(group.getByRole('checkbox', { name: 'Arabic', exact: true })).not.toBeChecked();
+
+  await page.getByRole('checkbox', { name: 'Fix while I type' }).click();
+  await expect(group.getByRole('checkbox', { name: 'Arabic', exact: true })).toBeEnabled();
+  await expect(group.getByRole('checkbox', { name: 'Arabic', exact: true })).not.toBeChecked();
+});
+
 const LONG_MODEL = `my-org/${'very-long-custom-model-name-'.repeat(6)}q4_k_m`;
 
 const SEEDED_USAGE = [

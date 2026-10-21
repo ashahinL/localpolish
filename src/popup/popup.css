@@ -255,8 +255,39 @@ select:focus-visible {
   min-height: 40px;
 }
 
-.qrow + .qrow {
+.qrow + .qrow,
+.qlangs + .qrow {
   border-top: 1px solid var(--border);
+}
+
+/* Sits under the idle row, lined up with its text: icon 24px + gap 10px. */
+.qlangs {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 8px 34px;
+  margin-top: -4px;
+}
+
+button.lang {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border-color: var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+button.lang[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+button.lang[aria-pressed='true']:hover:not(:disabled) {
+  border-color: var(--accent);
 }
 
 .qicon {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { type DefaultMode, type Settings } from '../core/settings';
+import { type DefaultMode, type LanguageId, type Settings } from '../core/settings';
 import { useBridge } from '../popup/useBridge';
 import { openShortcutsPage, polishShortcut } from './chrome';
 import { useTest } from '../popup/useTest';
@@ -13,6 +13,13 @@ export const CLIS: Array<{ key: 'claude' | 'codex' | 'grok' | 'agy'; name: strin
   { key: 'codex', name: 'Codex' },
   { key: 'grok', name: 'Grok CLI' },
   { key: 'agy', name: 'Antigravity CLI' },
+];
+
+export const LANGUAGES: Array<{ id: LanguageId; name: string; short: string }> = [
+  { id: 'en', name: 'English', short: 'EN' },
+  { id: 'ar', name: 'Arabic', short: 'AR' },
+  { id: 'franco', name: 'Franco-Arabic', short: 'Franco' },
+  { id: 'other', name: 'Other languages', short: 'Other' },
 ];
 
 const MODES: Array<{ value: DefaultMode; label: string }> = [
@@ -127,6 +134,28 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
           <p class="help" id="idle-fix-help">
             Fixes a field after a 3 s pause. Off: the button and the shortcut still work.
           </p>
+          <fieldset class="langs" disabled={!settings.idleFix} aria-describedby="langs-help">
+            <legend>Languages to fix while I type</legend>
+            <div class="lang-grid">
+              {LANGUAGES.map(({ id, name }) => (
+                <label key={id} class="check-option" for={`lang-${id}`}>
+                  <input
+                    id={`lang-${id}`}
+                    type="checkbox"
+                    checked={settings.languages[id]}
+                    onChange={() =>
+                      change((s) => ({ languages: { ...s.languages, [id]: !s.languages[id] } }))
+                    }
+                  />
+                  <span>{name}</span>
+                </label>
+              ))}
+            </div>
+            <p class="help" id="langs-help">
+              Off: Fix while I type skips text that is mostly in that language and leaves those
+              words alone in other text. The button and the shortcut still fix every language.
+            </p>
+          </fieldset>
         </div>
       </div>
     </section>

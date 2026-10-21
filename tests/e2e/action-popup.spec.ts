@@ -245,6 +245,38 @@ test('Fix while I type stores idleFix off', async ({ page }) => {
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
 });
 
+test('language chips show the stored values and toggle each language', async ({ page }) => {
+  await openPopup(page, { settings: { languages: { ar: false } } });
+  const group = page.getByRole('group', { name: 'Languages to fix while I type' });
+  const chips = [
+    { name: 'English', text: 'EN', id: 'en', on: true },
+    { name: 'Arabic', text: 'AR', id: 'ar', on: false },
+    { name: 'Franco-Arabic', text: 'Franco', id: 'franco', on: true },
+    { name: 'Other languages', text: 'Other', id: 'other', on: true },
+  ];
+  const expected: Record<string, boolean> = { en: true, ar: false, franco: true, other: true };
+  for (const { name, text, id, on } of chips) {
+    const chip = group.getByRole('button', { name, exact: true });
+    await expect(chip).toHaveText(text);
+    await expect(chip).toHaveAttribute('aria-pressed', String(on));
+
+    await chip.click();
+    expected[id] = !on;
+    await expect.poll(async () => (await stored(page))?.languages).toEqual(expected);
+    await expect(chip).toHaveAttribute('aria-pressed', String(!on));
+  }
+});
+
+test('language chips are hidden while Fix while I type is off', async ({ page }) => {
+  await openPopup(page, { settings: { idleFix: false } });
+  const group = page.getByRole('group', { name: 'Languages to fix while I type' });
+  await expect(group).toBeHidden();
+
+  await page.getByRole('switch', { name: 'Fix while I type' }).click();
+  await expect(group).toBeVisible();
+  await expect(group.getByRole('button')).toHaveCount(4);
+});
+
 test('the site switch hides and shows mail.google.com', async ({ page }) => {
   await openPopup(page);
   const toggle = page.getByRole('switch', { name: 'Show on mail.google.com' });

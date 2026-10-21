@@ -1,4 +1,5 @@
 import { type Settings } from '../core/settings';
+import { LANGUAGES } from '../options/sections';
 import { useSettingsApi } from '../options/useSettings';
 import { BoltIcon } from './icons';
 import { hideSite, showSite, siteState, type SiteState } from './sites';
@@ -38,6 +39,24 @@ export function QuickToggles({ settings, host, onOpenSites }: QuickTogglesProps)
           onToggle={() => change({ idleFix: !settings.idleFix })}
         />
       </div>
+      {settings.idleFix && (
+        <div class="qlangs" role="group" aria-label="Languages to fix while I type">
+          {LANGUAGES.map(({ id, name, short }) => (
+            <button
+              key={id}
+              type="button"
+              class="lang"
+              aria-label={name}
+              aria-pressed={settings.languages[id]}
+              onClick={() =>
+                change((s) => ({ languages: { ...s.languages, [id]: !s.languages[id] } }))
+              }
+            >
+              {short}
+            </button>
+          ))}
+        </div>
+      )}
       <SiteRow settings={settings} host={host} onOpenSites={onOpenSites} />
     </section>
   );

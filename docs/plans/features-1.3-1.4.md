@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: in progress. T21a, T21c, T22a and T22b are done. T21c's live check waits for the owner's agy login. OpenCode moved to the backlog (owner, 22 October 2026).
+Status: in progress. All 1.3.0 build tasks are done (T21a, T21c, T22a-c). T24 waits for the owner's agy login and hand check. OpenCode moved to the backlog (owner, 22 October 2026).
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -78,7 +78,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Idle Fix skips text whose main language is off, and clears its marks.
   - When the main language is on and other parts are off, the idle request adds one line telling the model to leave those parts as they are. Bench-check this line with the existing Fix inputs before merging, because the Fix prompt is kept short on purpose (see `docs/benchmarks/2026-10-17-fix-mode.md`).
   - e2e: an Arabic draft with Arabic off gets no idle request, but manual Fix still sends one.
-- [ ] **T22c. Language switches in the UI.** Art lane (Claude Opus). Brief: [T22c-language-ui.md](../briefs/T22c-language-ui.md). Four switches in options, under idle Fix, and the same four in the toolbar popup's Home tab if they fit. Depends on: T22b.
+- [x] **T22c. Language switches in the UI.** Art lane (Claude Opus). Brief: [T22c-language-ui.md](../briefs/T22c-language-ui.md). Four switches in options, under idle Fix, and the same four in the toolbar popup's Home tab if they fit. Depends on: T22b.
 
 ## 1.3.0 release (T24)
 
@@ -150,10 +150,10 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current commit: T21c (Antigravity provider).
-- Finished: T21a (spike), T22a (language detector), T22b (language settings and the idle skip), T21c (Antigravity provider).
-- Last checks (T21c): unit tests (654 passed, 2 skipped), lint, typecheck, Prettier, build, and all 203 browser tests.
-- Waiting on the owner: `npm run bridge:install` (adds agy's folder to the wrapper PATH), then the one-time agy login. Then Claude checks a real Fix, the conversation cleanup, and whether `conversation_summaries.db` in the agy home keeps draft text.
-- Next task: T22c (art lane), then T24 (release 1.3.0).
+- Current commit: T22c (language switches UI).
+- Finished: T21a (spike), T22a, T22b, T21c (Antigravity provider), T22c. Popup screenshots were retaken for T22c.
+- Last checks (T22c): unit tests (654 passed, 2 skipped), lint, typecheck, Prettier, build, and all 207 browser tests.
+- Waiting on the owner: `npm run bridge:install`, then the one-time agy login. Then Claude checks a real Antigravity Fix, the conversation cleanup, and whether `conversation_summaries.db` in the agy home keeps draft text. The paid bench check of the keep line is also the owner's to schedule.
+- Next task: T24 (release 1.3.0) after those checks. T23 (chat) work can start before the release.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.
