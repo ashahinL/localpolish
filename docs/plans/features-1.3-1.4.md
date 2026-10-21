@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: planned on 22 October 2026. Nothing is built yet.
+Status: in progress. T22a is done.
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -70,7 +70,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ### Tasks
 
-- [ ] **T22a. Language detector.** Sol medium. A pure module `src/content/language.ts` with: main language (`en`, `ar`, `franco` or `other`), plus which other languages appear. Chrome's detector is passed in, so unit tests use a fake. Table tests with English, Arabic, Franco, mixed and very short samples, using made-up text only. It must stay fast: one detection per idle pass, never per keystroke. Depends on: nothing.
+- [x] **T22a. Language detector.** Sol medium. A pure module `src/content/language.ts` with: main language (`en`, `ar`, `franco` or `other`), plus which other languages appear. Chrome's detector is passed in, so unit tests use a fake. Table tests with English, Arabic, Franco, mixed and very short samples, using made-up text only. It must stay fast: one detection per idle pass, never per keystroke. Depends on: nothing.
 - [ ] **T22b. Settings and the idle skip.** Sol medium. Depends on: T22a.
   - A `languages` setting with checked reads (like `idleFix`), included in `pageSettings`.
   - Idle Fix skips text whose main language is off, and clears its marks.
@@ -145,7 +145,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 ## Handoff
 
 - Current commit: `a4ba7fc` (1.2.0 released).
-- Finished: none of this plan.
-- Next task: T21a (Claude spike) and T22a (Sol medium).
+- Finished: T22a (language detector, 39 unit tests).
+- Next task: T21a (Claude spike), then T22b.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.
