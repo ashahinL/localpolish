@@ -28,7 +28,7 @@ body {
 }
 
 body {
-  width: 360px;
+  width: 400px;
   height: 600px;
   overflow: hidden;
   background: var(--bg);
@@ -59,7 +59,7 @@ select {
 /* Popup frame */
 
 .popup {
-  width: 360px;
+  width: 400px;
   height: 600px;
   display: flex;
   flex-direction: column;
@@ -263,31 +263,63 @@ select:focus-visible {
 /* Sits under the idle row, lined up with its text: icon 24px + gap 10px. */
 .qlangs {
   display: flex;
-  gap: 6px;
-  padding: 0 0 8px 34px;
-  margin-top: -4px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 10px 34px;
+  margin-top: -2px;
+}
+
+.qlangs-label {
+  flex: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* A multi-select take on the segmented control: each language is on or off on its own. */
+.lang-seg {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--seg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 button.lang {
+  flex: 1;
+  min-width: 0;
   height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border-color: var(--border);
-  background: transparent;
+  padding: 0 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
   color: var(--muted);
   font-size: 12px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
 }
 
-button.lang[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
+button.lang:hover:not(:disabled) {
+  color: var(--text);
+  background: none;
 }
 
+button.lang[aria-pressed='true'],
 button.lang[aria-pressed='true']:hover:not(:disabled) {
-  border-color: var(--accent);
+  background: var(--seg-on);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+button.lang svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
 }
 
 .qicon {
@@ -461,7 +493,7 @@ span.tip.on {
 }
 
 .tab:focus-visible {
-  outline-offset: -2px;
+  outline-offset: -4px;
 }
 
 .tab .bad {
@@ -767,19 +799,16 @@ button.copy {
 
 .chips {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.chips.two {
   grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
 }
 
 .chip {
   position: relative;
   min-width: 0;
   height: 34px;
-  padding: 0 4px;
+  padding: 0 8px;
+  white-space: nowrap;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--card);

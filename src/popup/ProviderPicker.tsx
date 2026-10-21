@@ -51,7 +51,7 @@ export function ProviderPicker({ settings }: { settings: Settings }) {
           ))}
         </div>
         <p class="pgroup-label">API</p>
-        <div class="chips two">
+        <div class="chips">
           {api.map((item) => (
             <Chip
               key={item.id}

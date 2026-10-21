@@ -82,6 +82,8 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - e2e: an Arabic draft with Arabic off gets no idle request, but manual Fix still sends one.
 - [x] **T22c. Language switches in the UI.** Art lane (Claude Opus). Brief: [T22c-language-ui.md](../briefs/T22c-language-ui.md). Four switches in options, under idle Fix, and the same four in the toolbar popup's Home tab if they fit. Depends on: T22b.
 
+- [x] **T22d. Popup polish** (owner's hand check, 22 October 2026). Claude, with the `impeccable` skill, at the owner's request. The popup is 400 px wide, up from 360. The provider chips use an even 2-column grid, so no name wraps. The language pills became a labeled multi-select segmented control that matches "Default mode", with a check mark on each language that is on. Screenshots retaken.
+
 ## 1.3.0 release (T24)
 
 - [ ] **T24. Release 1.3.0.** Follow `RELEASING.md`. The notes say: run `npm run bridge:install` again only if you want Antigravity. The owner hand-checks Fix with Antigravity and an Arabic draft with Arabic off.

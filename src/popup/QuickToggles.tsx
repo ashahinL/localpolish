@@ -1,7 +1,7 @@
 import { type Settings } from '../core/settings';
 import { LANGUAGES } from '../options/sections';
 import { useSettingsApi } from '../options/useSettings';
-import { BoltIcon } from './icons';
+import { BoltIcon, CheckIcon } from './icons';
 import { hideSite, showSite, siteState, type SiteState } from './sites';
 import { Switch } from './Switch';
 import { Tooltip } from './Tooltip';
@@ -40,21 +40,27 @@ export function QuickToggles({ settings, host, onOpenSites }: QuickTogglesProps)
         />
       </div>
       {settings.idleFix && (
-        <div class="qlangs" role="group" aria-label="Languages to fix while I type">
-          {LANGUAGES.map(({ id, name, short }) => (
-            <button
-              key={id}
-              type="button"
-              class="lang"
-              aria-label={name}
-              aria-pressed={settings.languages[id]}
-              onClick={() =>
-                change((s) => ({ languages: { ...s.languages, [id]: !s.languages[id] } }))
-              }
-            >
-              {short}
-            </button>
-          ))}
+        <div class="qlangs">
+          <span class="qlangs-label" aria-hidden="true">
+            Languages
+          </span>
+          <div class="lang-seg" role="group" aria-label="Languages to fix while I type">
+            {LANGUAGES.map(({ id, name, short }) => (
+              <button
+                key={id}
+                type="button"
+                class="lang"
+                aria-label={name}
+                aria-pressed={settings.languages[id]}
+                onClick={() =>
+                  change((s) => ({ languages: { ...s.languages, [id]: !s.languages[id] } }))
+                }
+              >
+                {settings.languages[id] && <CheckIcon />}
+                {short}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       <SiteRow settings={settings} host={host} onOpenSites={onOpenSites} />

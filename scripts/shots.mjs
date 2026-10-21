@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Renders the real toolbar popup from dist/ into docs/screenshots, one PNG per
- * tab at 360x600 (2x). Chrome APIs are stubbed with a fixed demo state, so the
+ * tab at 400x600 (2x). Chrome APIs are stubbed with a fixed demo state, so the
  * pictures do not depend on this machine's settings, bridge or CLIs.
  * Run it with `npm run shots`, which builds first.
  */
@@ -21,13 +21,14 @@ const version = JSON.parse(fs.readFileSync(path.join(DIST, 'manifest.json'), 'ut
 const STATE = {
   version,
   tabUrl: 'https://mail.google.com/mail/u/0/',
-  settings: { blocklist: ['bank.example.com', 'docs.google.com'] },
+  settings: { blocklist: ['bank.example.com', 'docs.google.com'], languages: { other: false } },
   bridge: {
     ok: true,
     clis: {
       claude: { version: '2.4.1 (Claude Code)' },
       codex: { version: '0.98.0' },
       grok: { version: '1.3.0' },
+      agy: { version: '1.4.4' },
     },
   },
 };
@@ -71,7 +72,7 @@ async function main() {
   const browser = await chromium.launch({ args: ['--single-process'] });
   try {
     const context = await browser.newContext({
-      viewport: { width: 360, height: 600 },
+      viewport: { width: 400, height: 600 },
       deviceScaleFactor: 2,
     });
     await context.route(`${ORIGIN}/**`, (route) =>

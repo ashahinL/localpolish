@@ -379,8 +379,8 @@ test('bridge rows and Check again asks again', async ({ page }) => {
 });
 
 for (const { path, colorScheme, width } of [
-  { path: 'popup.html', colorScheme: 'light', width: 360 },
-  { path: 'popup.html', colorScheme: 'dark', width: 360 },
+  { path: 'popup.html', colorScheme: 'light', width: 400 },
+  { path: 'popup.html', colorScheme: 'dark', width: 400 },
   { path: 'setup.html', colorScheme: 'light', width: 720 },
   { path: 'setup.html', colorScheme: 'dark', width: 720 },
 ] as const) {
@@ -504,9 +504,9 @@ test('arrow keys move between tabs', async ({ page }) => {
   await expect(page.getByRole('tab', { name: 'About' })).toHaveAttribute('aria-selected', 'true');
 });
 
-test('the popup body is 360 px wide', async ({ page }) => {
+test('the popup body is 400 px wide', async ({ page }) => {
   await openPopup(page);
-  expect(await page.evaluate(() => document.body.getBoundingClientRect().width)).toBe(360);
+  expect(await page.evaluate(() => document.body.getBoundingClientRect().width)).toBe(400);
 });
 
 test('hover help shows after 2 seconds', async ({ page }) => {
