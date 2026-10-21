@@ -4,7 +4,7 @@ import { isCli, PROVIDERS } from '../options/ProviderSection';
 import {
   ANTHROPIC_MODELS,
   baseUrlPreset,
-  CLI_EFFORTS,
+  cliEfforts,
   CLI_MODELS,
   type Preset,
 } from '../options/presets';
@@ -59,7 +59,9 @@ function detail(settings: Settings): string {
   const { provider } = settings;
   if (isCli(provider)) {
     const model = labelOf(CLI_MODELS[provider], settings.models[provider]);
-    const effort = labelOf(CLI_EFFORTS[provider], settings.efforts[provider]);
+    const options = cliEfforts(provider, settings.models[provider]);
+    if (options.length === 0) return model;
+    const effort = labelOf(options, settings.efforts[provider]);
     return `${model} · Effort: ${effort}`;
   }
   if (provider === 'openai-compatible') {

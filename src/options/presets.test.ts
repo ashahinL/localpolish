@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../core/settings';
 import {
   CLI_EFFORTS,
+  cliEfforts,
   CLI_MODELS,
   CUSTOM,
   isOllamaUrl,
@@ -33,7 +34,9 @@ describe('presets', () => {
   it('include every default model and effort', () => {
     for (const provider of ['claude-cli', 'codex-cli', 'grok-cli', 'antigravity-cli'] as const) {
       const models = CLI_MODELS[provider].map((preset) => preset.value);
-      const efforts = CLI_EFFORTS[provider].map((preset) => preset.value);
+      const efforts = cliEfforts(provider, DEFAULT_SETTINGS.models[provider]).map(
+        (preset) => preset.value,
+      );
       expect(models).toContain(DEFAULT_SETTINGS.models[provider]);
       expect(efforts).toContain(DEFAULT_SETTINGS.efforts[provider]);
     }
@@ -49,5 +52,33 @@ describe('isOllamaUrl', () => {
     expect(isOllamaUrl('http://127.0.0.1:11434')).toBe(true);
     expect(isOllamaUrl('http://localhost:1234/v1')).toBe(false);
     expect(isOllamaUrl('http://localhost:114345/v1')).toBe(false);
+  });
+});
+
+describe('cliEfforts', () => {
+  const levels = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+  ];
+
+  it('offers Low, Medium and High for Antigravity Gemini', () => {
+    expect(cliEfforts('antigravity-cli', 'gemini-3.8-flash')).toEqual(levels);
+  });
+
+  it.each(['gpt-oss-120b', 'claude-sonnet-4-6', 'claude-opus-4-6'])(
+    'offers no effort for Antigravity %s',
+    (model) => expect(cliEfforts('antigravity-cli', model)).toEqual([]),
+  );
+
+  it('offers the model default and levels for a custom Antigravity model', () => {
+    expect(cliEfforts('antigravity-cli', 'custom-model')).toEqual([
+      { value: '', label: 'Model default' },
+      ...levels,
+    ]);
+  });
+
+  it('keeps other providers unchanged', () => {
+    expect(cliEfforts('codex-cli', 'gpt-6-luna')).toBe(CLI_EFFORTS['codex-cli']);
   });
 });

@@ -30,13 +30,25 @@ function bridge(missing: 'claude' | 'codex' | 'grok' | 'agy' | null = null): Bri
 }
 
 describe('providerSummary', () => {
-  it('shows Antigravity with its model default effort', () => {
+  it('shows Antigravity Gemini with Low effort', () => {
     expect(providerSummary(settings({ provider: 'antigravity-cli' }))).toEqual({
       title: 'Antigravity CLI',
       mark: 'Ag',
-      detail: 'Gemini 3.8 Flash, low · Effort: Model default',
+      detail: 'Gemini 3.8 Flash · Effort: Low',
     });
   });
+  it('shows Antigravity Sonnet without an effort part', () => {
+    expect(
+      providerSummary(
+        settings({
+          provider: 'antigravity-cli',
+          models: { 'antigravity-cli': 'claude-sonnet-4-6' },
+          efforts: { 'antigravity-cli': 'low' },
+        }),
+      ).detail,
+    ).toBe('Claude Sonnet 4.6');
+  });
+
   it('uses the Codex preset labels for the default settings', () => {
     expect(providerSummary(DEFAULT_SETTINGS)).toEqual({
       title: 'Codex',

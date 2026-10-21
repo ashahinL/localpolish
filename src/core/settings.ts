@@ -38,7 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
     'claude-cli': 'haiku',
     'codex-cli': 'gpt-6-luna',
     'grok-cli': '',
-    'antigravity-cli': 'gemini-3.8-flash-low',
+    'antigravity-cli': 'gemini-3.8-flash',
     'openai-compatible': '',
     'anthropic-api': 'claude-haiku-5-5',
   },
@@ -46,7 +46,7 @@ export const DEFAULT_SETTINGS: Settings = {
     'claude-cli': 'low',
     'codex-cli': 'none',
     'grok-cli': 'low',
-    'antigravity-cli': '',
+    'antigravity-cli': 'low',
   },
   openaiBaseUrl: 'http://localhost:11434/v1',
   openaiApiKey: '',
@@ -103,6 +103,15 @@ function storedPatch(value: unknown): Partial<Settings> {
           Object.hasOwn(DEFAULT_SETTINGS.efforts, key) && typeof effort === 'string',
       ),
     ) as Settings['efforts'];
+  }
+  const agyModel = patch.models?.['antigravity-cli'];
+  const geminiEffort = /^gemini-3\.8-flash-(low|medium|high)$/.exec(agyModel ?? '')?.[1];
+  if (geminiEffort || agyModel === 'gpt-oss-120b-medium') {
+    patch.models!['antigravity-cli'] = geminiEffort ? 'gemini-3.8-flash' : 'gpt-oss-120b';
+    patch.efforts = {
+      ...patch.efforts,
+      'antigravity-cli': geminiEffort ?? '',
+    } as Settings['efforts'];
   }
   if (isRecord(value.languages)) {
     patch.languages = Object.fromEntries(

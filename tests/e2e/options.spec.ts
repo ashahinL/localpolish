@@ -222,10 +222,56 @@ test('switching provider shows that provider’s fields', async ({ page }) => {
   await expect(page.getByText('Codex needs its own login')).toBeVisible();
 
   await provider(page, 'Antigravity CLI').click();
-  await expect(page.getByLabel('Model', { exact: true })).toHaveValue('gemini-3.8-flash-low');
-  await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('');
+  await expect(page.getByLabel('Model', { exact: true })).toHaveValue('gemini-3.8-flash');
+  await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('low');
   await expect(page.getByText('Antigravity needs its own login')).toBeVisible();
   await expect.poll(async () => (await stored(page))?.provider).toBe('antigravity-cli');
+});
+
+test('Antigravity effort follows the chosen model', async ({ page }) => {
+  await openOptions(page, { settings: { provider: 'antigravity-cli' } });
+  const model = page.getByLabel('Model', { exact: true });
+  const effort = page.getByLabel('Thinking effort', { exact: true });
+  const help = page.getByText('Lower effort is faster and cheaper.');
+  await expect(effort.locator('option')).toHaveText(['Low', 'Medium', 'High', 'Custom…']);
+  await effort.selectOption('high');
+  await model.selectOption('claude-sonnet-4-6');
+  await expect(effort).toHaveCount(0);
+  await expect(help).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const settings = await stored(page);
+      return [
+        (settings?.models as Record<string, string>)?.['antigravity-cli'],
+        (settings?.efforts as Record<string, string>)?.['antigravity-cli'],
+      ];
+    })
+    .toEqual(['claude-sonnet-4-6', '']);
+  await model.selectOption('gemini-3.8-flash');
+  await expect(effort).toHaveValue('low');
+  await expect
+    .poll(
+      async () => ((await stored(page))?.efforts as Record<string, string>)?.['antigravity-cli'],
+    )
+    .toBe('low');
+
+  await model.selectOption('__custom__');
+  await page.getByLabel('Custom model', { exact: true }).fill('custom-agy-model');
+  await expect(effort.locator('option')).toHaveText([
+    'Model default',
+    'Low',
+    'Medium',
+    'High',
+    'Custom…',
+  ]);
+  await expect(effort).toHaveValue('low');
+  await effort.selectOption('__custom__');
+  await page.getByLabel('Custom thinking effort', { exact: true }).fill('custom-effort');
+  await expect
+    .poll(
+      async () => ((await stored(page))?.efforts as Record<string, string>)?.['antigravity-cli'],
+    )
+    .toBe('custom-effort');
 });
 
 test('Custom shows a text input and saves what is typed', async ({ page }) => {

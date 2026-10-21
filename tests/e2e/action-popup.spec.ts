@@ -354,8 +354,8 @@ test("switching provider shows that provider's fields", async ({ page }) => {
   await expect(page.getByText('Codex needs its own login')).toBeVisible();
 
   await radioLabel(page, 'Antigravity CLI').click();
-  await expect(page.getByLabel('Model', { exact: true })).toHaveValue('gemini-3.8-flash-low');
-  await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('');
+  await expect(page.getByLabel('Model', { exact: true })).toHaveValue('gemini-3.8-flash');
+  await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('low');
   await expect(page.getByText('Antigravity needs its own login')).toBeVisible();
   await expect.poll(async () => (await stored(page))?.provider).toBe('antigravity-cli');
 });

@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: in progress. All 1.3.0 build tasks are done (T21a, T21c, T22a-c). T24 waits for the owner's agy login and hand check. OpenCode moved to the backlog (owner, 22 October 2026).
+Status: in progress. All 1.3.0 build tasks are done (T21a, T21c, T21d, T22a-c). T24 waits for the owner's agy login and hand check. OpenCode moved to the backlog (owner, 22 October 2026).
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -31,7 +31,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 - **Lockdown is the same as Claude, Codex and Grok.** No tools, no file reads, no web, no rule files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`), no saved sessions, our own system prompt. If a CLI can't be locked down, it doesn't ship.
 - **OpenCode models (backlog):** the model box suggests the free Zen models (names ending in `-free`, plus `big-pickle`). Any `provider/model` that the user's OpenCode login supports can be typed in.
 - **Free-model warning (backlog, OpenCode only):** when the chosen model is free, the Provider tab shows one line: free models may keep your text to train on. No extra clicks.
-- **Antigravity models:** the box suggests what `agy models` lists (Gemini 3.8 Flash low/medium/high, GPT-OSS 120B, and others). Default (Claude): `gemini-3.8-flash-low`, because it is the fastest.
+- **Antigravity models:** Gemini 3.8 Flash, GPT-OSS 120B, Claude Sonnet 4.6, and Claude Opus 4.6. Default: `gemini-3.8-flash` with effort `low`. Only Gemini offers an effort choice. Custom models allow model default, Low, Medium, High, or a typed effort.
 - **Default OpenCode model** (backlog): picked by the spike, from the free models, by speed and Fix quality on the existing bench inputs.
 
 ### What we know (checked 22 October 2026)
@@ -57,6 +57,8 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Extension: a new `antigravity-cli` provider id in settings, the providers index, the toolbar Provider picker and options, and the model suggestions.
   - Docs: the README setup steps, with the one-time login command, and `PRIVACY.md`.
   - Live check, 22 October 2026: after the owner's login, three real Fixes ran through the installed bridge wrapper (`gemini-3.8-flash-low`, 5.6 to 13 s each). The ping reports agy 1.4.4. The conversation and brain files were deleted after each run, and no draft text was left anywhere in the agy home. The check found two leftovers, both now fixed: a generated title row per run in `conversation_summaries.db`, and one 26 KB log per run. The bridge now deletes the row (needs `node:sqlite`, Node 22.13 or later) and keeps the 5 newest logs. Quality note: the model left "two apple" unfixed in all three runs.
+
+- [x] **T21d. Antigravity model and effort.** Sol medium. Brief: [T21d-agy-model-effort.md](../briefs/T21d-agy-model-effort.md).
 
 ## 1.3.0, part 2: language switches (T22)
 
@@ -150,10 +152,10 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current commit: T22c (language switches UI).
-- Finished: T21a (spike), T22a, T22b, T21c (Antigravity provider), T22c. Popup screenshots were retaken for T22c.
-- Last checks (T22c): unit tests (654 passed, 2 skipped), lint, typecheck, Prettier, build, and all 207 browser tests.
+- Current commit: `3fb3b53`. T21d is implemented and uncommitted, waiting for the owner to review.
+- Finished: T21a (spike), T22a, T22b, T21c (Antigravity provider), T22c, T21d (Antigravity model and effort). Popup screenshots were retaken for T22c.
+- Last checks (T21d): targeted tests (172 passed), full unit tests (668 passed, 2 skipped), lint, typecheck, Prettier, and build passed. Browser tests are blocked by the macOS Codex sandbox. The owner must run `npm run test:e2e` outside the sandbox.
 - The Antigravity live check is done (see T21c). Still the owner's to schedule: the paid bench check of the keep line.
-- Next task: T24 (release 1.3.0), after the owner's hand check. T23 (chat) work can start before the release.
+- Next task: owner review and browser checks for T21d, then T24 (release 1.3.0) after the owner's hand check. T23 (chat) work can start before the release.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.

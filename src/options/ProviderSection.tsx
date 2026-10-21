@@ -4,7 +4,7 @@ import { baseUrlPatch, parseTemperature } from './form';
 import {
   ANTHROPIC_MODELS,
   baseUrlPreset,
-  CLI_EFFORTS,
+  cliEfforts,
   CLI_MODELS,
   isOllamaUrl,
   OPENAI_BASE_URLS,
@@ -83,7 +83,15 @@ export function ProviderSection({ settings }: { settings: Settings }) {
 function useModelChange(provider: ProviderId) {
   const { change } = useSettingsApi();
   return (value: string, typing: boolean) =>
-    change((current) => ({ models: { ...current.models, [provider]: value } }), typing);
+    change((current) => {
+      const models = { ...current.models, [provider]: value };
+      if (!isCli(provider)) return { models };
+      const options = cliEfforts(provider, value);
+      const effort = options.some((option) => option.value === current.efforts[provider])
+        ? current.efforts[provider]
+        : (options[0]?.value ?? '');
+      return { models, efforts: { ...current.efforts, [provider]: effort } };
+    }, typing);
 }
 
 export function CliDetails({
@@ -95,6 +103,7 @@ export function CliDetails({
 }) {
   const { change } = useSettingsApi();
   const onModel = useModelChange(provider);
+  const effortOptions = cliEfforts(provider, settings.models[provider]);
   return (
     <>
       <div class="row">
@@ -106,18 +115,22 @@ export function CliDetails({
           settingsKey="models"
           onValue={onModel}
         />
-        <PresetPicker
-          id="effort"
-          label="Thinking effort"
-          presets={CLI_EFFORTS[provider]}
-          value={settings.efforts[provider]}
-          settingsKey="efforts"
-          onValue={(value, typing) =>
-            change((current) => ({ efforts: { ...current.efforts, [provider]: value } }), typing)
-          }
-        />
+        {effortOptions.length > 0 && (
+          <PresetPicker
+            id="effort"
+            label="Thinking effort"
+            presets={effortOptions}
+            value={settings.efforts[provider]}
+            settingsKey="efforts"
+            onValue={(value, typing) =>
+              change((current) => ({ efforts: { ...current.efforts, [provider]: value } }), typing)
+            }
+          />
+        )}
       </div>
-      <p class="help">Lower effort is faster and cheaper. Low is enough for fixing text.</p>
+      {effortOptions.length > 0 && (
+        <p class="help">Lower effort is faster and cheaper. Low is enough for fixing text.</p>
+      )}
       {provider === 'antigravity-cli' && (
         <Note tone="info">
           <p>Antigravity needs its own login for LocalPolish, once. Run this in a terminal.</p>

@@ -38,8 +38,8 @@ describe('loadSettings', () => {
   it('returns defaults when nothing is stored', async () => {
     const loaded = await loadSettings();
     expect(loaded).toEqual(DEFAULT_SETTINGS);
-    expect(loaded.models['antigravity-cli']).toBe('gemini-3.8-flash-low');
-    expect(loaded.efforts['antigravity-cli']).toBe('');
+    expect(loaded.models['antigravity-cli']).toBe('gemini-3.8-flash');
+    expect(loaded.efforts['antigravity-cli']).toBe('low');
 
     loaded.blocklist.push('evil.com');
     loaded.models['claude-cli'] = 'changed';
@@ -47,6 +47,22 @@ describe('loadSettings', () => {
     expect(DEFAULT_SETTINGS.models['claude-cli']).toBe('haiku');
     expect(DEFAULT_SETTINGS.idleFix).toBe(true);
     expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it.each([
+    ['gemini-3.8-flash-low', 'gemini-3.8-flash', 'low'],
+    ['gemini-3.8-flash-medium', 'gemini-3.8-flash', 'medium'],
+    ['gemini-3.8-flash-high', 'gemini-3.8-flash', 'high'],
+    ['gpt-oss-120b-medium', 'gpt-oss-120b', ''],
+  ])('migrates the old Antigravity model %s', async (oldModel, model, effort) => {
+    memory.set('settings', {
+      models: { 'antigravity-cli': oldModel },
+      efforts: { 'antigravity-cli': 'max', 'codex-cli': 'high' },
+    });
+    const loaded = await loadSettings();
+    expect(loaded.models['antigravity-cli']).toBe(model);
+    expect(loaded.efforts['antigravity-cli']).toBe(effort);
+    expect(loaded.efforts['codex-cli']).toBe('high');
   });
 
   it('loads a stored idleFix of false', async () => {
@@ -77,7 +93,7 @@ describe('loadSettings', () => {
       'claude-cli': 'opus',
       'codex-cli': 'gpt-6-luna',
       'grok-cli': '',
-      'antigravity-cli': 'gemini-3.8-flash-low',
+      'antigravity-cli': 'gemini-3.8-flash',
       'openai-compatible': '',
       'anthropic-api': 'claude-haiku-5-5',
     });
@@ -152,7 +168,7 @@ describe('loadSettings', () => {
       'claude-cli': 'low',
       'codex-cli': 'xhigh',
       'grok-cli': 'low',
-      'antigravity-cli': '',
+      'antigravity-cli': 'low',
     });
   });
 });

@@ -13,11 +13,10 @@ export const CUSTOM = '__custom__';
 
 export const CLI_MODELS: Record<CliProviderId, Preset[]> = {
   'antigravity-cli': [
-    { value: 'gemini-3.8-flash-low', label: 'Gemini 3.8 Flash, low' },
-    { value: 'gemini-3.8-flash-medium', label: 'Gemini 3.8 Flash, medium' },
-    { value: 'gemini-3.8-flash-high', label: 'Gemini 3.8 Flash, high' },
-    { value: 'gpt-oss-120b-medium', label: 'GPT-OSS 120B' },
+    { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+    { value: 'gpt-oss-120b', label: 'GPT-OSS 120B' },
     { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
   ],
   'claude-cli': [
     { value: 'haiku', label: 'Haiku' },
@@ -56,6 +55,13 @@ export const CLI_EFFORTS: Record<CliProviderId, Preset[]> = {
   'grok-cli': efforts(['low', 'medium', 'high']),
   'antigravity-cli': [{ value: '', label: 'Model default' }, ...efforts(['low', 'medium', 'high'])],
 };
+
+export function cliEfforts(provider: CliProviderId, model: string): Preset[] {
+  if (provider !== 'antigravity-cli') return CLI_EFFORTS[provider];
+  if (model === 'gemini-3.8-flash') return efforts(['low', 'medium', 'high']);
+  if (CLI_MODELS[provider].some((preset) => preset.value === model)) return [];
+  return CLI_EFFORTS[provider];
+}
 
 export const ANTHROPIC_MODELS: Preset[] = [
   { value: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
