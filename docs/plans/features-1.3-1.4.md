@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: in progress. T21a and T22a are done. T21b waits for an owner decision (see the spike).
+Status: in progress. T21a and T22a are done. OpenCode moved to the backlog (owner, 22 October 2026).
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -8,10 +8,10 @@ Owner answers: the grill session on 22 October 2026. Each decision below is the 
 
 | Release | Contents                                                     | Why this order                                                                                                    |
 | ------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| 1.3.0   | OpenCode provider, Antigravity provider, language switches   | Small, independent and close to done. Free models help right away. Antigravity ships only if its spike passes.     |
+| 1.3.0   | Antigravity provider, language switches                      | Small, independent and close to done. Free models help right away. Antigravity ships only if its spike passes.     |
 | 1.4.0   | The assistant chat                                           | The biggest feature, with new UI, storage and entry points. It ships on its own, so 1.3.0 doesn't wait for it.     |
 
-Both are minor releases (see `RELEASING.md`). Nobody has to redo setup. Only people who want OpenCode or Antigravity run `npm run bridge:install` again, because the installer must add those CLIs' folders to the wrapper's PATH.
+Both are minor releases (see `RELEASING.md`). Nobody has to redo setup. Only people who want Antigravity run `npm run bridge:install` again, because the installer must add its folder to the wrapper's PATH.
 
 If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to the backlog with the reason written down.
 
@@ -29,10 +29,10 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 ### Decisions
 
 - **Lockdown is the same as Claude, Codex and Grok.** No tools, no file reads, no web, no rule files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`), no saved sessions, our own system prompt. If a CLI can't be locked down, it doesn't ship.
-- **OpenCode models:** the model box suggests the free Zen models (names ending in `-free`, plus `big-pickle`). Any `provider/model` that the user's OpenCode login supports can be typed in.
-- **Free-model warning:** when the chosen model is free, the Provider tab shows one line: free models may keep your text to train on. No extra clicks.
+- **OpenCode models (backlog):** the model box suggests the free Zen models (names ending in `-free`, plus `big-pickle`). Any `provider/model` that the user's OpenCode login supports can be typed in.
+- **Free-model warning (backlog, OpenCode only):** when the chosen model is free, the Provider tab shows one line: free models may keep your text to train on. No extra clicks.
 - **Antigravity models:** the box suggests what `agy models` lists (Gemini 3.8 Flash low/medium/high, GPT-OSS 120B, and others). Default (Claude): `gemini-3.8-flash-low`, because it is the fastest.
-- **Default OpenCode model** (Claude): picked by the spike, from the free models, by speed and Fix quality on the existing bench inputs.
+- **Default OpenCode model** (backlog): picked by the spike, from the free models, by speed and Fix quality on the existing bench inputs.
 
 ### What we know (checked 22 October 2026)
 
@@ -51,11 +51,11 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   6. Time to first text and total time for a short Fix on two free models.
 
   Output: `docs/plans/cli-spike.md`, with exact commands and a pass or fail for each CLI. Depends on: nothing.
-- [ ] **T21b. OpenCode provider.** Sol medium. **Blocked: owner decision.** The spike failed for free models. Options are in [cli-spike.md](cli-spike.md#options-for-the-owner).
-  - Bridge: `buildCommand`, `parseLine`, `CLI_NAMES`, the ping, and the installer's PATH list. Fake-CLI tests like Grok's.
-  - Extension: a new `opencode-cli` provider id in settings, the providers index, the toolbar Provider picker and options, the model suggestions, and the free-model warning line.
-  - Docs: the README setup steps and `PRIVACY.md` (free models may keep text).
-- [ ] **T21c. Antigravity provider.** Sol medium. Depends on: T21a (passed). It no longer waits for T21b. Same list as T21b, with id `antigravity-cli`, plus what the spike found: a private home at `LocalPolish/agy-home` with the `polish` agent file, a one-time login command in setup, the prompt sent on stdin as stream-json, and the conversation files deleted by id after each run.
+- **T21b. OpenCode provider.** Dropped from 1.3.0 by the owner on 22 October 2026, because the free tier can't be locked down. See the backlog below.
+- [ ] **T21c. Antigravity provider.** Sol medium. Depends on: T21a (passed). It no longer waits for T21b. Brief: [T21c-antigravity.md](../briefs/T21c-antigravity.md).
+  - Bridge: `buildCommand`, `parseLine`, `CLI_NAMES`, the ping, and the installer's PATH list. A private home at `LocalPolish/agy-home` with the `polish` agent file. The prompt goes on stdin as stream-json. The conversation files are deleted by id after each run. Fake-CLI tests like Grok's.
+  - Extension: a new `antigravity-cli` provider id in settings, the providers index, the toolbar Provider picker and options, and the model suggestions.
+  - Docs: the README setup steps, with the one-time login command, and `PRIVACY.md`.
 
 ## 1.3.0, part 2: language switches (T22)
 
@@ -80,7 +80,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## 1.3.0 release (T24)
 
-- [ ] **T24. Release 1.3.0.** Follow `RELEASING.md`. The notes say: run `npm run bridge:install` again only if you want OpenCode or Antigravity. The owner hand-checks Fix with each new provider and an Arabic draft with Arabic off.
+- [ ] **T24. Release 1.3.0.** Follow `RELEASING.md`. The notes say: run `npm run bridge:install` again only if you want Antigravity. The owner hand-checks Fix with Antigravity and an Arabic draft with Arabic off.
 
 ## 1.4.0: the assistant chat (T23)
 
@@ -134,10 +134,14 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 - [ ] **T25. Release 1.4.0.** Follow `RELEASING.md`. New toolbar screenshots, because the popup gains a chat button. The owner hand-checks the chat on a long article, with a CLI provider and an API provider.
 
+## Backlog
+
+- **OpenCode provider** (was T21b). Free models can't be locked down ([cli-spike.md](cli-spike.md)). Revisit for paid and own-key models only, after one paid test run, or if OpenCode lets its free tier run without file tools.
+
 ## Order of work
 
 1. T21a (spike) and T22a (detector) at the same time. T23b can start too, because it touches different files.
-2. T21b, then T21c if the spike passed. T22b, then T22c.
+2. T22b, then T21c, then T22c. One writer at a time, because T22b and T21c both change `src/core/settings.ts`.
 3. T24: release 1.3.0.
 4. T23a, then T23c, T23d, T23e, T23f and T23g.
 5. T25: release 1.4.0.
@@ -146,6 +150,6 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 - Current commit: `6fce943` (T22a).
 - Finished: T21a (spike), T22a (language detector, 39 unit tests).
-- Next task: T22b and T21c. T21b waits for the owner's OpenCode decision.
+- Next task: T22b (Sol medium), then T21c (Sol medium).
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.
