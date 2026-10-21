@@ -12,6 +12,8 @@ import {
   TIMEOUT_MS,
 } from './constants.mjs';
 import {
+  agyHomeFor,
+  agyLoginCommand,
   buildCommand,
   codexHomeFor,
   codexLoginCommand,
@@ -25,7 +27,7 @@ import {
   splitText,
 } from './lib.mjs';
 
-const CLI_NAMES = ['claude', 'codex', 'grok'];
+const CLI_NAMES = ['claude', 'codex', 'grok', 'agy'];
 const KILL_AFTER_MS = 2000;
 // Chrome drops a native message over 1 MB. JSON can grow a character to 6 bytes.
 const CHUNK_CHARS = 100_000;
@@ -127,6 +129,13 @@ function handleRewrite(msg) {
     env.CODEX_HOME = codexHome;
   }
 
+  const agyHome = cli === 'agy' ? agyHomeFor(os.homedir()) : null;
+  if (agyHome) {
+    fs.mkdirSync(agyHome, { recursive: true });
+    env.HOME = agyHome;
+    if (process.platform === 'win32') env.USERPROFILE = agyHome;
+  }
+
   let run;
   try {
     run = resolveCommand(bin);
@@ -135,6 +144,15 @@ function handleRewrite(msg) {
     return;
   }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'localpolish-'));
+  if (cli === 'agy') {
+    const agents = path.join(dir, '.agents', 'agents');
+    fs.mkdirSync(agents, { recursive: true });
+    fs.writeFileSync(
+      path.join(agents, 'localpolish.md'),
+      '---\nname: localpolish\ndescription: LocalPolish rewrite.\ntools: []\nmainAgent: true\nsubagent: false\n---\n\n' +
+        system,
+    );
+  }
   let instructionsFile;
   let modelCatalogFile;
   if (cli === 'codex') {
@@ -156,6 +174,8 @@ function handleRewrite(msg) {
   });
 
   let stderrTail = '';
+  /** @type {string | undefined} */
+  let conversation;
   /** @type {string | null} */
   let rememberedError = null;
   let settled = false;
@@ -212,6 +232,11 @@ function handleRewrite(msg) {
         clearTimeout(killTimer);
         killGroup('SIGKILL');
       }
+      if (agyHome && conversation && /^[0-9a-f-]{36}$/i.test(conversation)) {
+        const saved = path.join(agyHome, '.gemini', 'antigravity-cli');
+        fs.rmSync(path.join(saved, 'conversations', `${conversation}.db`), { force: true });
+        fs.rmSync(path.join(saved, 'brain', conversation), { recursive: true, force: true });
+      }
       removeDir();
       exitWhenFlushed();
     };
@@ -245,13 +270,21 @@ function handleRewrite(msg) {
   child.stderr.setEncoding('utf8');
   child.stderr.on('data', (chunk) => {
     stderrTail = (stderrTail + chunk).slice(-2000);
+    if (agyHome && stderrTail.includes('Authentication required')) {
+      killChild();
+      finish({
+        type: 'error',
+        message: `Antigravity needs its own login for LocalPolish. In a terminal run: ${agyLoginCommand(agyHome)}`,
+      });
+    }
   });
 
   // 'close' fires after stdout is finished, so every line is parsed before done.
   const handleLine = (/** @type {string} */ line) => {
-    if (settled) return;
     const parsed = parseLine(cli, line);
     if (!parsed) return;
+    if ('conversation' in parsed) conversation = parsed.conversation;
+    if (settled) return;
     if ('text' in parsed) {
       const text = parsed.text;
       const remainingBytes = MAX_OUTPUT_BYTES - outputBytes;
@@ -285,7 +318,7 @@ function handleRewrite(msg) {
       process.stdout.write(encodeMessage({ type: 'model', model: parsed.model }));
       return;
     }
-    rememberedError = parsed.error;
+    if ('error' in parsed) rememberedError = parsed.error;
   };
 
   let lineBuffer = Buffer.alloc(0);
@@ -313,7 +346,7 @@ function handleRewrite(msg) {
     return true;
   };
   child.stdout.on('data', (/** @type {Buffer} */ chunk) => {
-    if (settled) return;
+    if (settled && cli !== 'agy') return;
     let start = 0;
     for (let at = 0; at < chunk.length; at++) {
       const byte = chunk[at];
@@ -329,13 +362,13 @@ function handleRewrite(msg) {
       lineBytes = 0;
       afterCR = byte === 13;
       handleLine(line);
-      if (settled) return;
+      if (settled && cli !== 'agy') return;
       start = at + 1;
     }
     appendLine(chunk, start, chunk.length);
   });
   child.stdout.on('end', () => {
-    if (settled || lineBytes === 0) return;
+    if ((settled && cli !== 'agy') || lineBytes === 0) return;
     const line = lineBuffer.toString('utf8', 0, lineBytes);
     lineBytes = 0;
     handleLine(line);
@@ -363,7 +396,9 @@ function handleRewrite(msg) {
     finish({ type: 'error', message });
   });
 
-  child.stdin.write(user);
+  child.stdin.write(
+    cli === 'agy' ? JSON.stringify({ event: 'user', message: { content: user } }) + '\n' : user,
+  );
   child.stdin.end();
 }
 

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MAX_CLI_EVENT_BYTES, MAX_NATIVE_FRAME_BYTES } from './constants.mjs';
-import { codexHomeFor, createDecoder, encodeMessage } from './lib.mjs';
+import { agyHomeFor, agyLoginCommand, codexHomeFor, createDecoder, encodeMessage } from './lib.mjs';
 
 const windows = process.platform === 'win32';
 const hostPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'host.mjs');
@@ -852,6 +852,7 @@ ${mode === 'codex hangs' && name === 'codex' ? 'setInterval(() => {}, 1000);' : 
             claude: { version: 'claude 1.2.3' },
             codex: { version: mode === 'codex hangs' ? '' : 'codex 1.2.3' },
             grok: { version: 'grok 1.2.3' },
+            agy: null,
           },
         },
       ]);
@@ -888,6 +889,7 @@ if (process.argv.includes('--version')) {
           claude: { version: '9.9.9 (Claude Code)' },
           codex: null,
           grok: null,
+          agy: null,
         },
       },
     ]);
@@ -1009,3 +1011,167 @@ async function waitForPid(file) {
   }
   throw new Error(`pid file missing: ${file}`);
 }
+
+describe('Antigravity host', () => {
+  const id = '12345678-abcd-abcd-abcd-123456789abc';
+  const agent =
+    '---\nname: localpolish\ndescription: LocalPolish rewrite.\ntools: []\nmainAgent: true\nsubagent: false\n---\n\nS';
+
+  function setup(body) {
+    const bin = tempDir('lp-agy-bin-');
+    const home = tempDir('lp-agy-home-');
+    const agyHome = agyHomeFor(home);
+    const saved = path.join(agyHome, '.gemini', 'antigravity-cli');
+    writeCli(
+      bin,
+      'agy',
+      `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert/strict');
+const send = (event) => console.log(JSON.stringify(event));
+const saved = path.join(process.env.HOME, '.gemini', 'antigravity-cli');
+const id = ${JSON.stringify(id)};
+const persist = () => {
+  fs.mkdirSync(path.join(saved, 'conversations'), { recursive: true });
+  fs.mkdirSync(path.join(saved, 'brain', id), { recursive: true });
+  fs.writeFileSync(path.join(saved, 'conversations', id + '.db'), 'fake draft');
+  fs.writeFileSync(path.join(saved, 'brain', id, 'draft'), 'fake draft');
+  send({ event: 'init', conversation_id: id, init: { model: 'm1' } });
+};
+${body.replaceAll('AGY_HOME_EXPECTED', JSON.stringify(agyHome)).replaceAll('BIN_EXPECTED', JSON.stringify(bin))}
+`,
+    );
+    return { host: startHost(bin, 5000, home), agyHome, saved, bin };
+  }
+
+  function expectDeleted(saved) {
+    expect(fs.existsSync(path.join(saved, 'conversations', id + '.db'))).toBe(false);
+    expect(fs.existsSync(path.join(saved, 'brain', id))).toBe(false);
+  }
+
+  it('passes one JSON user line and an isolated agent, streams and deletes the saved conversation', async () => {
+    const { host, agyHome, saved } = setup(`
+let input = '';
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', (chunk) => input += chunk);
+process.stdin.on('end', () => {
+  assert.equal(input, JSON.stringify({ event: 'user', message: { content: 'fake draft\\nsecond line' } }) + '\\n');
+  assert.equal(process.env.HOME, AGY_HOME_EXPECTED);
+  assert.equal(fs.readFileSync('.agents/agents/localpolish.md', 'utf8'), ${JSON.stringify(agent)});
+  persist();
+  send({ event: 'step_update', step_update: { step_type: 'agent_response', text_delta: 'Fixed.' } });
+  send({ event: 'step_update', step_update: { step_type: 'agent_response', state: 'DONE', text_delta: '\\n' } });
+  send({ event: 'result', result: { status: 'SUCCESS' } });
+});
+`);
+    host.child.stdin.write(rewrite('agy', 'fake draft\nsecond line'));
+    await host.closed;
+    expect(host.messages).toEqual([
+      { type: 'model', model: 'm1' },
+      { type: 'chunk', text: 'Fixed.' },
+      { type: 'chunk', text: '\n' },
+      { type: 'done' },
+    ]);
+    expectDeleted(saved);
+    expect(fs.existsSync(path.join(agyHome, '.agents'))).toBe(false);
+    expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+  });
+
+  it('kills a waiting login and returns the private login command', async () => {
+    const { host, agyHome, saved, bin } = setup(`
+persist();
+fs.writeFileSync(path.join(BIN_EXPECTED, 'pid'), String(process.pid));
+process.stderr.write('Authentication required');
+setInterval(() => {}, 1000);
+`);
+    const start = Date.now();
+    host.child.stdin.write(rewrite('agy', 'fake draft'));
+    await host.closed;
+    expect(Date.now() - start).toBeLessThan(3000);
+    expect(host.messages.at(-1)).toEqual({
+      type: 'error',
+      message:
+        'Antigravity needs its own login for LocalPolish. In a terminal run: ' +
+        agyLoginCommand(agyHome),
+    });
+    expect(() => process.kill(Number(fs.readFileSync(path.join(bin, 'pid'), 'utf8')), 0)).toThrow();
+    expectDeleted(saved);
+  });
+
+  it('returns an error status and still deletes the saved conversation', async () => {
+    const { host, saved } = setup(`
+persist();
+send({ event: 'result', result: { status: 'ERROR', error: 'fake error' } });
+`);
+    host.child.stdin.write(rewrite('agy', 'fake draft'));
+    await host.closed;
+    expect(host.messages.at(-1)).toEqual({ type: 'error', message: 'fake error' });
+    expectDeleted(saved);
+  });
+
+  it('cleans up on disconnect', async () => {
+    const { host, saved, bin } = setup(`
+persist();
+fs.writeFileSync(path.join(BIN_EXPECTED, 'pid'), String(process.pid));
+setInterval(() => {}, 1000);
+`);
+    host.child.stdin.write(rewrite('agy', 'fake draft'));
+    pids.push(await waitForPid(path.join(bin, 'pid')));
+    await expect.poll(() => host.messages).toContainEqual({ type: 'model', model: 'm1' });
+    host.child.stdin.end();
+    await host.closed;
+    expectDeleted(saved);
+  });
+
+  it('cleans up after the rewrite timeout', async () => {
+    const bin = tempDir('lp-agy-timeout-bin-');
+    const home = tempDir('lp-agy-timeout-home-');
+    const saved = path.join(agyHomeFor(home), '.gemini', 'antigravity-cli');
+    writeCli(
+      bin,
+      'agy',
+      `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const saved = ${JSON.stringify(saved)};
+const id = ${JSON.stringify(id)};
+fs.mkdirSync(path.join(saved, 'conversations'), { recursive: true });
+fs.mkdirSync(path.join(saved, 'brain', id), { recursive: true });
+fs.writeFileSync(path.join(saved, 'conversations', id + '.db'), 'fake draft');
+fs.writeFileSync(path.join(saved, 'brain', id, 'draft'), 'fake draft');
+console.log(JSON.stringify({ event: 'init', conversation_id: id, init: { model: 'm1' } }));
+setInterval(() => {}, 1000);
+`,
+    );
+    const host = startHost(bin, 65_000, home);
+    host.child.stdin.write(rewrite('agy', 'fake draft'));
+    await host.closed;
+    expect(host.messages.at(-1)).toEqual({ type: 'error', message: 'Timed out after 60 seconds.' });
+    expectDeleted(saved);
+    expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+  }, 65_000);
+
+  it.each(['../../x', '../../../../x'])(
+    'ignores unsafe conversation id %s',
+    async (conversation) => {
+      const { host, agyHome } = setup(`
+send({ event: 'init', conversation_id: ${JSON.stringify(conversation)}, init: { model: 'm1' } });
+send({ event: 'result', result: { status: 'SUCCESS' } });
+`);
+      const outside = path.join(
+        agyHome,
+        '.gemini',
+        'antigravity-cli',
+        'conversations',
+        conversation + '.db',
+      );
+      fs.mkdirSync(path.dirname(outside), { recursive: true });
+      fs.writeFileSync(outside, 'keep');
+      host.child.stdin.write(rewrite('agy', 'fake draft'));
+      await host.closed;
+      expect(host.messages.at(-1)).toEqual({ type: 'done' });
+      expect(fs.readFileSync(outside, 'utf8')).toBe('keep');
+    },
+  );
+});

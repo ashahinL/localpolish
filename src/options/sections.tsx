@@ -8,10 +8,11 @@ import { formatSeconds, invalidSiteEntries, parseBlocklist, shortcutKeys } from 
 import { isCli } from './ProviderSection';
 import { useSettingsApi } from './useSettings';
 
-export const CLIS: Array<{ key: 'claude' | 'codex' | 'grok'; name: string }> = [
+export const CLIS: Array<{ key: 'claude' | 'codex' | 'grok' | 'agy'; name: string }> = [
   { key: 'claude', name: 'Claude Code' },
   { key: 'codex', name: 'Codex' },
   { key: 'grok', name: 'Grok CLI' },
+  { key: 'agy', name: 'Antigravity CLI' },
 ];
 
 const MODES: Array<{ value: DefaultMode; label: string }> = [

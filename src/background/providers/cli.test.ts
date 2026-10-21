@@ -152,6 +152,7 @@ describe('cliProvider', () => {
     ['claude', 'claude-cli', 'opus'],
     ['codex', 'codex-cli', 'gpt-6-luna'],
     ['grok', 'grok-cli', 'grok-3'],
+    ['agy', 'antigravity-cli', 'gemini-3.8-flash-low'],
   ] as const)('posts a %s rewrite with the saved model and effort', async (cli, key, model) => {
     const pending = cliProvider(cli)(
       prompt,
@@ -322,6 +323,7 @@ describe('pingBridge', () => {
     await expect(pending).resolves.toEqual({
       ok: true,
       clis: {
+        agy: null,
         claude: { version: '1.2.3' },
         codex: null,
         grok: { version: '0.4.0' },
@@ -353,4 +355,27 @@ describe('pingBridge', () => {
       vi.useRealTimers();
     }
   });
+});
+
+describe('Antigravity bridge status', () => {
+  it.each([null, { version: '1.0.0' }])('accepts an agy status of %j', async (agy) => {
+    const pending = pingBridge();
+    emitMessage({ type: 'pong', clis: { claude: null, codex: null, grok: null, agy } });
+    await expect(pending).resolves.toEqual({
+      ok: true,
+      clis: { claude: null, codex: null, grok: null, agy },
+    });
+  });
+
+  it.each([undefined, false, '1.0', { version: 7 }])(
+    'rejects a bad agy status of %j',
+    async (agy) => {
+      const pending = pingBridge();
+      emitMessage({ type: 'pong', clis: { claude: null, codex: null, grok: null, agy } });
+      await expect(pending).resolves.toEqual({
+        ok: false,
+        message: 'The bridge returned an unexpected status.',
+      });
+    },
+  );
 });

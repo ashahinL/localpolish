@@ -12,6 +12,13 @@ export interface BaseUrlPreset extends Preset {
 export const CUSTOM = '__custom__';
 
 export const CLI_MODELS: Record<CliProviderId, Preset[]> = {
+  'antigravity-cli': [
+    { value: 'gemini-3.8-flash-low', label: 'Gemini 3.8 Flash, low' },
+    { value: 'gemini-3.8-flash-medium', label: 'Gemini 3.8 Flash, medium' },
+    { value: 'gemini-3.8-flash-high', label: 'Gemini 3.8 Flash, high' },
+    { value: 'gpt-oss-120b-medium', label: 'GPT-OSS 120B' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+  ],
   'claude-cli': [
     { value: 'haiku', label: 'Haiku' },
     { value: 'sonnet', label: 'Sonnet' },
@@ -47,6 +54,7 @@ export const CLI_EFFORTS: Record<CliProviderId, Preset[]> = {
   'claude-cli': efforts(['low', 'medium', 'high', 'xhigh', 'max']),
   'codex-cli': efforts(['none', 'low', 'medium', 'high', 'xhigh']),
   'grok-cli': efforts(['low', 'medium', 'high']),
+  'antigravity-cli': [{ value: '', label: 'Model default' }, ...efforts(['low', 'medium', 'high'])],
 };
 
 export const ANTHROPIC_MODELS: Preset[] = [

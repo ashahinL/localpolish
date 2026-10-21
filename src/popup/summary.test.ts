@@ -17,18 +17,26 @@ function settings(
   };
 }
 
-function bridge(missing: 'claude' | 'codex' | 'grok' | null = null): BridgeStatus {
+function bridge(missing: 'claude' | 'codex' | 'grok' | 'agy' | null = null): BridgeStatus {
   return {
     ok: true,
     clis: {
       claude: missing === 'claude' ? null : { version: '1.2.3' },
       codex: missing === 'codex' ? null : { version: '1.2.3' },
       grok: missing === 'grok' ? null : { version: '1.2.3' },
+      agy: missing === 'agy' ? null : { version: '1.2.3' },
     },
   };
 }
 
 describe('providerSummary', () => {
+  it('shows Antigravity with its model default effort', () => {
+    expect(providerSummary(settings({ provider: 'antigravity-cli' }))).toEqual({
+      title: 'Antigravity CLI',
+      mark: 'Ag',
+      detail: 'Gemini 3.8 Flash, low · Effort: Model default',
+    });
+  });
   it('uses the Codex preset labels for the default settings', () => {
     expect(providerSummary(DEFAULT_SETTINGS)).toEqual({
       title: 'Codex',
@@ -178,6 +186,17 @@ describe('connection', () => {
     expect(connection(DEFAULT_SETTINGS, bridge('codex'))).toEqual({
       tone: 'error',
       label: 'Codex not found',
+    });
+  });
+
+  it('names Antigravity when agy is missing', () => {
+    expect(connection(settings({ provider: 'antigravity-cli' }), bridge('agy'))).toEqual({
+      tone: 'error',
+      label: 'Antigravity CLI not found',
+    });
+    expect(connection(settings({ provider: 'antigravity-cli' }), bridge())).toEqual({
+      tone: 'ok',
+      label: 'Bridge ready',
     });
   });
 

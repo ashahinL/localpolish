@@ -2,12 +2,13 @@ import { BRIDGE_MISSING, type BridgeStatus, HOST_NAME } from '../../core/message
 import { type Settings } from '../../core/settings';
 import { type StreamFn } from './types';
 
-type CliName = 'claude' | 'codex' | 'grok';
+type CliName = 'claude' | 'codex' | 'grok' | 'agy';
 
 const MODEL_KEY = {
   claude: 'claude-cli',
   codex: 'codex-cli',
   grok: 'grok-cli',
+  agy: 'antigravity-cli',
 } as const satisfies Record<CliName, keyof Settings['models']>;
 
 const NOT_INSTALLED =
@@ -81,8 +82,10 @@ function readPong(value: unknown): BridgeStatus | undefined {
   const claude = readCliStatus(value.clis.claude);
   const codex = readCliStatus(value.clis.codex);
   const grok = readCliStatus(value.clis.grok);
-  if (claude === undefined || codex === undefined || grok === undefined) return undefined;
-  return { ok: true, clis: { claude, codex, grok } };
+  const agy = Object.hasOwn(value.clis, 'agy') ? readCliStatus(value.clis.agy) : null;
+  if (claude === undefined || codex === undefined || grok === undefined || agy === undefined)
+    return undefined;
+  return { ok: true, clis: { claude, codex, grok, agy } };
 }
 
 export function cliProvider(cli: CliName): StreamFn {
@@ -109,7 +112,7 @@ export function cliProvider(cli: CliName): StreamFn {
       port.onMessage.addListener((message: unknown) => {
         if (settled || !isRecord(message)) return;
         if (message.type === 'model') {
-          if (cli === 'grok' && !signal.aborted) {
+          if ((cli === 'grok' || cli === 'agy') && !signal.aborted) {
             const model = reportedModelName(message.model);
             if (model !== undefined) onModel?.(model);
           }

@@ -13,14 +13,16 @@ const MARKS: Record<ProviderId, string> = {
   'claude-cli': 'CC',
   'codex-cli': 'Cx',
   'grok-cli': 'Gk',
+  'antigravity-cli': 'Ag',
   'openai-compatible': 'AI',
   'anthropic-api': 'An',
 };
 
-const CLI_KEY: Record<CliProviderId, 'claude' | 'codex' | 'grok'> = {
+const CLI_KEY: Record<CliProviderId, 'claude' | 'codex' | 'grok' | 'agy'> = {
   'claude-cli': 'claude',
   'codex-cli': 'codex',
   'grok-cli': 'grok',
+  'antigravity-cli': 'agy',
 };
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);

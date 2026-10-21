@@ -14,6 +14,11 @@ import { useSettingsApi } from './useSettings';
 export const PROVIDERS: Array<{ id: ProviderId; title: string; subtitle: string }> = [
   { id: 'claude-cli', title: 'Claude Code', subtitle: 'Your Claude subscription, via the bridge' },
   { id: 'codex-cli', title: 'Codex', subtitle: 'Your ChatGPT subscription, via the bridge' },
+  {
+    id: 'antigravity-cli',
+    title: 'Antigravity CLI',
+    subtitle: 'Your Google account, via the bridge',
+  },
   { id: 'grok-cli', title: 'Grok CLI', subtitle: 'Your SuperGrok subscription, via the bridge' },
   {
     id: 'openai-compatible',
@@ -27,13 +32,22 @@ const CODEX_LOGIN = navigator.userAgent.includes('Windows')
   ? '$env:CODEX_HOME="$env:USERPROFILE\\AppData\\Local\\LocalPolish\\codex-home"; mkdir -Force $env:CODEX_HOME | Out-Null; codex login'
   : 'mkdir -p "$HOME/Library/Application Support/LocalPolish/codex-home" && CODEX_HOME="$HOME/Library/Application Support/LocalPolish/codex-home" codex login';
 
+const AGY_LOGIN = navigator.userAgent.includes('Windows')
+  ? '$env:HOME="$env:USERPROFILE\\AppData\\Local\\LocalPolish\\agy-home"; $env:USERPROFILE=$env:HOME; mkdir -Force $env:HOME | Out-Null; agy'
+  : 'mkdir -p "$HOME/Library/Application Support/LocalPolish/agy-home" && HOME="$HOME/Library/Application Support/LocalPolish/agy-home" agy';
+
 const BASE_URL_OPTIONS = OPENAI_BASE_URLS.map((preset) => ({
   value: preset.value,
   label: `${preset.label} (${preset.value})`,
 }));
 
 export function isCli(provider: ProviderId): provider is CliProviderId {
-  return provider === 'claude-cli' || provider === 'codex-cli' || provider === 'grok-cli';
+  return (
+    provider === 'claude-cli' ||
+    provider === 'codex-cli' ||
+    provider === 'grok-cli' ||
+    provider === 'antigravity-cli'
+  );
 }
 
 export function ProviderSection({ settings }: { settings: Settings }) {
@@ -104,6 +118,12 @@ export function CliDetails({
         />
       </div>
       <p class="help">Lower effort is faster and cheaper. Low is enough for fixing text.</p>
+      {provider === 'antigravity-cli' && (
+        <Note tone="info">
+          <p>Antigravity needs its own login for LocalPolish, once. Run this in a terminal.</p>
+          <CodeLine text={AGY_LOGIN} />
+        </Note>
+      )}
       {provider === 'codex-cli' && (
         <Note tone="info">
           <p>Codex needs its own login for LocalPolish, once. Run this in a terminal.</p>

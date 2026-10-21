@@ -4,6 +4,8 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { MAX_NATIVE_FRAME_BYTES } from './constants.mjs';
 import {
+  agyHomeFor,
+  agyLoginCommand,
   buildCommand,
   CODEX_DISABLED_FEATURES,
   codexRewriteCatalog,
@@ -392,5 +394,77 @@ describe('splitText', () => {
   it('splits long text without cutting a surrogate pair', () => {
     expect(splitText('abcdef', 4)).toEqual(['abcd', 'ef']);
     expect(splitText('ab😀cd', 3)).toEqual(['ab', '😀c', 'd']);
+  });
+});
+
+describe('Antigravity', () => {
+  it.each([
+    ['', '', []],
+    ['gemini-3.8-flash-low', '', ['--model', 'gemini-3.8-flash-low']],
+    ['', 'high', ['--effort', 'high']],
+    ['m1', 'low', ['--model', 'm1', '--effort', 'low']],
+  ])('builds a command with model %s and effort %s', (model, effort, extra) => {
+    expect(buildCommand('agy', { model, effort, system: 'private system' })).toEqual({
+      cmd: 'agy',
+      args: [
+        '--agent',
+        'localpolish',
+        '--output-format',
+        'stream-json',
+        '--input-format',
+        'stream-json',
+        '-p=',
+        ...extra,
+      ],
+    });
+  });
+
+  it.each([
+    [
+      { event: 'init', conversation_id: 'id', init: { model: '  m1  ' } },
+      { model: 'm1', conversation: 'id' },
+    ],
+    [{ event: 'init', init: { model: '' } }, null],
+    [{ event: 'init', init: { model: 7 } }, null],
+    [{ event: 'init', init: { model: 'x'.repeat(201) } }, null],
+    [
+      { event: 'step_update', step_update: { step_type: 'agent_response', text_delta: 'Hello.' } },
+      { text: 'Hello.' },
+    ],
+    [
+      {
+        event: 'step_update',
+        step_update: { step_type: 'agent_response', state: 'DONE', text_delta: '\n' },
+      },
+      { text: '\n' },
+    ],
+    [{ event: 'step_update', step_update: { step_type: 'agent_response', text_delta: '' } }, null],
+    [{ event: 'step_update', step_update: { step_type: 'tool', text_delta: 'ignored' } }, null],
+    [{ event: 'result', result: { status: 'SUCCESS' } }, { end: true }],
+    [
+      { event: 'result', result: { status: 'ERROR', error: 'fake failure' } },
+      { error: 'fake failure' },
+    ],
+    [
+      { event: 'result', result: { status: 'CANCELLED' } },
+      { error: 'Antigravity stopped (CANCELLED).' },
+    ],
+    [{ event: 'unknown' }, null],
+  ])('parses %j', (event, expected) => {
+    expect(parseLine('agy', JSON.stringify(event))).toEqual(expected);
+  });
+
+  it.each(['darwin', 'win32'])('uses a private home and login on %s', (platform) => {
+    const home = agyHomeFor('/fake/home', platform);
+    expect(home).toBe(
+      platform === 'win32'
+        ? path.join('/fake/home', 'AppData', 'Local', 'LocalPolish', 'agy-home')
+        : path.join('/fake/home', 'Library', 'Application Support', 'LocalPolish', 'agy-home'),
+    );
+    expect(agyLoginCommand(home, platform)).toBe(
+      platform === 'win32'
+        ? `$env:HOME="${home}"; $env:USERPROFILE="${home}"; mkdir -Force $env:HOME | Out-Null; agy`
+        : `mkdir -p "${home}" && HOME="${home}" agy`,
+    );
   });
 });

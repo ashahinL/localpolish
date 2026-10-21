@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: in progress. T21a, T22a and T22b are done. OpenCode moved to the backlog (owner, 22 October 2026).
+Status: in progress. T21a, T21c, T22a and T22b are done. T21c's live check waits for the owner's agy login. OpenCode moved to the backlog (owner, 22 October 2026).
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -52,10 +52,11 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
   Output: `docs/plans/cli-spike.md`, with exact commands and a pass or fail for each CLI. Depends on: nothing.
 - **T21b. OpenCode provider.** Dropped from 1.3.0 by the owner on 22 October 2026, because the free tier can't be locked down. See the backlog below.
-- [ ] **T21c. Antigravity provider.** Sol medium. Depends on: T21a (passed). It no longer waits for T21b. Brief: [T21c-antigravity.md](../briefs/T21c-antigravity.md).
-  - Bridge: `buildCommand`, `parseLine`, `CLI_NAMES`, the ping, and the installer's PATH list. A private home at `LocalPolish/agy-home` with the `polish` agent file. The prompt goes on stdin as stream-json. The conversation files are deleted by id after each run. Fake-CLI tests like Grok's.
+- [x] **T21c. Antigravity provider.** Sol medium. Depends on: T21a (passed). It no longer waits for T21b. Brief: [T21c-antigravity.md](../briefs/T21c-antigravity.md).
+  - Bridge: `buildCommand`, `parseLine`, `CLI_NAMES`, the ping, and the installer's PATH list. A private home at `LocalPolish/agy-home` and a per-run `.agents/agents/localpolish.md` agent file in the temp working folder. The prompt goes on stdin as stream-json. The conversation files are deleted by id after each run. Fake-CLI tests like Grok's.
   - Extension: a new `antigravity-cli` provider id in settings, the providers index, the toolbar Provider picker and options, and the model suggestions.
   - Docs: the README setup steps, with the one-time login command, and `PRIVACY.md`.
+  - Live check pending: the owner runs the agy login command, then Claude checks a real Fix and the conversation cleanup.
 
 ## 1.3.0, part 2: language switches (T22)
 
@@ -149,9 +150,10 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current commit: T22b (language settings and the idle skip).
-- Finished: T21a (spike), T22a (language detector), T22b. T22b clears all idle results when the language switches change. Manual Fix doesn't reuse results or pending requests that have a keep line, and manual whole-field sends no longer carry `trigger: 'idle'`.
-- T22b checks: unit tests (617 passed, 2 skipped), lint, typecheck, Prettier, build, and all 203 browser tests. The 5 new language browser tests fail on the old code and pass on the new code.
-- Next: T21c (Sol medium), then T22c (art lane).
+- Current commit: T21c (Antigravity provider).
+- Finished: T21a (spike), T22a (language detector), T22b (language settings and the idle skip), T21c (Antigravity provider).
+- Last checks (T21c): unit tests (654 passed, 2 skipped), lint, typecheck, Prettier, build, and all 203 browser tests.
+- Waiting on the owner: `npm run bridge:install` (adds agy's folder to the wrapper PATH), then the one-time agy login. Then Claude checks a real Fix, the conversation cleanup, and whether `conversation_summaries.db` in the agy home keeps draft text.
+- Next task: T22c (art lane), then T24 (release 1.3.0).
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.

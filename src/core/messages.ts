@@ -22,7 +22,7 @@ export type RewriteEvent =
 export type BridgeStatus =
   | {
       ok: true;
-      clis: Record<'claude' | 'codex' | 'grok', { version: string } | null>;
+      clis: Record<'claude' | 'codex' | 'grok' | 'agy', { version: string } | null>;
     }
   | { ok: false; message: string };
 

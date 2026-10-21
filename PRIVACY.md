@@ -54,6 +54,7 @@ and tone. Where it goes depends on the provider you chose:
   history in `~/.grok`. Claude Code saves no session
   (`--no-session-persistence`). Codex runs with `--ephemeral`, in a separate
   Codex home.
+- **Antigravity CLI.** The text goes through the bridge to `agy`, which sends it to Google under your Google account and Google's privacy policies. The bridge sets `HOME` to `~/Library/Application Support/LocalPolish/agy-home` on macOS, or `~/AppData/Local/LocalPolish/agy-home` on Windows. It also sets `USERPROFILE` on Windows. This private home holds the separate login and avoids loading your normal rules and plugins. Each run uses an agent with no tools, in its own temp folder. After the CLI exits, the bridge deletes that run's `.gemini/antigravity-cli/conversations/<id>.db` and `.gemini/antigravity-cli/brain/<id>/` inside the private home, including on errors, timeouts, and disconnects.
 - **OpenAI-compatible API.** The text goes to the base URL you set, with
   your API key if you entered one. That can be a server on this computer,
   such as Ollama or LM Studio.

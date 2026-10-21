@@ -20,7 +20,12 @@ interface StubConfig {
 
 const BRIDGE_OK = {
   ok: true,
-  clis: { claude: { version: '2.4.1 (Claude Code)' }, codex: { version: '0.98.0' }, grok: null },
+  clis: {
+    claude: { version: '2.4.1 (Claude Code)' },
+    codex: { version: '0.98.0' },
+    grok: null,
+    agy: null,
+  },
 };
 
 const test = base.extend<{ page: Page }, { sharedContext: BrowserContext }>({
@@ -215,6 +220,12 @@ test('switching provider shows that provider’s fields', async ({ page }) => {
   await provider(page, 'Codex').click();
   await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('none');
   await expect(page.getByText('Codex needs its own login')).toBeVisible();
+
+  await provider(page, 'Antigravity CLI').click();
+  await expect(page.getByLabel('Model', { exact: true })).toHaveValue('gemini-3.8-flash-low');
+  await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('');
+  await expect(page.getByText('Antigravity needs its own login')).toBeVisible();
+  await expect.poll(async () => (await stored(page))?.provider).toBe('antigravity-cli');
 });
 
 test('Custom shows a text input and saves what is typed', async ({ page }) => {
@@ -250,7 +261,8 @@ test('Test connection shows the result', async ({ page }) => {
 test('bridge rows and the install hint when the bridge is missing', async ({ page }) => {
   await openOptions(page);
   await expect(page.getByText('2.4.1 (Claude Code)')).toBeVisible();
-  await expect(page.getByText('not found')).toBeVisible();
+  // Grok is missing, and this older bridge reply has no Antigravity entry.
+  await expect(page.getByText('not found')).toHaveCount(2);
   await expect(page.locator('kbd')).toHaveText(['⇧', '⌘', 'K']);
 
   const missing = await page.context().newPage();

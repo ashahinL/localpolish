@@ -10,6 +10,8 @@ export function getProvider(id: ProviderId): StreamFn {
       return cliProvider('claude');
     case 'codex-cli':
       return cliProvider('codex');
+    case 'antigravity-cli':
+      return cliProvider('agy');
     case 'grok-cli':
       return cliProvider('grok');
     case 'openai-compatible':

@@ -31,7 +31,7 @@ describe('selectedOption', () => {
 
 describe('presets', () => {
   it('include every default model and effort', () => {
-    for (const provider of ['claude-cli', 'codex-cli', 'grok-cli'] as const) {
+    for (const provider of ['claude-cli', 'codex-cli', 'grok-cli', 'antigravity-cli'] as const) {
       const models = CLI_MODELS[provider].map((preset) => preset.value);
       const efforts = CLI_EFFORTS[provider].map((preset) => preset.value);
       expect(models).toContain(DEFAULT_SETTINGS.models[provider]);

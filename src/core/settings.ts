@@ -1,9 +1,14 @@
 import type { PageSettings } from './messages';
 
 export type ProviderId =
-  'claude-cli' | 'codex-cli' | 'grok-cli' | 'openai-compatible' | 'anthropic-api';
+  | 'claude-cli'
+  | 'codex-cli'
+  | 'grok-cli'
+  | 'antigravity-cli'
+  | 'openai-compatible'
+  | 'anthropic-api';
 
-export type CliProviderId = 'claude-cli' | 'codex-cli' | 'grok-cli';
+export type CliProviderId = 'claude-cli' | 'codex-cli' | 'grok-cli' | 'antigravity-cli';
 
 export type LanguageId = 'en' | 'ar' | 'franco' | 'other';
 
@@ -33,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
     'claude-cli': 'haiku',
     'codex-cli': 'gpt-6-luna',
     'grok-cli': '',
+    'antigravity-cli': 'gemini-3.8-flash-low',
     'openai-compatible': '',
     'anthropic-api': 'claude-haiku-5-5',
   },
@@ -40,6 +46,7 @@ export const DEFAULT_SETTINGS: Settings = {
     'claude-cli': 'low',
     'codex-cli': 'none',
     'grok-cli': 'low',
+    'antigravity-cli': '',
   },
   openaiBaseUrl: 'http://localhost:11434/v1',
   openaiApiKey: '',

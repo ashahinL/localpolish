@@ -38,6 +38,8 @@ describe('loadSettings', () => {
   it('returns defaults when nothing is stored', async () => {
     const loaded = await loadSettings();
     expect(loaded).toEqual(DEFAULT_SETTINGS);
+    expect(loaded.models['antigravity-cli']).toBe('gemini-3.8-flash-low');
+    expect(loaded.efforts['antigravity-cli']).toBe('');
 
     loaded.blocklist.push('evil.com');
     loaded.models['claude-cli'] = 'changed';
@@ -75,6 +77,7 @@ describe('loadSettings', () => {
       'claude-cli': 'opus',
       'codex-cli': 'gpt-6-luna',
       'grok-cli': '',
+      'antigravity-cli': 'gemini-3.8-flash-low',
       'openai-compatible': '',
       'anthropic-api': 'claude-haiku-5-5',
     });
@@ -149,6 +152,7 @@ describe('loadSettings', () => {
       'claude-cli': 'low',
       'codex-cli': 'xhigh',
       'grok-cli': 'low',
+      'antigravity-cli': '',
     });
   });
 });

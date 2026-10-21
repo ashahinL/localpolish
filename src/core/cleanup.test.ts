@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { cleanOutput } from './cleanup';
 
 describe('cleanOutput', () => {
+  it('removes the final Antigravity newline', () => {
+    expect(cleanOutput('Fixed.\n', 'fake draft')).toBe('Fixed.');
+  });
   it('drops a leading preamble line', () => {
     expect(cleanOutput('Here is the corrected text:\nI went home.', 'i go home')).toBe(
       'I went home.',

@@ -21,7 +21,12 @@ interface StubConfig {
 
 const BRIDGE_OK = {
   ok: true,
-  clis: { claude: { version: '2.4.1 (Claude Code)' }, codex: { version: '0.98.0' }, grok: null },
+  clis: {
+    claude: { version: '2.4.1 (Claude Code)' },
+    codex: { version: '0.98.0' },
+    grok: null,
+    agy: null,
+  },
 };
 
 const BRIDGE_MISSING =
@@ -315,6 +320,12 @@ test("switching provider shows that provider's fields", async ({ page }) => {
 
   await radioLabel(page, 'Codex').click();
   await expect(page.getByText('Codex needs its own login')).toBeVisible();
+
+  await radioLabel(page, 'Antigravity CLI').click();
+  await expect(page.getByLabel('Model', { exact: true })).toHaveValue('gemini-3.8-flash-low');
+  await expect(page.getByLabel('Thinking effort', { exact: true })).toHaveValue('');
+  await expect(page.getByText('Antigravity needs its own login')).toBeVisible();
+  await expect.poll(async () => (await stored(page))?.provider).toBe('antigravity-cli');
 });
 
 test('bridge rows and Check again asks again', async ({ page }) => {

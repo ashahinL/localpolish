@@ -4,9 +4,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { EXTENSION_ID, HOST_NAME, WINDOWS_REGISTRY_KEYS } from './constants.mjs';
-import { codexHomeFor, codexLoginCommand, findOnPath, supportDir } from './lib.mjs';
+import {
+  agyHomeFor,
+  agyLoginCommand,
+  codexHomeFor,
+  codexLoginCommand,
+  findOnPath,
+  supportDir,
+} from './lib.mjs';
 
-const CLI_NAMES = ['claude', 'codex', 'grok'];
+const CLI_NAMES = ['claude', 'codex', 'grok', 'agy'];
 const SYSTEM_PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'];
 
 /**
@@ -20,13 +27,13 @@ const SYSTEM_PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'];
  * @returns {{
  *   wrapperPath: string,
  *   manifestPath: string,
- *   found: Record<'claude' | 'codex' | 'grok', string | null>,
+ *   found: Record<'claude' | 'codex' | 'grok' | 'agy', string | null>,
  * }}
  */
 export function installBridge({ home, repoDir, nodePath, pathEnv, platform = process.platform }) {
   const windows = platform === 'win32';
-  /** @type {Record<'claude' | 'codex' | 'grok', string | null>} */
-  const found = { claude: null, codex: null, grok: null };
+  /** @type {Record<'claude' | 'codex' | 'grok' | 'agy', string | null>} */
+  const found = { claude: null, codex: null, grok: null, agy: null };
   for (const name of CLI_NAMES) {
     found[name] = findOnPath(name, pathEnv, platform);
   }
@@ -114,6 +121,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
   console.log(result.wrapperPath);
   console.log(result.manifestPath);
+  if (result.found.agy) {
+    console.log(
+      `To use Antigravity, log in once for LocalPolish: ${agyLoginCommand(agyHomeFor(os.homedir()))}`,
+    );
+  }
   const codexHome = codexHomeFor(os.homedir());
   fs.mkdirSync(codexHome, { recursive: true });
   if (result.found.codex && !fs.existsSync(path.join(codexHome, 'auth.json'))) {

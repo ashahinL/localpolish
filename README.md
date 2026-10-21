@@ -87,7 +87,7 @@
 ## Install
 
 You need macOS or Windows and Google Chrome. For a CLI provider you also need Node.js 22 or newer
-and a logged-in `claude`, `codex` or `grok` CLI. An API provider needs only a key, or a local
+and a logged-in `claude`, `codex`, `grok` or `agy` CLI. An API provider needs only a key, or a local
 server.
 
 **From the release:**
@@ -184,6 +184,25 @@ $env:CODEX_HOME="$env:USERPROFILE\AppData\Local\LocalPolish\codex-home"; mkdir -
 
 3. Click the LocalPolish icon in the toolbar (pin it from the puzzle-piece menu). The popup has every setting. Pick a provider on its **Provider** tab, then press **Test connection**. The gear opens the full options page.
 
+### Set up Antigravity CLI
+
+Install Google's Antigravity CLI (`agy`), then run `npm run bridge:install` again so the bridge can find it.
+Antigravity needs a separate Google login for LocalPolish. On macOS, run this once:
+
+```bash
+mkdir -p "$HOME/Library/Application Support/LocalPolish/agy-home" && HOME="$HOME/Library/Application Support/LocalPolish/agy-home" agy
+```
+
+On Windows, use PowerShell. This command has not been checked on Windows yet.
+
+```powershell
+$env:HOME="$env:USERPROFILE\AppData\Local\LocalPolish\agy-home"; $env:USERPROFILE=$env:HOME; mkdir -Force $env:HOME | Out-Null; agy
+```
+
+Complete the login, then pick **Antigravity CLI** in LocalPolish's Provider tab.
+The bridge uses a private home to avoid loading your normal rules and plugins.
+It deletes each conversation database and brain folder after the CLI exits.
+
 ## Using it
 
 Select text in a text field. A small round button appears under the spot where your selection ends. Click it.
@@ -228,6 +247,7 @@ Choose a provider on the popup's **Provider** tab or on the options page. The de
 | Codex                 | Bridge to the `codex` CLI, on your ChatGPT subscription                                    | `gpt-6-luna`, effort `none`                                  |
 | Grok CLI              | Bridge to the `grok` CLI, on your SuperGrok subscription                                   | CLI default, `grok-4.7`, effort `low`                        |
 | OpenAI-compatible API | HTTP, with an optional API key. This covers OpenAI, xAI, OpenRouter, LM Studio, and Ollama | Base URL `http://localhost:11434/v1` for Ollama. Set a model |
+| Antigravity CLI       | Bridge to `agy`, through your Google account                                               | `gemini-3.8-flash-low`, model default effort                 |
 | Anthropic API         | HTTP, with an API key                                                                      | `claude-haiku-5-5`                                           |
 
 Those defaults are the cheapest setups that scored well on a Fix benchmark. The scores are in the [Fix mode benchmark, 2026-10-17](docs/benchmarks/2026-10-17-fix-mode.md) and the [Fix prompt test](bench/README.md).
@@ -263,6 +283,7 @@ Incoming native JSON payloads are capped at 8 MiB, excluding the four-byte heade
 Each CLI turns tools off in its own way. Grok can still search X and keeps its session history in `~/.grok`:
 
 - Claude Code gets `--tools ""`, which leaves it with no tools.
+- Antigravity uses a private home and a per-run agent with `tools: []`. The agent body contains the LocalPolish system prompt, alongside Antigravity's built-in base prompt. The bridge deletes the saved conversation database and brain folder after the child exits, including errors, timeouts, and disconnects.
 - Codex runs in a read-only sandbox, in its own home, with the shell, apps, plugins, browser and web search turned off. Rewrite requests omit coding skills, agent instructions and environment descriptions. With fresh cached model metadata, a temporary catalog also removes unused tools. Missing or stale metadata uses Codex's normal model discovery. See the [context reduction checks](docs/plans/codex-context.md) for measured token counts and quality limits.
 - Grok gets every local tool removed by name, plus deny rules for shell, file, web and MCP tools. `grok --tools ""` alone keeps every tool. Grok can still search X. Grok keeps its session history in `~/.grok`. The installer supports macOS and Windows. [ADR 0001, CLI bridge over native messaging](docs/adr/0001-cli-bridge-over-native-messaging.md) explains why.
 
@@ -319,6 +340,7 @@ Match the message on screen, then do the fix that follows it.
 
 - `The LocalPolish bridge is not installed. In the LocalPolish folder run: npm run bridge:install`. Run that command in this repo.
 - `<cli> CLI not found. Install it, log in, then run "npm run bridge:install" again.` The message names the CLI, such as `codex`. Install it, log in, then run `npm run bridge:install` again.
+- `Antigravity needs its own login for LocalPolish. In a terminal run: <command>`. Run the command printed in the error to log in to the private Antigravity home. See **Set up Antigravity CLI** above.
 - `Codex needs its own login for LocalPolish. In a terminal run: CODEX_HOME="..." codex login`. The message prints the real path in place of `...`. Run that command. The same command is in Setup.
 - `Timed out after 60 seconds.` The bridge waited 60 seconds and did not get a finished answer. Try again, or pick a faster model.
 - `Timed out after 45 seconds.` **Test connection** waited 45 seconds after the provider stream started. Check that the CLI is logged in and that the model name is valid.

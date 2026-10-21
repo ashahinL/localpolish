@@ -334,11 +334,11 @@ describe('onInstalled', () => {
 describe('background bridge health', () => {
   const pong = {
     type: 'pong',
-    clis: { claude: { version: '2.4.1' }, codex: { version: '' }, grok: null },
+    clis: { claude: { version: '2.4.1' }, codex: { version: '' }, grok: null, agy: null },
   };
   const success = {
     ok: true,
-    clis: { claude: { version: '2.4.1' }, codex: { version: '' }, grok: null },
+    clis: { claude: { version: '2.4.1' }, codex: { version: '' }, grok: null, agy: null },
   };
 
   beforeEach(() => {

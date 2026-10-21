@@ -219,6 +219,20 @@ export function buildCommand(cli, { model, effort, system, instructionsFile, mod
     );
     return { cmd: 'grok', args };
   }
+  if (cli === 'agy') {
+    const args = [
+      '--agent',
+      'localpolish',
+      '--output-format',
+      'stream-json',
+      '--input-format',
+      'stream-json',
+      '-p=',
+    ];
+    if (model) args.push('--model', model);
+    if (effort) args.push('--effort', effort);
+    return { cmd: 'agy', args };
+  }
   if (cli === 'codex') {
     const args = ['exec', '-', '--skip-git-repo-check', '--ephemeral', '-s', 'read-only'];
     for (const feature of CODEX_DISABLED_FEATURES) args.push('-c', `features.${feature}=false`);
@@ -254,7 +268,7 @@ function reportedModelName(value) {
 /**
  * @param {string} cli
  * @param {string} line
- * @returns {{ text: string } | { error: string } | { end: true } | { model: string } | null}
+ * @returns {{ text: string } | { error: string } | { end: true } | { model?: string, conversation?: string } | null}
  */
 export function parseLine(cli, line) {
   const trimmed = line.trim();
@@ -266,6 +280,34 @@ export function parseLine(cli, line) {
     return null;
   }
   if (!msg || typeof msg !== 'object') return null;
+
+  if (cli === 'agy') {
+    if (msg.event === 'init') {
+      const model = reportedModelName(msg.init?.model);
+      const conversation =
+        typeof msg.conversation_id === 'string' ? msg.conversation_id : undefined;
+      return model === undefined && conversation === undefined
+        ? null
+        : {
+            ...(model === undefined ? {} : { model }),
+            ...(conversation === undefined ? {} : { conversation }),
+          };
+    }
+    if (
+      msg.event === 'step_update' &&
+      msg.step_update?.step_type === 'agent_response' &&
+      typeof msg.step_update.text_delta === 'string' &&
+      msg.step_update.text_delta.length > 0
+    ) {
+      return { text: msg.step_update.text_delta };
+    }
+    if (msg.event === 'result') {
+      const result = msg.result;
+      if (result?.status === 'SUCCESS') return { end: true };
+      return { error: result?.error || `Antigravity stopped (${result?.status}).` };
+    }
+    return null;
+  }
 
   if (cli === 'claude' || cli === 'grok') {
     if (cli === 'grok' && msg.type === 'system' && msg.subtype === 'init') {
@@ -388,4 +430,25 @@ export function codexLoginCommand(codexHome, platform = process.platform) {
   return platform === 'win32'
     ? `$env:CODEX_HOME="${codexHome}"; mkdir -Force $env:CODEX_HOME | Out-Null; codex login`
     : `mkdir -p "${codexHome}" && CODEX_HOME="${codexHome}" codex login`;
+}
+
+/**
+ * @param {string} home
+ * @param {NodeJS.Platform} [platform]
+ * @returns {string}
+ */
+export function agyHomeFor(home, platform = process.platform) {
+  return path.join(supportDir(home, platform), 'agy-home');
+}
+
+/**
+ * @param {string} agyHome
+ * @param {NodeJS.Platform} [platform]
+ * @returns {string}
+ */
+export function agyLoginCommand(agyHome, platform = process.platform) {
+  // The Windows login command is unverified.
+  return platform === 'win32'
+    ? `$env:HOME="${agyHome}"; $env:USERPROFILE="${agyHome}"; mkdir -Force $env:HOME | Out-Null; agy`
+    : `mkdir -p "${agyHome}" && HOME="${agyHome}" agy`;
 }

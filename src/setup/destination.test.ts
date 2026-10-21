@@ -7,6 +7,11 @@ function settings(patch: Partial<Settings>): Settings {
 }
 
 describe('destination', () => {
+  it('explains Antigravity delivery and conversation deletion', () => {
+    expect(destination(settings({ provider: 'antigravity-cli' }))).toBe(
+      'Your text goes from this computer, through the bridge, to the Antigravity CLI, which sends it to Google. LocalPolish deletes each Antigravity conversation after the answer.',
+    );
+  });
   it.each([
     ['claude-cli', 'Anthropic'],
     ['codex-cli', 'OpenAI'],

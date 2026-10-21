@@ -2,6 +2,8 @@ import { isLoopbackHost } from '../background/providers/openai';
 import { type CliProviderId, type Settings } from '../core/settings';
 
 const CLI_DESTINATION: Record<CliProviderId, string> = {
+  'antigravity-cli':
+    'Your text goes from this computer, through the bridge, to the Antigravity CLI, which sends it to Google. LocalPolish deletes each Antigravity conversation after the answer.',
   'claude-cli':
     'Your text goes from this computer, through the bridge, to the Claude Code CLI, which sends it to Anthropic.',
   'codex-cli':

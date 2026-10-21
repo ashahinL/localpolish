@@ -26,7 +26,7 @@ describe.runIf(process.platform === 'darwin')('installBridge on macOS', () => {
   it('writes an executable wrapper and a Chrome manifest, then uninstall removes both', () => {
     const home = tempDir('lp-home-');
     const bin = tempDir('lp-bin-');
-    for (const name of ['claude', 'grok']) {
+    for (const name of ['claude', 'grok', 'agy']) {
       const file = path.join(bin, name);
       fs.writeFileSync(file, '#!/bin/sh\nexit 0\n');
       fs.chmodSync(file, 0o755);
@@ -44,6 +44,7 @@ describe.runIf(process.platform === 'darwin')('installBridge on macOS', () => {
       claude: path.join(bin, 'claude'),
       codex: null,
       grok: path.join(bin, 'grok'),
+      agy: path.join(bin, 'agy'),
     });
 
     const dirsOnPath = [
@@ -161,6 +162,7 @@ describe.runIf(process.platform === 'win32')('installBridge on Windows', () => {
       claude: path.join(bin, 'claude.exe'),
       codex: path.join(bin, 'codex.cmd'),
       grok: null,
+      agy: null,
     });
     const dir = path.join(home, 'AppData', 'Local', 'LocalPolish');
     expect(result.wrapperPath).toBe(path.join(dir, 'localpolish-bridge.cmd'));
@@ -185,4 +187,15 @@ describe.runIf(process.platform === 'win32')('installBridge on Windows', () => {
     uninstallBridge({ home, platform: 'win32' });
     expect(fs.existsSync(dir)).toBe(false);
   });
+});
+
+it('adds a separate agy folder to the wrapper PATH', () => {
+  const home = tempDir('lp-home-');
+  const bin = tempDir('lp-agy-bin-');
+  const name = process.platform === 'win32' ? 'agy.exe' : 'agy';
+  fs.writeFileSync(path.join(bin, name), '');
+  fs.chmodSync(path.join(bin, name), 0o755);
+  const result = installBridge({ home, repoDir, nodePath: process.execPath, pathEnv: bin });
+  expect(result.found.agy).toBe(path.join(bin, name));
+  expect(fs.readFileSync(result.wrapperPath, 'utf8')).toContain(bin);
 });
