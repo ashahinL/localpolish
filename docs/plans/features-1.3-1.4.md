@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: in progress. T22a is done.
+Status: in progress. T21a and T22a are done. T21b waits for an owner decision (see the spike).
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -42,7 +42,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ### Tasks
 
-- [ ] **T21a. Spike: lock down OpenCode and agy.** Claude, free models only. For each CLI, find and prove:
+- [x] **T21a. Spike: lock down OpenCode and agy.** Result: [cli-spike.md](cli-spike.md). OpenCode free models fail (the free tier refuses requests with the file tools off). Antigravity passes, with a private home, a one-time login and per-run cleanup. Claude, free models only. For each CLI, find and prove:
   1. How to set our own system prompt.
   2. How to turn off every tool, so a prompt that asks it to read a file or run a command can't.
   3. How to stop it loading rule files from the user's home and the working folder.
@@ -51,11 +51,11 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   6. Time to first text and total time for a short Fix on two free models.
 
   Output: `docs/plans/cli-spike.md`, with exact commands and a pass or fail for each CLI. Depends on: nothing.
-- [ ] **T21b. OpenCode provider.** Sol medium. Depends on: T21a passing for OpenCode.
+- [ ] **T21b. OpenCode provider.** Sol medium. **Blocked: owner decision.** The spike failed for free models. Options are in [cli-spike.md](cli-spike.md#options-for-the-owner).
   - Bridge: `buildCommand`, `parseLine`, `CLI_NAMES`, the ping, and the installer's PATH list. Fake-CLI tests like Grok's.
   - Extension: a new `opencode-cli` provider id in settings, the providers index, the toolbar Provider picker and options, the model suggestions, and the free-model warning line.
   - Docs: the README setup steps and `PRIVACY.md` (free models may keep text).
-- [ ] **T21c. Antigravity provider.** Sol medium. Depends on: T21a passing for agy, and T21b (it reuses the same shape). Same list as T21b, with id `antigravity-cli`.
+- [ ] **T21c. Antigravity provider.** Sol medium. Depends on: T21a (passed). It no longer waits for T21b. Same list as T21b, with id `antigravity-cli`, plus what the spike found: a private home at `LocalPolish/agy-home` with the `polish` agent file, a one-time login command in setup, the prompt sent on stdin as stream-json, and the conversation files deleted by id after each run.
 
 ## 1.3.0, part 2: language switches (T22)
 
@@ -144,8 +144,8 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current commit: `a4ba7fc` (1.2.0 released).
-- Finished: T22a (language detector, 39 unit tests).
-- Next task: T21a (Claude spike), then T22b.
+- Current commit: `6fce943` (T22a).
+- Finished: T21a (spike), T22a (language detector, 39 unit tests).
+- Next task: T22b and T21c. T21b waits for the owner's OpenCode decision.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.
