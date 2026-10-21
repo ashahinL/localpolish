@@ -6,6 +6,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+## 1.2.0 — 2026-10-21
+
 **Bridge users:** run `git pull` in your LocalPolish folder to get the new bridge code. No `npm run bridge:install` is needed.
 
 **Faster and lighter**
