@@ -1,3 +1,4 @@
+import { pruneChats } from '../core/chatHistory';
 import { pingBridge } from '../background/providers/cli';
 import { getProvider } from '../background/providers';
 import { runRewrite, testConnection } from '../background/rewrite';
@@ -33,6 +34,7 @@ interface RewritePort {
 interface ExtensionChrome {
   runtime: {
     onInstalled: { addListener(cb: (details: { reason: string }) => void): void };
+    onStartup: { addListener(cb: () => void): void };
     getURL(path: string): string;
     onConnect: { addListener(cb: (port: RewritePort) => void): void };
     onMessage: {
@@ -179,6 +181,12 @@ export default defineBackground(() => {
       .catch(() => {
         // The setup page is a convenience; the toolbar popup still works without it.
       });
+  });
+
+  extension().runtime.onStartup.addListener(() => {
+    void pruneChats().catch((error: unknown) => {
+      console.warn('Could not prune chat history.', error);
+    });
   });
 
   extension().runtime.onConnect.addListener((port) => {

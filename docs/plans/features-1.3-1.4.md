@@ -131,7 +131,12 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Chat prompts live beside the Fix prompts: system prompt, Summarize, Explain, Translate, Draft a reply, and `buildChatMessages`. The selection, title and URL are JSON inside one `<attachment>` tag on the first user turn. An oversized chat tells the user to start a new chat with the last answer. `CHAT_TIMEOUT_MS` is 180000. No chat runtime handler.
   - Settings gain `chat.provider` and `chat.models`. A first load with no saved chat copies the normalized Fix provider and models. Later Fix saves do not move a saved chat. Keys, credentials and CLI efforts stay shared. `pageSettings` is still the same four fields.
   - Review fixed the CLI input size check to include the system prompt and removed a test that only repeated constants. The orchestrator verified lint, typecheck, 692 unit tests passed with 2 skipped, formatting, build, and 208 e2e tests on 22 October 2026. No real providers were called. Package version stays 1.3.0.
-- [ ] **T23c. Chat history store.** Sol medium. Depends on: nothing. Save, list, open, delete one, delete all. Prune to 50 chats and 30 days on every save and on browser start. A size cap per chat, so one huge selection can't fill storage. Unit tests with a fake storage.
+- [x] **T23c. Chat history store.** Sol medium. Depends on: nothing. Save, list, open, delete one, delete all. Prune to 50 chats and 30 days on every save and on browser start. A size cap per chat, so one huge selection can't fill storage. Unit tests with a fake storage.
+  - Reviewed and verified on base `1157244`. Brief: [T23c-chat-history.md](../briefs/T23c-chat-history.md). `src/core/chatHistory.ts` exports `SavedChat`, `SaveChatInput`, `saveChat`, `listChats`, `openChat`, `deleteChat`, `deleteAllChats`, and `pruneChats`. `openChat` returns `undefined` for a missing or expired id. Saving an explicit missing or expired id throws instead of restoring it. Updates preserve `createdAt` and replace the title, turns, and optional attachment.
+  - History uses only the `chat-history` local storage key. Every write uses the `localpolish-chat-history` browser lock, with a module promise queue fallback, following the settings lock pattern. Storage errors reach the caller. Browser startup prunes history and logs one warning with the error on failure. The install setup behavior stays unchanged.
+  - Saves and startup pruning keep the 50 most recently updated valid chats. Records expire at `updatedAt <= now - 30 days`. Reads exclude expired records and sort by descending `updatedAt`, then ascending id. Stored records are validated, unknown fields are removed, and duplicate ids keep the newest valid record. Each read returns fresh plain objects. History stores plain text and no provider or model choice.
+  - Decision: cap each complete serialized record at 128 KiB in UTF-8, including attachment, title, timestamps, id, and turns. Fifty records use at most about 6.25 MiB plus array framing. Oversized saves throw without truncation or replacing the stored chat. This is separate from the 256 KiB conversation input and 1 MiB output limits. An answer can still be shown when it exceeds the history save cap. T23d must show the save error without losing the answer.
+  - The orchestrator reviewed code, tests, and notes. Full local gates passed on 22 October 2026: lint, typecheck, formatting, build, 741 unit tests passed with 2 skipped, and 208 e2e tests. The bridge lifecycle fixture needed a no-op `onStartup` listener. Version stays 1.3.0. Comment Sicko was skipped because this session cannot launch that named reviewer.
 - [ ] **T23d. Side panel chat UI.** Art lane (Claude Opus). Depends on: T23a, T23b, T23c.
   - The panel layout: the attached selection, the messages, the quick asks, the input box, and the history list.
   - Markdown rendering with no raw HTML. Use a small, well-known Markdown library and sanitize, or render a safe subset.
@@ -161,12 +166,12 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current base commit: `04077db` (T23a evidence). T23b and this handoff are in the following task commit. Released version: `v1.3.0`.
+- Current base commit: `1157244` (T23b). T23c and this handoff are in the following task commit. Released version: `v1.3.0`.
 - Released: [LocalPolish 1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0), zip SHA-256 `f14d71e0…c3`. Notes: [docs/releases/1.3.0.md](../releases/1.3.0.md).
-- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a, T23b. T21b (OpenCode) is in the Backlog.
-- Last checks: T23b full local gates passed on 22 October 2026: lint, typecheck, 692 unit tests passed with 2 skipped, formatting, build, and 208 e2e tests. Code, tests, and docs were reviewed. Comment Sicko was skipped because this session cannot launch that named reviewer.
+- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a, T23b, T23c. T21b (OpenCode) is in the Backlog.
+- Last checks: T23c full local gates passed on 22 October 2026: lint, typecheck, formatting, build, 741 unit tests passed with 2 skipped, and 208 e2e tests. Code, tests, and docs were reviewed. Comment Sicko was skipped because this session cannot launch that named reviewer.
 - Still the owner's to schedule: the paid bench check of the keep line, and the Windows agy login (not verified).
-- 1.4.0 in progress. T23a passed all four entry points. T23b is the provider, prompt and settings foundation for chat. History, panel UI, entry points and insertion are not started.
-- Next task: T23c. T23d waits for T23b and T23c. Choose fleet routing by task size, not the historical model labels.
+- 1.4.0 in progress. T23a passed all four entry points. T23b is the provider, prompt and settings foundation for chat. T23c history is complete. Panel UI, entry points and insertion are not started.
+- Next task: T23d. T23b is finished. Choose fleet routing by task size, not the historical model labels.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
-- Active processes: none. The disposable T23a harness remains in `/private/tmp/localpolish-t23a-spike/` and may disappear after a reboot.
+- Active processes: none. T23c checks have finished. The disposable T23a harness remains in `/private/tmp/localpolish-t23a-spike/` and may disappear after a reboot.

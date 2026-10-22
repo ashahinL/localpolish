@@ -147,6 +147,7 @@ process.stdin.on('end', () => {
         },
       },
       onInstalled: { addListener: () => {} },
+      onStartup: { addListener: () => {} },
       onMessage: { addListener: () => {} },
     },
     storage: {

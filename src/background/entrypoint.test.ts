@@ -29,11 +29,21 @@ function nativePort() {
 async function startBackground() {
   const onConnect = vi.fn();
   const onInstalled = vi.fn();
+  const onStartup = vi.fn();
   const create = vi.fn().mockResolvedValue(undefined);
   const onRuntimeMessage = vi.fn();
   const onStorageChanged = vi.fn();
   const setAccessLevel = vi.fn().mockResolvedValue(undefined);
-  const get = vi.fn().mockResolvedValue({});
+  const stored = new Map<string, unknown>();
+  const get = vi.fn(async (key: string): Promise<Record<string, unknown>> => ({
+    [key]: structuredClone(stored.get(key)),
+  }));
+  const set = vi.fn(async (items: Record<string, unknown>) => {
+    for (const [key, value] of Object.entries(items)) stored.set(key, structuredClone(value));
+  });
+  const remove = vi.fn(async (key: string) => {
+    stored.delete(key);
+  });
   const query = vi.fn().mockResolvedValue([]);
   const sendMessage = vi.fn().mockResolvedValue(undefined);
   const nativePorts: Array<ReturnType<typeof nativePort>> = [];
@@ -47,13 +57,14 @@ async function startBackground() {
     runtime: {
       connectNative,
       onInstalled: { addListener: onInstalled },
+      onStartup: { addListener: onStartup },
       getURL: (path: string) => `chrome-extension://localpolish${path}`,
       onConnect: { addListener: onConnect },
       onMessage: { addListener: onRuntimeMessage },
     },
     commands: { onCommand: { addListener: vi.fn() } },
     storage: {
-      local: { setAccessLevel, get },
+      local: { setAccessLevel, get, set, remove },
       onChanged: { addListener: onStorageChanged },
     },
     tabs: { query, sendMessage, create },
@@ -65,7 +76,13 @@ async function startBackground() {
   const installed = onInstalled.mock.calls[0]?.[0] as
     ((details: { reason: string }) => void) | undefined;
   if (!installed) throw new Error('No onInstalled listener');
+  const startup = onStartup.mock.calls[0]?.[0] as (() => void) | undefined;
+  if (!startup) throw new Error('No onStartup listener');
   return {
+    stored,
+    set,
+    remove,
+    startup,
     onConnect,
     message,
     storageChanged,
@@ -119,6 +136,41 @@ describe('background settings and rewrite ports', () => {
     expect(background.setAccessLevel).toHaveBeenCalledExactlyOnceWith({
       accessLevel: 'TRUSTED_CONTEXTS',
     });
+  });
+
+  it('prunes expired history on browser startup without changing settings', async () => {
+    const background = await startBackground();
+    const now = Date.now();
+    const expired = {
+      id: 'expired',
+      title: 'Old',
+      createdAt: 0,
+      updatedAt: now - 30 * 24 * 60 * 60 * 1000,
+      turns: [],
+    };
+    const current = { ...expired, id: 'current', updatedAt: now };
+    background.stored.set('settings', DEFAULT_SETTINGS);
+    background.stored.set('chat-history', [expired, current]);
+    background.startup();
+    await vi.waitFor(() => expect(background.stored.get('chat-history')).toEqual([current]));
+    expect(background.stored.get('settings')).toEqual(DEFAULT_SETTINGS);
+    expect(background.create).not.toHaveBeenCalled();
+    expect(background.set).toHaveBeenCalledExactlyOnceWith({ 'chat-history': [current] });
+  });
+
+  it('warns once if startup pruning fails', async () => {
+    const background = await startBackground();
+    const error = new Error('Storage unavailable');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      background.get.mockRejectedValueOnce(error);
+      background.startup();
+      await vi.waitFor(() =>
+        expect(warn).toHaveBeenCalledExactlyOnceWith('Could not prune chat history.', error),
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('answers page-settings with only site, idle and default mode settings', async () => {
