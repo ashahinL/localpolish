@@ -6,6 +6,7 @@ interface Tab {
   windowId?: number;
   title?: string;
   url?: string;
+  active?: boolean;
 }
 interface Sender {
   id?: string;
@@ -46,11 +47,12 @@ export interface ChatEntryChrome {
     get(tabId: number): Promise<Tab>;
     sendMessage(
       tabId: number,
-      message: { type: 'chat-read-selection' },
+      message: Record<string, unknown>,
       options: { frameId: number },
     ): Promise<unknown>;
     onRemoved: { addListener(cb: (tabId: number) => void): void };
   };
+  windows: { get(windowId: number): Promise<{ focused?: boolean }> };
   storage: {
     session: {
       get(key: string): Promise<Record<string, unknown>>;
@@ -62,6 +64,7 @@ export interface ChatEntryChrome {
 }
 
 const MENU_ID = 'localpolish-selection-chat';
+const editableKey = (tabId: number) => `chat-editable:${tabId}`;
 const hintKey = (tabId: number) => `chat-frame:${tabId}`;
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -83,9 +86,36 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
       .catch(() => {})
       .then(async () => {
         if (latest.get(windowId) !== pending.sequence) return;
+        let insertTarget = {};
+        const hint = (await ext.storage.session.get(editableKey(pending.tabId)))[
+          editableKey(pending.tabId)
+        ];
+        if (record(hint) && id(hint.frameId) && typeof hint.fieldId === 'string') {
+          try {
+            const result = await ext.tabs.sendMessage(
+              pending.tabId,
+              {
+                type: 'chat-bind-target',
+                sequence: pending.sequence,
+                fieldId: hint.fieldId,
+              },
+              { frameId: hint.frameId },
+            );
+            if (record(result) && result.ok === true)
+              insertTarget = { insertFrameId: hint.frameId, fieldId: hint.fieldId };
+          } catch {
+            /* The old field or frame is gone. Chat still opens with Copy. */
+          }
+        }
+        if (latest.get(windowId) !== pending.sequence) return;
         await ext.storage.session.set({
           [pendingKey(windowId)]: pending,
-          [targetKey(windowId)]: { sequence: pending.sequence, tabId: pending.tabId, frameId },
+          [targetKey(windowId)]: {
+            sequence: pending.sequence,
+            tabId: pending.tabId,
+            frameId,
+            ...insertTarget,
+          },
         });
       });
     writes.set(windowId, work);
@@ -202,13 +232,20 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
 
   ext.tabs.onRemoved.addListener((tabId) => {
     void ext.storage.session.remove(hintKey(tabId)).catch(warn);
+    void ext.storage.session.remove(editableKey(tabId)).catch(warn);
   });
 
   ext.runtime.onMessage.addListener((message, sender, reply) => {
     if (
       !record(message) ||
       typeof message.type !== 'string' ||
-      !['chat-frame-focus', 'chat-open-selection', 'chat-open-plain'].includes(message.type)
+      ![
+        'chat-frame-focus',
+        'chat-editable-focus',
+        'chat-insert',
+        'chat-open-selection',
+        'chat-open-plain',
+      ].includes(message.type)
     )
       return;
     const respond = (value: unknown) => {
@@ -226,14 +263,95 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
       typeof sender.url === 'string' &&
       !sender.url.startsWith(ext.runtime.getURL('/'));
     const keys =
-      message.type === 'chat-open-selection'
-        ? ['type', 'text', 'title']
-        : message.type === 'chat-open-plain'
-          ? ['type', 'tabId', 'windowId']
-          : ['type'];
+      message.type === 'chat-insert'
+        ? ['type', 'sequence', 'windowId', 'text']
+        : message.type === 'chat-editable-focus'
+          ? ['type', 'fieldId']
+          : message.type === 'chat-open-selection'
+            ? ['type', 'text', 'title']
+            : message.type === 'chat-open-plain'
+              ? ['type', 'tabId', 'windowId']
+              : ['type'];
     if (Object.keys(message).some((key) => !keys.includes(key))) {
       respond({ ok: false, message: 'Invalid chat entry.' });
       return;
+    }
+    if (message.type === 'chat-insert') {
+      if (
+        sender.id !== ext.runtime.id ||
+        sender.url !== ext.runtime.getURL('/sidepanel.html') ||
+        !id(message.windowId) ||
+        typeof message.sequence !== 'string' ||
+        !message.sequence ||
+        typeof message.text !== 'string' ||
+        !message.text.trim() ||
+        new TextEncoder().encode(message.text).length > 1024 * 1024
+      ) {
+        respond({ ok: false, message: 'Invalid insert request.' });
+        return;
+      }
+      const { windowId, sequence, text } = message;
+      void (async () => {
+        const key = targetKey(windowId);
+        const target = (await ext.storage.session.get(key))[key];
+        if (
+          !record(target) ||
+          target.sequence !== sequence ||
+          !id(target.tabId) ||
+          !id(target.insertFrameId) ||
+          typeof target.fieldId !== 'string'
+        )
+          throw new Error(
+            'The chat target is no longer available. Open chat from the page again, or use Copy.',
+          );
+        const [tab, window] = await Promise.all([
+          ext.tabs.get(target.tabId),
+          ext.windows.get(windowId),
+        ]);
+        if (tab.windowId !== windowId || !tab.active || !window.focused)
+          throw new Error('The tab changed. Return to the original tab, or use Copy.');
+        const current = (await ext.storage.session.get(key))[key];
+        if (
+          !record(current) ||
+          current.sequence !== sequence ||
+          (latest.has(windowId) && latest.get(windowId) !== sequence)
+        )
+          throw new Error('The chat target changed. Open chat from the page again, or use Copy.');
+        return ext.tabs
+          .sendMessage(
+            target.tabId,
+            { type: 'chat-insert-target', sequence, fieldId: target.fieldId, text },
+            { frameId: target.insertFrameId },
+          )
+          .catch(() => ({
+            ok: false,
+            message:
+              'The chat target is no longer available. Open chat from the page again, or use Copy.',
+          }));
+      })().then(respond, (error: unknown) =>
+        respond({
+          ok: false,
+          message: error instanceof Error ? error.message : 'Could not insert. Use Copy instead.',
+        }),
+      );
+      return true;
+    }
+    if (
+      message.type === 'chat-editable-focus' &&
+      content &&
+      typeof message.fieldId === 'string' &&
+      message.fieldId.length > 0 &&
+      message.fieldId.length <= 100
+    ) {
+      void ext.storage.session
+        .set({
+          [editableKey(sender.tab!.id!)]: { frameId: sender.frameId, fieldId: message.fieldId },
+        })
+        .then(
+          () => respond({ ok: true }),
+          () => respond({ ok: false }),
+        );
+      return true;
     }
     if (message.type === 'chat-frame-focus' && content) {
       void ext.storage.session

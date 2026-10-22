@@ -7,6 +7,8 @@ export interface ChatTarget {
   sequence: string;
   tabId: number;
   frameId: number;
+  insertFrameId?: number;
+  fieldId?: string;
 }
 
 /** Written by the worker when an entry point opens the panel. */
@@ -46,7 +48,17 @@ export async function readChatTarget(sequence: string): Promise<ChatTarget | und
     Number.isInteger(value.frameId) &&
     value.frameId >= 0
   )
-    return { sequence, tabId: value.tabId, frameId: value.frameId };
+    return {
+      sequence,
+      tabId: value.tabId,
+      frameId: value.frameId,
+      ...(Number.isInteger(value.insertFrameId) &&
+      (value.insertFrameId as number) >= 0 &&
+      typeof value.fieldId === 'string' &&
+      value.fieldId !== ''
+        ? { insertFrameId: value.insertFrameId as number, fieldId: value.fieldId }
+        : {}),
+    };
 }
 
 function extension(): SessionChrome {

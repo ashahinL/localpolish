@@ -62,8 +62,9 @@ function setup() {
         },
       },
     },
+    windows: { get: async () => ({ focused: true }) },
     tabs: {
-      get: async (id) => ({ id, windowId: 10 }),
+      get: async (id) => ({ id, windowId: 10, active: true }),
       sendMessage,
       onRemoved: {
         addListener: (cb) => {
@@ -353,4 +354,96 @@ it('handles command and menu open failures', async () => {
   } finally {
     warn.mockRestore();
   }
+});
+
+const panel = { id: 'localpolish', url: 'chrome-extension://localpolish/sidepanel.html' };
+
+it.each([false, true])(
+  'binds the editable frame and accepts the exact panel page, panelTab=%s',
+  async (panelTab) => {
+    const bg = setup();
+    bg.sendMessage.mockResolvedValue({ ok: true } as never);
+    await bg.request(
+      { type: 'chat-editable-focus', fieldId: 'field-1' },
+      { ...sender, frameId: 8 },
+    );
+    await bg.request({ type: 'chat-open-selection', text: 'Page words', title: '' }, sender);
+    const { sequence } = pending(bg.stored) as { sequence: string };
+    expect(bg.stored.get('chat-target:10')).toEqual({
+      sequence,
+      tabId: 7,
+      frameId: 3,
+      insertFrameId: 8,
+      fieldId: 'field-1',
+    });
+    expect(
+      await bg.request(
+        { type: 'chat-insert', sequence, windowId: 10, text: 'Answer' },
+        panelTab ? { ...panel, tab: { id: 99, windowId: 10 } } : panel,
+      ),
+    ).toEqual({ ok: true });
+    expect(bg.sendMessage).toHaveBeenLastCalledWith(
+      7,
+      { type: 'chat-insert-target', sequence, fieldId: 'field-1', text: 'Answer' },
+      { frameId: 8 },
+    );
+  },
+);
+
+it('binds toolbar plain chat to the last editable iframe', async () => {
+  const bg = setup();
+  bg.sendMessage.mockResolvedValue({ ok: true } as never);
+  await bg.request({ type: 'chat-editable-focus', fieldId: 'child-field' }, sender);
+  await bg.request(
+    { type: 'chat-open-plain', tabId: 7, windowId: 10 },
+    { id: 'localpolish', url: 'chrome-extension://localpolish/popup.html' },
+  );
+  expect(bg.stored.get('chat-target:10')).toMatchObject({
+    frameId: 0,
+    insertFrameId: 3,
+    fieldId: 'child-field',
+  });
+});
+
+it.each([
+  'stale',
+  'tab',
+  'window',
+  'missing-frame',
+  'missing-field',
+  'foreign',
+  'content',
+  'forged-field',
+  'empty-answer',
+])('refuses unsafe insert requests: %s', async (condition) => {
+  const bg = setup();
+  bg.stored.set('chat-target:10', {
+    sequence: 'live',
+    tabId: 7,
+    frameId: 0,
+    insertFrameId: 3,
+    fieldId: 'field',
+  });
+  let source: Sender = panel;
+  const request: Record<string, unknown> = {
+    type: 'chat-insert',
+    sequence: 'live',
+    windowId: 10,
+    text: 'Answer',
+  };
+  if (condition === 'stale') request.sequence = 'old';
+  if (condition === 'tab') bg.ext.tabs.get = async () => ({ id: 7, windowId: 10, active: false });
+  if (condition === 'window') bg.ext.windows.get = async () => ({ focused: false });
+  if (condition === 'missing-frame')
+    bg.sendMessage.mockRejectedValue(new Error('Frame was removed'));
+  if (condition === 'missing-field')
+    bg.stored.set('chat-target:10', { sequence: 'live', tabId: 7, frameId: 0 });
+  if (condition === 'foreign') source = { ...panel, id: 'foreign' };
+  if (condition === 'content') source = sender;
+  if (condition === 'forged-field') request.fieldId = 'other';
+  if (condition === 'empty-answer') request.text = '';
+  expect(await bg.request(request, source)).toMatchObject({ ok: false });
+  if (condition !== 'missing-frame') expect(bg.sendMessage).not.toHaveBeenCalled();
+  expect(bg.fetch).not.toHaveBeenCalled();
+  expect(bg.connectNative).not.toHaveBeenCalled();
 });

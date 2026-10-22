@@ -867,3 +867,209 @@ for (const type of ['password', 'text'] as const) {
     }
   });
 }
+
+async function insertFromPanel(panel: Page, article: Page): Promise<void> {
+  // The real panel leaves its page tab active. A test panel tab needs this explicitly.
+  await article.bringToFront();
+  await panel
+    .getByRole('button', { name: 'Insert into field', exact: true })
+    .evaluate((button: HTMLButtonElement) => button.click());
+}
+
+for (const target of ['textarea', 'rich', 'iframe', 'http'] as const) {
+  test(`inserts a mock answer into the bound ${target} field after a page selection`, async ({
+    page,
+    extensionContext,
+    sw,
+    mock,
+  }) => {
+    await guardProviders(sw, mock.url);
+    const article = await extensionContext.newPage();
+    try {
+      await openPanel(page);
+      if (target === 'http') {
+        await article.route('http://localpolish.test/**', (route) =>
+          route.fulfill({
+            contentType: 'text/html',
+            body: '<!doctype html><title>HTTP fixture</title><textarea id="ta"></textarea>',
+          }),
+        );
+      }
+      await article.goto(
+        target === 'http'
+          ? 'http://localpolish.test/'
+          : target === 'iframe'
+            ? 'http://localhost:5179/frames.html'
+            : 'http://localhost:5179/',
+      );
+      if (target === 'http') {
+        expect(
+          await article.evaluate(() => ({
+            secure: window.isSecureContext,
+            randomUUID: typeof crypto.randomUUID,
+          })),
+        ).toEqual({ secure: false, randomUUID: 'undefined' });
+      }
+      const field =
+        target === 'iframe'
+          ? article.frameLocator('#cross-host').locator('textarea')
+          : article.locator(target === 'rich' ? '#ce' : '#ta');
+      await field.fill('Fake draft before chat.');
+      await articleSelection(article, 'Fake article selected words.');
+      await chatSparkle(article).click();
+      await expect(page.getByRole('region', { name: 'Attached' })).toContainText(
+        'Fake article selected words.',
+      );
+      mock.reply({ chunks: ['A fake answer.'] });
+      await page.getByRole('button', { name: 'Summarize' }).click();
+      await expect(answers(page)).toContainText('A fake answer.');
+      await insertFromPanel(page, article);
+      await expect(page.getByRole('status')).toContainText('Inserted into the text field.');
+      if (target === 'rich') await expect(field).toHaveText('A fake answer.');
+      else await expect(field).toHaveValue('A fake answer.');
+      expect(await blockedAttempts(sw)).toEqual([]);
+    } finally {
+      await article.close();
+      await releaseProviders(sw);
+    }
+  });
+}
+
+for (const change of [
+  'typed',
+  'removed',
+  'disabled',
+  'readonly',
+  'password',
+  'navigation',
+  'frame-navigation',
+  'tab',
+  'history',
+] as const) {
+  test(`refuses insertion after target ${change}`, async ({ page, extensionContext, sw, mock }) => {
+    await guardProviders(sw, mock.url);
+    const article = await extensionContext.newPage();
+    try {
+      await openPanel(page);
+      await article.goto(
+        change === 'frame-navigation'
+          ? 'http://localhost:5179/frames.html'
+          : 'http://localhost:5179/',
+      );
+      const field =
+        change === 'frame-navigation'
+          ? article.frameLocator('#cross-host').locator('textarea')
+          : article.locator('#inp');
+      await field.fill('Original fake draft.');
+      await articleSelection(article, 'Words to ask about.');
+      await chatSparkle(article).click();
+      await expect(page.getByRole('region', { name: 'Attached' })).toBeVisible();
+      mock.reply({ chunks: ['A fake answer.'] });
+      await page.getByRole('button', { name: 'Summarize' }).click();
+      await expect(answers(page)).toContainText('A fake answer.');
+      if (change === 'typed') await field.fill('New fake draft.');
+      if (change === 'removed') await field.evaluate((el) => el.remove());
+      if (change === 'disabled')
+        await field.evaluate((el: HTMLInputElement) => {
+          el.disabled = true;
+        });
+      if (change === 'readonly')
+        await field.evaluate((el: HTMLInputElement) => {
+          el.readOnly = true;
+        });
+      if (change === 'password')
+        await field.evaluate((el: HTMLInputElement) => {
+          el.type = 'password';
+        });
+      if (change === 'navigation') await article.reload();
+      if (change === 'frame-navigation')
+        await article.locator('#cross-host').evaluate((el: HTMLIFrameElement) => {
+          el.src += '?new-document';
+        });
+      if (change === 'history') {
+        await expect
+          .poll(async () => ((await stored(sw, 'chat-history')) as unknown[] | undefined)?.length)
+          .toBe(1);
+        await page.getByRole('button', { name: 'History', exact: true }).click();
+        await page.locator('.history-open').first().click();
+      }
+      if (change === 'tab') {
+        await page.bringToFront();
+        await page.getByRole('button', { name: 'Insert into field' }).click();
+      } else await insertFromPanel(page, article);
+      const expectedError =
+        change === 'history'
+          ? 'This chat has no live text field.'
+          : change === 'tab'
+            ? 'The tab changed.'
+            : change === 'navigation' || change === 'frame-navigation'
+              ? 'The chat target is no longer available.'
+              : 'The text field changed or was removed.';
+      await expect(page.getByRole('alert')).toContainText(expectedError);
+      await expect(answers(page).getByRole('button', { name: 'Copy', exact: true })).toBeEnabled();
+      if (change === 'typed') await expect(field).toHaveValue('New fake draft.');
+      if (['disabled', 'readonly', 'password', 'tab', 'history'].includes(change))
+        await expect(field).toHaveValue('Original fake draft.');
+      expect(await blockedAttempts(sw)).toEqual([]);
+    } finally {
+      await article.close();
+      await releaseProviders(sw);
+    }
+  });
+}
+
+test('toolbar plain chat inserts into its remembered iframe field', async ({
+  page,
+  extensionContext,
+  sw,
+  mock,
+}) => {
+  await guardProviders(sw, mock.url);
+  const article = await extensionContext.newPage();
+  const popup = await extensionContext.newPage();
+  try {
+    await openPanel(page);
+    await article.goto('http://localhost:5179/frames.html');
+    await article.bringToFront();
+    const field = article.frameLocator('#cross-host').locator('textarea');
+    await field.fill('Fake iframe draft.');
+    const origin = await sw.evaluate(async () => {
+      const chrome = (
+        globalThis as unknown as {
+          chrome: {
+            tabs: {
+              query(query: {
+                active: boolean;
+                currentWindow: boolean;
+              }): Promise<Array<{ id: number; windowId: number }>>;
+            };
+          };
+        }
+      ).chrome;
+      return (await chrome.tabs.query({ active: true, currentWindow: true }))[0]!;
+    });
+    await popup.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
+    const result = await popup.evaluate(async ({ id, windowId }) => {
+      const chrome = (
+        globalThis as unknown as {
+          chrome: { runtime: { sendMessage(message: unknown): Promise<unknown> } };
+        }
+      ).chrome;
+      return chrome.runtime.sendMessage({ type: 'chat-open-plain', tabId: id, windowId });
+    }, origin);
+    expect(result).toEqual({ ok: true });
+    await expect(page.locator('.panel')).toHaveAttribute('data-tab-id', String(origin.id));
+    await expect(page.getByRole('region', { name: 'Attached' })).toHaveCount(0);
+    mock.reply({ chunks: ['Plain chat fake answer.'] });
+    await page.getByRole('button', { name: 'Explain' }).click();
+    await expect(answers(page)).toContainText('Plain chat fake answer.');
+    await insertFromPanel(page, article);
+    await expect(field).toHaveValue('Plain chat fake answer.');
+    await expect(page.getByRole('status')).toContainText('Inserted into the text field.');
+    expect(await blockedAttempts(sw)).toEqual([]);
+  } finally {
+    await article.close();
+    await popup.close();
+    await releaseProviders(sw);
+  }
+});

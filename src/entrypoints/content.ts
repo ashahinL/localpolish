@@ -1,3 +1,4 @@
+import { createChatInsert } from '../content/chatInsert';
 import { createSelectionChat } from '../content/selectionChat';
 import { createButton } from '../content/button';
 import { createController } from '../content/controller';
@@ -44,6 +45,7 @@ export default defineContentScript({
 
 function start(): void {
   const ext = (globalThis as unknown as { chrome: ContentChrome }).chrome;
+  createChatInsert(ext);
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
   // Null until loaded, so the button never flashes on a blocklisted site.
   let settings: PageSettings | null = null;

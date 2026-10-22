@@ -60,12 +60,47 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function InsertButton({ text, onInsert }: { text: string; onInsert(text: string): Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [failed, setFailed] = useState(false);
+  const insert = async () => {
+    setBusy(true);
+    setMessage('');
+    try {
+      await onInsert(text);
+      setFailed(false);
+      setMessage('Inserted into the text field.');
+    } catch (error) {
+      setFailed(true);
+      setMessage(error instanceof Error ? error.message : 'Could not insert. Use Copy instead.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <button
+        type="button"
+        class="sm"
+        title="Replace the last text field with this answer"
+        disabled={busy}
+        onClick={() => void insert()}
+      >
+        {busy ? 'Inserting…' : 'Insert into field'}
+      </button>
+      {message && <p role={failed ? 'alert' : 'status'}>{message}</p>}
+    </>
+  );
+}
+
 export function Conversation({
   turns,
   attachment,
   status,
   saveError,
   onRemoveAttachment,
+  onInsert,
   onRetry,
   onNewChat,
   onNewChatWithAnswer,
@@ -75,6 +110,7 @@ export function Conversation({
   status: TurnStatus;
   saveError: string | null;
   onRemoveAttachment(): void;
+  onInsert(text: string): Promise<void>;
   onRetry(): void;
   onNewChat(): void;
   onNewChatWithAnswer(answer: string): void;
@@ -120,6 +156,7 @@ export function Conversation({
             <MarkdownView text={turn.content} />
             <div class="answer-actions">
               <CopyButton text={turn.content} />
+              <InsertButton text={turn.content} onInsert={onInsert} />
             </div>
           </div>
         ),

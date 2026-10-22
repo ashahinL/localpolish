@@ -4,6 +4,7 @@ import { type ChatAttachment } from '../core/prompts';
 import { LogoIcon } from '../popup/icons';
 import { Composer } from './Composer';
 import { Conversation } from './Conversation';
+import { insertAnswer } from './insert';
 import { History } from './History';
 import { ModelPicker } from './ModelPicker';
 import { watchPending, type PendingChat } from './pending';
@@ -36,6 +37,7 @@ export function App() {
 
   const open = useCallback(
     (saved: SavedChat) => {
+      setEntry(undefined);
       start(saved.attachment, { id: saved.id, turns: saved.turns });
       setHistoryOpen(false);
     },
@@ -43,6 +45,7 @@ export function App() {
   );
 
   const newChat = useCallback(() => {
+    setEntry(undefined);
     start();
     setHistoryOpen(false);
   }, [start]);
@@ -79,12 +82,14 @@ export function App() {
           attachment={conversation.attachment}
           status={status}
           saveError={chat.saveError}
+          onInsert={(answer) => insertAnswer(entry?.sequence, answer)}
           onRemoveAttachment={chat.removeAttachment}
           onRetry={chat.retry}
           onNewChat={newChat}
-          onNewChatWithAnswer={(answer) =>
-            start({ text: answer, title: 'Previous answer', url: '' })
-          }
+          onNewChatWithAnswer={(answer) => {
+            setEntry(undefined);
+            start({ text: answer, title: 'Previous answer', url: '' });
+          }}
         />
       )}
       {!historyOpen && (

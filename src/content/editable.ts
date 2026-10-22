@@ -61,10 +61,15 @@ export function wholeFieldTarget(el: HTMLElement): Target {
   return { kind: 'rich', root: el, range: contentsOf(el), text: fieldText(el), whole: true };
 }
 
-export async function applyReplacement(target: Target, text: string): Promise<ApplyResult> {
+export async function applyReplacement(
+  target: Target,
+  text: string,
+  isCurrent: () => boolean = () => true,
+): Promise<ApplyResult> {
+  if (!isCurrent()) return { ok: false, reason: 'changed' };
   if (text === target.text) return { ok: true };
-  if (target.kind === 'field') return applyField(target, text);
-  return applyRich(target, text);
+  if (target.kind === 'field') return applyField(target, text, isCurrent);
+  return applyRich(target, text, isCurrent);
 }
 
 function startElement(node: Node | null): Element | null {
@@ -173,9 +178,14 @@ function isRichHost(
   );
 }
 
-function applyField(target: Extract<Target, { kind: 'field' }>, text: string): ApplyResult {
+function applyField(
+  target: Extract<Target, { kind: 'field' }>,
+  text: string,
+  isCurrent: () => boolean,
+): ApplyResult {
   const { el, start, end } = target;
   el.focus();
+  if (!isCurrent()) return { ok: false, reason: 'changed' };
   el.setSelectionRange(start, end);
   if (el.value.slice(start, end) !== target.text) return { ok: false, reason: 'changed' };
 
@@ -201,6 +211,7 @@ function applyField(target: Extract<Target, { kind: 'field' }>, text: string): A
 async function applyRich(
   target: Extract<Target, { kind: 'rich' }>,
   text: string,
+  isCurrent: () => boolean,
 ): Promise<ApplyResult> {
   const { root } = target;
   if (!root.isConnected) return { ok: false, reason: 'changed' };
@@ -223,10 +234,11 @@ async function applyRich(
   // Backspace stops working. Paste first, and insert only when nothing handled the paste.
   // Slate reads the new selection on a selectionchange throttled to 100ms.
   await waitForRender(150);
+  if (!isCurrent()) return { ok: false, reason: 'changed' };
   const pasted = await paste(root, selection, text, before, target.text);
   if (pasted) return pasted;
 
-  if (!selectionMatches(root, selection, target.text)) {
+  if (!isCurrent() || !selectionMatches(root, selection, target.text)) {
     return { ok: false, reason: 'changed' };
   }
   if (root.matches('[data-slate-editor="true"]')) {
