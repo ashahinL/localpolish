@@ -95,7 +95,7 @@ server.
 
 **From the release:**
 
-1. Download `localpolish-1.2.0.zip` from the
+1. Download `localpolish-1.3.0.zip` from the
    [latest release](https://github.com/ashahinL/localpolish/releases/latest) and extract it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the
    extracted folder.

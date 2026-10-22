@@ -6,6 +6,8 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+## 1.3.0 — 2026-10-22
+
 **Bridge users:** run `git pull` in your LocalPolish folder to get the new bridge code. To use Antigravity, also run `npm run bridge:install` again and log in once with the command it prints. Nobody else needs a reinstall.
 
 **New**
