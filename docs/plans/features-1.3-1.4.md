@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 (T23, chat) waits for the owner's go-ahead.
+Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 started on 22 October 2026 (T23, chat). The version stays 1.3.0 until release day.
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -21,7 +21,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 - Implementers follow the `implement-plan` skill in its light form: build, test, keep this file current, report. Skip the guard skills and the final review pass. The owner's orchestrator reviews each diff.
 - One commit per task. Tick the task's box in this file in the same commit. Push after each task, with `git pull --rebase` first.
 - Never use real drafts. Never press Send, Post, Reply or Comment. Tests use fake CLI scripts and the mock OpenAI server, never a real CLI or a paid provider.
-- Lanes: Sol medium for normal tasks, Sol high where marked. UI tasks go to the art lane (Claude Opus). Spikes that run a real CLI are done by Claude, with free models only.
+- Fleet routing, updated by the owner on 22 October 2026: Codex is the orchestrator. Choose the implementer and effort by task size using the configured fleet. The model assignments beside tasks below are historical and do not control routing. Wait for delegates to finish without inspecting partial work. Spikes that run a real CLI use free models only.
 - Keep the version unchanged until release day.
 
 ## 1.3.0, part 1: new CLI providers (T21)
@@ -117,7 +117,13 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ### Tasks
 
-- [ ] **T23a. Spike: open the side panel from each entry point.** Claude. A throwaway branch that proves `sidePanel.open()` works from a page click, the context menu, the shortcut and the toolbar popup, and that the panel receives the selection. Output: a short note in this file. Depends on: nothing.
+- [x] **T23a. Spike: open the side panel from each entry point.** Completed on a throwaway branch. Brief: [T23a-side-panel.md](../briefs/T23a-side-panel.md).
+  - Verified on 22 October 2026, about 04:54 Cairo time, in headed Playwright Chromium `156.0.8078.4`, using a temporary profile and made-up text. Claude built the disposable harness. Its sandbox blocked browser launch, so the orchestrator ran it outside that sandbox and checked the native browser UI.
+  - All four paths opened the panel. A content-script button click sent a runtime message to the worker. The native selection context menu and real `Option+Shift+L` shortcut also opened it. Each delivered the selected sentence, `Fixture article` title, and `http://localhost/fixture` URL. The toolbar popup's Chat button opened a plain chat with empty text, title, and URL. The panel also received a second selection while already open.
+  - T23e can use `sidePanel.open({ tabId })` immediately in the worker's message, context-menu, and command handlers. Start the open call before awaiting selection reads or storage writes. The popup can fetch its window id when it loads and call `sidePanel.open({ windowId })` directly inside its button handler. Close the popup after the click so the panel is visible.
+  - The harness passed attachments through `chrome.storage.session`: write the payload with a sequence number, read it when the panel starts, and follow `storage.onChanged` for later selections. This worked for the cold panel and the open panel. Production tab-switch handling still belongs to T23e.
+  - Reproduction artifact on this Mac: `/private/tmp/localpolish-t23a-spike/`, extension in `ext/`, runner `run.mjs`. Run `HEADED=1 MANUAL=1 node /private/tmp/localpolish-t23a-spike/run.mjs`. It tests the page button and second selection, then allows five minutes for the native context menu, shortcut, and toolbar checks. Its CDP shortcut check fails because that input does not trigger Chrome's extension command here. The real shortcut passed through native UI input. The runner exits zero even when checks fail, so inspect the printed results and the panel. This temporary harness is not shipped.
+  - Scope: macOS Chromium only. No real providers were called. No production code or version changed. All temporary browser processes were stopped.
 - [ ] **T23b. Chat messages through every provider.** Sol high. Depends on: nothing (it can start during 1.3.0 work).
   - The provider contract takes a message list (system, then user and assistant turns), not only one prompt pair. Fix keeps working unchanged.
   - The OpenAI and Anthropic providers send real message lists. CLI providers flatten the conversation into one prompt with clear turn tags.
@@ -149,16 +155,17 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 1. T21a (spike) and T22a (detector) at the same time. T23b can start too, because it touches different files.
 2. T22b, then T21c, then T22c. One writer at a time, because T22b and T21c both change `src/core/settings.ts`.
 3. T24: release 1.3.0.
-4. T23a, then T23c, T23d, T23e, T23f and T23g.
+4. T23a, then T23b, T23c, T23d, T23e, T23f and T23g.
 5. T25: release 1.4.0.
 
 ## Handoff
 
-- Current commit: `8fa485d` (Version 1.3.0), tag `v1.3.0`, plus the release record commit after it.
+- Current base commit: `7a5ee13` (1.3.0 release record). T23a evidence and this handoff are in the following task commit. Released version: `v1.3.0`.
 - Released: [LocalPolish 1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0), zip SHA-256 `f14d71e0…c3`. Notes: [docs/releases/1.3.0.md](../releases/1.3.0.md).
-- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24. T21b (OpenCode) is in the Backlog.
-- Last checks: full gates green on `59721e6` (668 unit passed, 2 skipped; 208 e2e), CI and platforms green. The downloaded zip matched its SHA-256, its manifest says 1.3.0, and it passed the 8 Test connection browser tests.
+- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a. T21b (OpenCode) is in the Backlog.
+- Last checks: T23a full local gates passed on 22 October 2026: lint, typecheck, 668 unit tests passed with 2 skipped, formatting, build, and 208 e2e tests. The four spike entry points passed in a separate headed browser check. Docs review passed. Comment Sicko was skipped because this session cannot launch that named reviewer. Release verification remains recorded in `docs/releases/1.3.0.md`.
 - Still the owner's to schedule: the paid bench check of the keep line, and the Windows agy login (not verified).
-- Next task: T23a (chat, 1.4.0), only when the owner says to start.
+- 1.4.0 started. T23a passed all four entry points and selection delivery. Production chat work has not started.
+- Next task: T23b, then T23c. T23d waits for both. Choose fleet routing by task size, not the historical model labels.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
-- Active processes: none.
+- Active processes: none. The disposable T23a harness remains in `/private/tmp/localpolish-t23a-spike/` and may disappear after a reboot.
