@@ -33,6 +33,7 @@ export interface Settings {
   temperature: number;
   defaultMode: DefaultMode;
   idleFix: boolean;
+  selectionChat: boolean;
   languages: Record<LanguageId, boolean>;
   blocklist: string[];
   chat: ChatSettings;
@@ -62,6 +63,7 @@ export const DEFAULT_SETTINGS: Settings = {
   temperature: 0.3,
   defaultMode: 'fix',
   idleFix: true,
+  selectionChat: true,
   languages: { en: true, ar: true, franco: true, other: true },
   blocklist: [],
   chat: {
@@ -155,6 +157,7 @@ function storedPatch(value: unknown): Partial<Settings> {
     patch.defaultMode = isDefaultMode(value.defaultMode) ? value.defaultMode : 'fix';
   }
   if (typeof value.idleFix === 'boolean') patch.idleFix = value.idleFix;
+  if (typeof value.selectionChat === 'boolean') patch.selectionChat = value.selectionChat;
   if (Array.isArray(value.blocklist)) {
     patch.blocklist = value.blocklist.filter((entry): entry is string => typeof entry === 'string');
   }
@@ -198,8 +201,10 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 export function pageSettings(value: unknown): PageSettings {
-  const { blocklist, idleFix, defaultMode, languages } = mergeSettings(storedPatch(value));
-  return { blocklist, idleFix, defaultMode, languages };
+  const { blocklist, idleFix, selectionChat, defaultMode, languages } = mergeSettings(
+    storedPatch(value),
+  );
+  return { blocklist, idleFix, selectionChat, defaultMode, languages };
 }
 
 let settingsQueue: Promise<void> = Promise.resolve();

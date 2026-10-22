@@ -15,10 +15,9 @@ issue for it until a fix is out.
 ## What counts
 
 - Anything that lets a web page read or change the extension's settings or
-  API keys, or read text from a field you did not rewrite.
+  API keys, saved chats, or pending attachments, or read password values or unrelated field text.
 - Anything that sends your text somewhere other than the provider you chose,
-  or sends it when you did not ask (outside Fix while I type, or on a site in
-  **Sites**).
+  or sends it when you did not ask, outside the documented Fix while I type behavior. Automatic checks and the selection sparkle must stay off on blocked sites. Explicit chat and rewrite actions remain available there.
 - Anything that lets a page, another extension or another program use the
   bridge to run something other than the chosen CLI, or to run that CLI with
   its tools on.

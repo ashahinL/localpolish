@@ -57,7 +57,7 @@ Nothing else gets one.
    through `docs/manual-checklist.md` for anything this version changed, and
    at least Fix, Rephrase and Accept in one plain textarea and one rich
    editor, with one CLI provider and one API provider. Check the toolbar
-   popup's four tabs and both switches.
+   popup's four tabs and both switches. For a chat release, also follow the assistant-chat section of the manual checklist: all four real entry points, the selected-text attachment, history deletion, window isolation, Copy, and Insert after T23f is complete. The owner checks a long article with one CLI and one API provider. Do not release 1.4.0 before the remaining T23f, T23g and T25 checks are complete.
 3. **Images.** If the toolbar popup looks different, run `npm run shots` and
    open every image in `docs/screenshots` before committing it.
 4. **Set the version** in `package.json` and `package-lock.json`:

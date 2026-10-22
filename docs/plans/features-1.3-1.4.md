@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 started on 22 October 2026 (T23, chat). The version stays 1.3.0 until release day.
+Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 started on 22 October 2026 (T23, chat). The version stays 1.3.0 until release day. The owner requested a stop after T23e for a move to another machine.
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -146,12 +146,15 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Verified by the orchestrator on 22 October 2026, about 06:18 Cairo time: lint, typecheck, formatting, build, 782 unit tests passed with 2 skipped, and 218 e2e tests. This includes all 10 chat browser tests and both settings-failure regressions. Code, test, and docs reviews are complete. Comment Sicko was skipped because this session cannot launch that named reviewer.
   - Native UI verification passed on 22 October 2026, about 11:28 Cairo time, after the owner unlocked the Mac. The actual Chromium side panel showed the attachment and metadata, rendered a mock answer with a heading, list, emphasis, and inline code, and listed the saved chat in History. The Copy action was exercised. Only the local mock provider was called. The disposable browser and server were stopped. The temporary reproduction harness is `/tmp/localpolish-t23d-visual.mjs`.
   - Reusable skill candidates from Claude: extension-page screenshots, parser stress checks, and an e2e provider guard. The provider guard is worth extracting into a shared test helper if reused. The parser checks belong in a short checklist. No skill was created.
-- [ ] **T23e. Entry points.** Sol medium. Depends on: T23a, T23d.
-  - The selection sparkle in the content script. Reuse `FloatingButton`. Skip blocked sites, text fields and short selections.
-  - The context menu, the shortcut and the toolbar popup button.
-  - The manifest permissions: `sidePanel` and `contextMenus`. Chrome shows no new warning for these.
+- [x] **T23e. Entry points.** Reviewed on base `7f9d13f`. Brief: [T23e-entry-points.md](../briefs/T23e-entry-points.md). Version stays 1.3.0.
+  - Added a separate page-selection sparkle, the checked `selectionChat` setting and options checkbox, the selection context menu, Alt+Shift+L with the macOS binding, and Home's Open chat button. Fix's button stays separate. Explicit entries remain available on blocked sites and when the selection sparkle is off. No provider call starts from opening chat.
+  - Open calls start before asynchronous reads and writes. The content script caches selection locally, excluding password fields and clearing old cached text on password focus. Only trusted frame hints are sent before an explicit action. The worker validates entry messages and sender identity, and removes frame hints when tabs close.
+  - Pending attachments use `chat-pending:<windowId>` and UUID sequences. Window-scoped target records retain tab and frame ownership. `readChatTarget(sequence)` is available for T23f. Panel watchers preserve cold-start ordering and ignore other windows.
+  - The orchestrator reviewed code, tests and docs, and ran 77 targeted browser cases, including page-click attachment delivery, popup behavior, setting changes, frame cache ownership, synthetic-click rejection, and both password/visible-input regressions. Full gates are recorded in the handoff below.
+  - Native context-menu and physical keyboard checks of the final production handlers remain for the manual release pass. T23a proved those browser gesture routes in its disposable spike. The owner closed the Mac lid and asked for commit/push/stop, so no further unlock was requested. All automated browser tests use fake data and mock providers.
+  - README, privacy policy, security scope, manual checklist, changelog, release checklist, original plan index/contracts, and [machine handoff](../handoff-1.4.md) were updated. Historical release records, audits, benchmark evidence, and earlier briefs remain historical records. No reusable skill was proposed by Sol.
 - [ ] **T23f. Insert into the last text field.** Sol medium. Depends on: T23d. The content script remembers the last focused editable field. Insert reuses `applyReplacement`, and it reports clearly when that field is gone or the tab changed. e2e on the fixture page.
-- [ ] **T23g. Chat docs and e2e.** Sol medium. Depends on: T23e, T23f. Update the README, `PRIVACY.md` (history is stored locally, what is sent) and `docs/manual-checklist.md`. Add an e2e test for selection → chat → mock answer → Copy and Insert.
+- [ ] **T23g. Chat docs and e2e.** Depends on: T23e, T23f. README, `PRIVACY.md`, and the manual checklist were updated through T23e for the machine handoff. After T23f, document Insert and add the combined selection → chat → mock answer → Copy and Insert test. Recheck all chat docs against the final behavior.
 
 ## 1.4.0 release (T25)
 
@@ -171,12 +174,10 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current base commit: `fc9370b` (T23c). T23d and this handoff are in the following task commit. Review, automated gates, and native UI inspection passed. Released version: `v1.3.0`.
-- Released: [LocalPolish 1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0), zip SHA-256 `f14d71e0…c3`. Notes: [docs/releases/1.3.0.md](../releases/1.3.0.md).
-- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a, T23b, T23c, T23d. T21b (OpenCode) is in the Backlog.
-- Last checks: T23d full local gates passed on 22 October 2026, about 06:18 Cairo time: lint, typecheck, formatting, build, 782 unit tests passed with 2 skipped, and 218 e2e tests. Code, tests, and docs were reviewed. Comment Sicko was skipped because this session cannot launch that named reviewer.
-- Still the owner's to schedule: the paid bench check of the keep line, and the Windows agy login (not verified).
-- 1.4.0 in progress. T23a-d are complete. T23d passed the native UI check after the Mac was unlocked. Entry points and insertion are not started.
-- Next task: T23e. Choose fleet routing by task size, not the historical model labels.
-- Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
-- Active processes: none. T23d checks finished and the visual browser and mock server were stopped. The disposable T23a harness remains in `/private/tmp/localpolish-t23a-spike/` and may disappear after a reboot.
+- Checkpoint: the T23e task commit containing this file, on `main`; parent `7f9d13f` is T23d. Use `git log -1 --oneline` for the exact checkpoint hash. Version remains 1.3.0; no 1.4.0 tag, zip, or release was created.
+- Completed chat tasks: T23a, T23b, T23c, T23d, T23e. Earlier 1.3.0 work remains released at [v1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0). OpenCode stays in the backlog.
+- Verification: all full T23e gates passed on 22 October 2026: lint, typecheck, 806 unit tests passed with 2 skipped, formatting, build, and 230 e2e tests. The 77 targeted browser cases passed too, including both password-cache regressions. Code, test, and documentation reviews passed. Local documentation links were checked. Comment Sicko was skipped because this session cannot launch that named reviewer. No real provider or installed CLI was called.
+- Remaining: T23f insertion; T23g's Insert documentation and combined end-to-end test; T25's screenshots, native gesture checks, owner CLI/API checks, and release. The paid language-preservation bench and Windows agy login remain unverified from earlier work.
+- Stop instruction: the owner explicitly requested commit/push/stop after T23e. Do not start T23f in this chat. Resume on the other machine only when the owner asks. Follow [the machine handoff](../handoff-1.4.md).
+- Required gates on future code changes: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
+- Active processes: none. The final gates finished; no delegate, development server, visual browser, or mock server remains running. Temporary Mac harnesses are supplementary and are not needed to resume.

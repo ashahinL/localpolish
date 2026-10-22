@@ -63,6 +63,7 @@ const CONTENT_PREFIX = `
 interface PageSettings {
   blocklist: string[];
   idleFix: boolean;
+  selectionChat: boolean;
   defaultMode: string;
   languages: Record<'en' | 'ar' | 'franco' | 'other', boolean>;
 }
@@ -86,12 +87,14 @@ interface ExtensionChrome {
 const OLD: PageSettings = {
   blocklist: [],
   idleFix: false,
+  selectionChat: true,
   defaultMode: 'fix',
   languages: { en: true, ar: true, franco: true, other: true },
 };
 const BLOCKED: PageSettings = {
   blocklist: ['localhost'],
   idleFix: false,
+  selectionChat: true,
   defaultMode: 'fix',
   languages: { en: true, ar: true, franco: true, other: true },
 };

@@ -1,6 +1,6 @@
 # Manual checklist
 
-Never press Send, Post, Reply or Comment while testing. Use drafts and close them without sending.
+Never submit a site's Send, Post, Reply or Comment action while testing. Use made-up text and close drafts without sending. Chat fixture tests may submit LocalPolish questions only to a local mock provider. The owner performs the real-provider release checks separately.
 
 Work through one site at a time. Tick a box only after you see that result. Gmail, X, and LinkedIn each name two fields. Do every check in both fields before you tick the box. Skip a field only when the box says to.
 
@@ -72,6 +72,23 @@ Use any page whose field is a plain `<textarea>`. One example is `tests/e2e/fixt
 - [ ] Press Esc. The popup closes. The page stays as it was.
 - [ ] If **Accept** fails, the note says the new text is copied. Press `Cmd+V`. The new text pastes into the field.
 - [ ] With the browser in dark mode, you can read the popup text.
+
+## Assistant chat, unreleased source build
+
+Use a made-up article and a local mock provider. These checks do not replace the owner's CLI and API hand checks before the 1.4.0 release.
+
+- [ ] Select two or more words outside text fields. The chat sparkle appears. A short or collapsed selection, editable field, blocked page, or blocked ancestor frame has no chat sparkle. The existing Fix button still works inside fields.
+- [ ] Click the chat sparkle. The actual side panel opens and shows the selection, title, and full URL. No AI request starts until a quick ask or question is submitted. A second selection replaces the attachment in a new chat.
+- [ ] Select text and use **Ask LocalPolish about this** in the native context menu. Repeat with the real chat shortcut, including a selection in a frame. Check that each opens the panel with the right attachment.
+- [ ] Open the real toolbar popup and click **Open chat**. A plain chat opens, even if text remains selected. Repeat on a blocked site with the selection setting off.
+- [ ] Turn off **Show chat button on selected page text** in options. The selection sparkle disappears immediately. Explicit chat entry points and manual Fix still work.
+- [ ] Select fake text in a password field after selecting normal text. The shortcut must attach neither the password nor the previous selection.
+- [ ] Ask two questions using the mock provider. Markdown, Copy, Stop and Retry work. Enter sends and Shift+Enter adds a line. The chat provider/model stay independent of Fix. Failed settings saves block requests.
+- [ ] Open saved history, reopen a chat, delete one, then delete all test chats. Local settings and Usage remain. An oversized save leaves its answer visible with an error. No raw HTML executes and no remote image loads automatically.
+- [ ] Open a second browser window. Its chat selection does not reset the first window's conversation. A restricted page without a content script opens plain chat through an explicit entry point.
+- [ ] Inspect the panel at narrow and wide widths in both color schemes. The attachment, error text and composer remain readable.
+
+T23f insertion and the combined selection-to-answer-to-Copy-and-Insert test are pending. Do not mark those complete from the current source build. T23e's new automated browser cases cover the selection and password-cache behavior. The new production context-menu and keyboard paths still need a native manual pass; T23a proved the browser gesture routes in a disposable spike.
 
 ## Results
 

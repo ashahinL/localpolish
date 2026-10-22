@@ -1,6 +1,13 @@
 import { type ChatAttachment } from '../core/prompts';
 
-export const PENDING_KEY = 'chat-pending';
+export const pendingKey = (windowId: number): string => `chat-pending:${windowId}`;
+export const targetKey = (windowId: number): string => `chat-target:${windowId}`;
+
+export interface ChatTarget {
+  sequence: string;
+  tabId: number;
+  frameId: number;
+}
 
 /** Written by the worker when an entry point opens the panel. */
 export interface PendingChat {
@@ -12,6 +19,7 @@ export interface PendingChat {
 type StorageListener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => void;
 
 interface SessionChrome {
+  windows: { getCurrent(): Promise<{ id?: number }> };
   storage: {
     session: { get(key: string): Promise<Record<string, unknown>> };
     onChanged: {
@@ -19,6 +27,26 @@ interface SessionChrome {
       removeListener(cb: StorageListener): void;
     };
   };
+}
+
+/** T23f can resolve the entry's tab and frame without reading rendered attributes. */
+export async function readChatTarget(sequence: string): Promise<ChatTarget | undefined> {
+  const ext = extension();
+  const { id } = await ext.windows.getCurrent();
+  if (id === undefined) return;
+  const key = targetKey(id);
+  const value = (await ext.storage.session.get(key))[key];
+  if (
+    isRecord(value) &&
+    value.sequence === sequence &&
+    typeof value.tabId === 'number' &&
+    Number.isInteger(value.tabId) &&
+    value.tabId >= 0 &&
+    typeof value.frameId === 'number' &&
+    Number.isInteger(value.frameId) &&
+    value.frameId >= 0
+  )
+    return { sequence, tabId: value.tabId, frameId: value.frameId };
 }
 
 function extension(): SessionChrome {
@@ -59,6 +87,7 @@ export function watchPending(onPending: (pending: PendingChat) => void): () => v
   let alive = true;
   let last: string | undefined;
   let changed = false;
+  let key: string | undefined;
   const take = (value: unknown) => {
     const pending = checkedPending(value);
     if (!alive || !pending || pending.sequence === last) return;
@@ -66,17 +95,22 @@ export function watchPending(onPending: (pending: PendingChat) => void): () => v
     onPending(pending);
   };
   const listener: StorageListener = (changes, areaName) => {
-    if (areaName !== 'session' || !(PENDING_KEY in changes)) return;
+    if (!key || areaName !== 'session' || !(key in changes)) return;
     changed = true;
-    take(changes[PENDING_KEY]!.newValue);
+    take(changes[key]!.newValue);
   };
   const storage = extension().storage;
-  storage.onChanged.addListener(listener);
-  storage.session.get(PENDING_KEY).then(
-    // A change that arrived first is newer than this read.
-    (stored) => changed || take(stored[PENDING_KEY]),
-    () => undefined,
-  );
+  void extension()
+    .windows.getCurrent()
+    .then(async ({ id }) => {
+      if (!alive || id === undefined) return;
+      key = pendingKey(id);
+      storage.onChanged.addListener(listener);
+      const stored = await storage.session.get(key);
+      // A change that arrived first is newer than this read.
+      if (!changed) take(stored[key]);
+    })
+    .catch(() => {});
   return () => {
     alive = false;
     storage.onChanged.removeListener(listener);

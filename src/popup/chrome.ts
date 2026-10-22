@@ -1,13 +1,17 @@
-interface PopupTab {
+export interface PopupTab {
+  id?: number;
+  windowId?: number;
   url?: string;
 }
 
 interface PopupChrome {
+  sidePanel: { open(target: { windowId: number }): Promise<void> };
   tabs: {
     query(queryInfo: { active: boolean; currentWindow: boolean }): Promise<PopupTab[]>;
   };
   runtime: {
     openOptionsPage(): Promise<void>;
+    sendMessage(message: unknown): Promise<unknown>;
     getManifest(): { version: string };
   };
 }
@@ -27,4 +31,23 @@ export function openOptionsPage(): void {
 
 export function extensionVersion(): string {
   return extension().runtime.getManifest().version;
+}
+
+export async function chatTarget(): Promise<{ tabId: number; windowId: number }> {
+  const tab = (await extension().tabs.query({ active: true, currentWindow: true }))[0];
+  if (tab?.id === undefined || tab.windowId === undefined)
+    throw new Error('Could not find the active tab.');
+  return { tabId: tab.id, windowId: tab.windowId };
+}
+
+export async function openPlainChat(target: { tabId: number; windowId: number }): Promise<void> {
+  // This first call must stay before every await to retain the popup click gesture.
+  await extension().sidePanel.open({ windowId: target.windowId });
+  const reply = await extension().runtime.sendMessage({ type: 'chat-open-plain', ...target });
+  if (!(reply as { ok?: boolean } | undefined)?.ok) {
+    throw new Error(
+      (reply as { message?: string } | undefined)?.message ?? 'Could not start chat.',
+    );
+  }
+  window.close();
 }

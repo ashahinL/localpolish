@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'preact/hooks';
+import { chatTarget, openPlainChat } from './chrome';
 import { type DefaultMode, type Settings } from '../core/settings';
 import { isCli } from '../options/ProviderSection';
 import { useSettingsApi } from '../options/useSettings';
@@ -89,7 +91,53 @@ export function HomeTab({ settings, bridge, test, onOpenProvider }: HomeTabProps
         </div>
         <p class="help">{MODE_HELP[settings.defaultMode]}</p>
       </section>
+      <OpenChat />
       <UsageSection />
     </>
+  );
+}
+
+function OpenChat() {
+  const [target, setTarget] = useState<{ tabId: number; windowId: number }>();
+  const [error, setError] = useState('');
+  const [opening, setOpening] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void chatTarget().then(
+      (value) => {
+        if (alive) setTarget(value);
+      },
+      () => {
+        if (alive) setError('Could not find the active tab. Reopen the popup.');
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return (
+    <div>
+      <button
+        type="button"
+        class="sm"
+        disabled={!target || opening}
+        onClick={() => {
+          if (!target) return;
+          setOpening(true);
+          setError('');
+          void openPlainChat(target).catch((error: unknown) => {
+            setOpening(false);
+            setError(error instanceof Error ? error.message : 'Could not open chat.');
+          });
+        }}
+      >
+        Open chat
+      </button>
+      {error && (
+        <p class="note note-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

@@ -6,6 +6,22 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+**New**
+
+- Assistant chat in Chrome's side panel, with streamed Markdown, quick asks, Copy, an independent provider and model, and local history. History keeps up to 50 chats for 30 days, with a 128 KiB save limit per chat.
+- Open chat from a page-text selection sparkle, the selection context menu, `Alt+Shift+L` or macOS `Option+Shift+L`, or **Open chat** in the toolbar. The panel shows its attachment before anything is sent to an AI.
+- An option to turn off the selection sparkle. Explicit chat entry points work on blocked sites.
+- Multi-turn messages through every provider. CLI chat turns can run for 180 seconds; Fix keeps its 60-second timeout. Bridge users need the current repo code through `git pull --rebase`.
+
+**Safer**
+
+- Selected page text is treated as untrusted data. Markdown uses a safe subset without raw HTML or automatic remote images, with bounded nesting and parsing of unmatched markers.
+- Chat settings must save before sending. Attachments stay within their browser window, and password values are excluded from shortcut selection caches.
+
+**For contributors**
+
+- T23a–e are the current checkpoint. Answer insertion, the remaining combined end-to-end check, and the 1.4.0 release are still pending. Version remains 1.3.0. See [the machine handoff](docs/handoff-1.4.md).
+
 ## 1.3.0 — 2026-10-22
 
 **Bridge users:** run `git pull` in your LocalPolish folder to get the new bridge code. To use Antigravity, also run `npm run bridge:install` again and log in once with the command it prints. Nobody else needs a reinstall.

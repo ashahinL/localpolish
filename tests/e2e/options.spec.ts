@@ -633,3 +633,15 @@ test('an abandoned options save cannot open a test port after a provider change'
     page.getByText('Settings were not saved, so the test did not run. Try again.'),
   ).toHaveCount(0);
 });
+
+test('selection chat checkbox defaults on and saves independently of idle Fix', async ({
+  page,
+}) => {
+  await openOptions(page, { settings: { idleFix: false } });
+  const checkbox = page.getByRole('checkbox', { name: 'Show chat button on selected page text' });
+  await expect(checkbox).toBeChecked();
+  await expect(page.getByText('Applies outside text fields.')).toBeVisible();
+  await checkbox.click();
+  await expect.poll(async () => (await stored(page))?.selectionChat).toBe(false);
+  expect((await stored(page))?.idleFix).toBe(false);
+});

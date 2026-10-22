@@ -6,7 +6,7 @@
 
 <p align="center">
   Fix and rewrite text in any web text field, with the AI subscriptions you already pay for.<br />
-  Claude Code, Codex and Grok CLI through a local bridge, or any OpenAI-compatible or Anthropic API.
+  Claude Code, Codex, Grok CLI and Antigravity through a local bridge, or any OpenAI-compatible or Anthropic API.
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
   </tr>
 </table>
 
-<p align="center">The toolbar popup. <code>npm run shots</code> renders these from the built extension.</p>
+<p align="center">The released 1.3.0 toolbar popup. Source builds also include the unreleased chat described below. <code>npm run shots</code> refreshes these images before release.</p>
 
 ## What it does
 
@@ -67,7 +67,7 @@
 
 **Toolbar popup**
 
-- Every setting in one place, with the pen nib icon. Two switches sit on top: **Fix while I
+- Quick rewrite settings in one place, with the pen nib icon. Two switches sit on top: **Fix while I
   type**, and **Show on** the site you are on.
 - **Home**: the provider in use with its model and effort, a status pill, **Test connection**,
   and the default mode (Fix, Rephrase or Shorter).
@@ -82,10 +82,31 @@
 
 **Providers**
 
-- Claude Code, Codex and Grok CLI run on this computer through a native-messaging bridge, with
+- Claude Code, Codex, Grok CLI and Antigravity run on this computer through a native-messaging bridge, with
   their tools turned off. Grok can still search X and keeps its session history in `~/.grok`.
 - Any OpenAI-compatible server (OpenAI, xAI, OpenRouter, LM Studio, Ollama), with an optional
   key, and the Anthropic API with a key.
+
+## Chat in source builds, unreleased
+
+The latest downloadable release is still 1.3.0. The current source build adds an assistant in Chrome's side panel. Inserting a chat answer into a field is not implemented yet.
+
+Open chat in any of these ways:
+
+- Select at least two words outside a text field and click the selection sparkle.
+- Right-click selected text and choose **Ask LocalPolish about this**.
+- Press `Alt+Shift+L`, or `Option+Shift+L` on macOS. With no readable selection, this opens a plain chat. Password fields are excluded.
+- Click **Open chat** on the toolbar popup's Home tab. This always starts without an attachment.
+
+The panel shows the selected text, title, and URL before you ask. Opening it sends nothing to an AI. Choose Summarize, Explain, Translate, or Draft a reply to send immediately, or type a question. Enter sends, Shift+Enter adds a line, and Stop cancels the answer. Copy copies a completed answer. History lets you reopen or delete chats, or delete all of them.
+
+Chat has its own provider and model. They start as copies of Fix's choices, then save independently. API keys, endpoints, temperature, and CLI effort remain shared. Every turn sends the conversation so far and its attachment to the chat provider. Chat attempts appear in Usage.
+
+History stays in this browser: up to 50 chats, expiring 30 days after their last update. Each saved chat is limited to 128 KiB, including the attachment. If saving fails, the answer stays visible with an error. The whole conversation input is limited to 256 KiB, counted in UTF-8, and answers to 1 MiB. Chat turns time out after 180 seconds; Fix keeps its 60-second timeout. If the input is too large, start a new chat with the last answer.
+
+The selection sparkle is on by default. Turn it off in options under **Show chat button on selected page text**. It stays hidden on blocked sites and inside text fields. The context menu, chat shortcut, and toolbar button still work when the sparkle is off or the site is blocked. Entry points and attachments are kept separate for each browser window.
+
+Bridge users need the current repo code with `git pull --rebase`; the installed wrapper reads the bridge from this repo. On another machine, or after moving the repo, run `npm run bridge:install` and set up that machine's provider login. Settings, API keys, and chat history do not move between browsers. See the [1.4 handoff](docs/handoff-1.4.md) for the exact stopping point and remaining work.
 
 ## Install
 
@@ -232,7 +253,7 @@ To hide LocalPolish on the site you are on, turn off the **Show on** switch for 
 
 ## The toolbar popup
 
-Click the pen nib icon in the toolbar (pin it from the puzzle-piece menu). Every setting is here, and changes save as you make them. A short **Saved** note shows in the header. The gear opens the full options page, which has the same settings.
+Click the pen nib icon in the toolbar (pin it from the puzzle-piece menu). Rewrite provider and common settings are here, and changes save as you make them. A short **Saved** note shows in the header. The gear opens the full options page, which also has the selection-chat switch.
 
 - **Fix while I type**, its **Languages**, and **Show on** _this site_ sit above the tabs, so they are always one click away.
 - **Home** shows the provider, model and effort you use, with a status pill (Bridge ready, No bridge, Key saved, No API key or Local server). **Change** jumps to the Provider tab. **Test connection** sends a short sample and shows the answer and how long it took. The default mode is Fix, Rephrase or Shorter. **Usage** lists each provider and model you have used, with its request count and a total. The options page shows the same card.
@@ -275,7 +296,7 @@ launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"
 
 The bridge is a small Node script. Chrome starts it through native messaging, under the name `com.localpolish.bridge`. It runs the CLI you chose, with your text on stdin, in an empty temp folder, and with its tools off. Grok can still search X and keeps its session history in `~/.grok`. It streams the answer back.
 
-The host already receives that text wrapped as `<text>`, a newline, the text, a newline, and `</text>`. The wrapper adds 15 bytes. The host rejects a prompt over 256 KiB plus those 15 bytes, with the same error, before it looks up a CLI or starts one. A direct call to the host is held to that wrapped limit.
+For Fix, the host receives that text wrapped as `<text>`, a newline, the text, a newline, and `</text>`. The wrapper adds 15 bytes. The host rejects a prompt over 256 KiB plus those 15 bytes, with the same error, before it looks up a CLI or starts one. A direct call to the host is held to that wrapped limit.
 
 API streams accept up to 1 MiB of decoded UTF-8 per SSE line and per retained event. A line excludes its terminating LF and one final CR, including at EOF. An event counts its current event name and data, including newlines inserted between data fields. Replacing the name replaces its byte contribution. Comments and unknown fields do not accumulate, but their lines have the same cap. Overflow rejects the stream and cancels its reader. Readers release their locks after completion, error or consumer cancellation. These limits bound retained content, not total network transfer or exact JavaScript heap bytes.
 
@@ -407,9 +428,10 @@ npx playwright install chromium
 Some sandboxed shells cannot start Chromium. The error mentions Mach ports. Run the end-to-end tests in a normal terminal.
 
 ```text
-src/core            settings, prompts, cleanup, diff, tokens
-src/background      providers, rewrite router
-src/content         field capture and replace, rewrite popup, button, Fix while I type
+src/core            settings, prompts, chat history, cleanup, diff, tokens
+src/background      providers, rewrite and chat routers, chat entry points
+src/content         field capture and replace, rewrite popup, selection buttons, Fix while I type
+src/chat            side panel UI, safe Markdown, history and attachment delivery
 src/popup           the toolbar popup: Home, Provider, Sites, About
 src/options         the full options page
 src/entrypoints
@@ -421,13 +443,13 @@ docs/               plan, ADR, benchmark, briefs, design, screenshots
 bench/              the Fix prompt benchmark
 ```
 
-The build plan is in [docs/plan.md](docs/plan.md). Release notes are in [CHANGELOG.md](CHANGELOG.md). How a version ships is in [RELEASING.md](RELEASING.md).
+The original build plan is in [docs/plan.md](docs/plan.md). Current work is in the [1.3–1.4 feature plan](docs/plans/features-1.3-1.4.md), with a [machine handoff](docs/handoff-1.4.md). Release notes are in [CHANGELOG.md](CHANGELOG.md). How a version ships is in [RELEASING.md](RELEASING.md).
 
 ## Not yet
 
 - Passive underlines while you type.
 - A tone setting per site.
-- Rewrite history.
+- Saved history for Fix and rewrite results. Chat history is available in source builds.
 - A Linux bridge installer.
 
 ## Bugs and ideas

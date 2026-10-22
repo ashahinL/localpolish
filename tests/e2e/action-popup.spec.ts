@@ -17,6 +17,10 @@ interface StubConfig {
   holdTest: boolean;
   test: unknown;
   shortcut: string;
+  chatTargetMissing?: boolean;
+  chatTargetDelayMs?: number;
+  chatOpenError?: string;
+  chatWriteError?: string;
 }
 
 const BRIDGE_OK = {
@@ -151,6 +155,10 @@ async function openPopup(
           },
           sendMessage: async (message: { type: string }) => {
             runtimeSent.push(copy(message));
+            if (message.type === 'chat-open-plain') {
+              opened.push('chat-pending');
+              return cfg.chatWriteError ? { ok: false, message: cfg.chatWriteError } : { ok: true };
+            }
             if (message.type === 'bridge-status') {
               (window as unknown as { __bridgeCalls: number }).__bridgeCalls += 1;
               if (cfg.holdBridge) return new Promise((reply) => bridgeHeld.push(reply));
@@ -163,9 +171,21 @@ async function openPopup(
           },
           getManifest: () => ({ version: '1.2.3' }),
         },
+        sidePanel: {
+          open: async (target: { windowId: number }) => {
+            opened.push(`chat-open:${target.windowId}`);
+            if (cfg.chatOpenError) throw new Error(cfg.chatOpenError);
+          },
+        },
         commands: { getAll: async () => [{ name: 'polish', shortcut: cfg.shortcut }] },
         tabs: {
-          query: async () => [{ url: cfg.tabUrl }],
+          query: async () => {
+            if (cfg.chatTargetDelayMs)
+              await new Promise((resolve) => setTimeout(resolve, cfg.chatTargetDelayMs));
+            return cfg.chatTargetMissing
+              ? [{ url: cfg.tabUrl }]
+              : [{ id: 7, windowId: 10, url: cfg.tabUrl }];
+          },
           create: async (props: { url: string }) => {
             opened.push(props.url);
             return {};
@@ -742,5 +762,41 @@ for (const path of ['popup.html', 'setup.html'] as const) {
     await expect(
       page.getByText('Settings were not saved, so the test did not run. Try again.'),
     ).toHaveCount(0);
+  });
+}
+
+test('Open chat waits for its target and shows target failures', async ({ page }) => {
+  await openPopup(page, { chatTargetMissing: true });
+  await expect(page.getByRole('button', { name: 'Open chat', exact: true })).toBeDisabled();
+  await expect(page.getByRole('alert')).toHaveText(
+    'Could not find the active tab. Reopen the popup.',
+  );
+});
+
+test('Open chat is disabled while target identifiers load', async ({ page }) => {
+  await openPopup(page, { chatTargetDelayMs: 1500 });
+  const button = page.getByRole('button', { name: 'Open chat', exact: true });
+  await expect(button).toBeDisabled();
+  await expect(button).toBeEnabled();
+});
+
+for (const failure of ['open', 'pending']) {
+  test(`Open chat shows a clear ${failure} failure and keeps the popup open`, async ({ page }) => {
+    await openPopup(
+      page,
+      failure === 'open'
+        ? { chatOpenError: 'Panel unavailable' }
+        : { chatWriteError: 'Session unavailable' },
+    );
+    const button = page.getByRole('button', { name: 'Open chat', exact: true });
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect(page.getByRole('alert')).toHaveText(
+      failure === 'open' ? 'Panel unavailable' : 'Session unavailable',
+    );
+    await expect(button).toBeEnabled();
+    expect(await opened(page)).toEqual(
+      failure === 'open' ? ['chat-open:10'] : ['chat-open:10', 'chat-pending'],
+    );
   });
 }

@@ -151,6 +151,7 @@ process.stdin.on('end', () => {
       onMessage: { addListener: () => {} },
     },
     storage: {
+      session: { setAccessLevel: async () => {} },
       local: {
         setAccessLevel: async () => {},
         get: async (key) => ({ [key]: structuredClone(store[key]) }),
@@ -159,6 +160,8 @@ process.stdin.on('end', () => {
       onChanged: { addListener: () => {} },
     },
     commands: { onCommand: { addListener: () => {} } },
+    contextMenus: { onClicked: { addListener: () => {} } },
+    tabs: { onRemoved: { addListener: () => {} } },
   });
   await import('../src/entrypoints/background');
   let start;

@@ -40,6 +40,7 @@ chrome.runtime.onMessage.addListener((message) => {
 interface PageSettings {
   blocklist: string[];
   idleFix: boolean;
+  selectionChat: boolean;
   defaultMode: string;
   languages: Record<'en' | 'ar' | 'franco' | 'other', boolean>;
 }
@@ -485,6 +486,7 @@ async function applySettings(
   const expected: PageSettings = {
     blocklist: extra.blocklist ?? [],
     idleFix: extra.idleFix ?? true,
+    selectionChat: true,
     defaultMode: 'fix',
     languages: { en: true, ar: true, franco: true, other: true },
   };

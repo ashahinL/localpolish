@@ -2,9 +2,9 @@
 
 Status: T0-T14 done.
 Released follow-up: [1.1.0 audit fixes and release record](plans/next-release.md).
-Current next release: [performance plan](plans/performance.md), based on the [performance review](audits/performance-1.1.0.md).
+Current work: [1.3–1.4 feature plan](plans/features-1.3-1.4.md). Resume from the [1.4 machine handoff](handoff-1.4.md). The [performance plan](plans/performance.md) records completed earlier work.
 Started: 2026-10-17
-Owner: Claude (orchestrator). Implementers: Grok (`feature` lane), Claude Opus (`art` lane, UI tasks).
+Current orchestrator: Codex. Choose fleet implementers by task size as the owner directed. The task assignments below are the original build history.
 
 LocalPolish is a Chrome extension (Manifest V3) that fixes or rewrites text you write in any text field. It uses the AI subscriptions you already pay for, through their CLIs, so no API keys are needed. API-key providers stay as an option.
 
@@ -12,20 +12,20 @@ LocalPolish is a Chrome extension (Manifest V3) that fixes or rewrites text you 
 
 | Topic | Decision |
 | --- | --- |
-| Main AI path | A local **bridge**: a Node script Chrome starts through **native messaging**. It runs `claude`, `codex` or `grok` headless on your subscriptions. See [ADR 0001](adr/0001-cli-bridge-over-native-messaging.md). |
+| Main AI path | A local **bridge**: a Node script Chrome starts through **native messaging**. It runs `claude`, `codex`, `grok` or `agy` headless on your subscriptions. See [ADR 0001](adr/0001-cli-bridge-over-native-messaging.md). |
 | Other providers | OpenAI-compatible HTTP (OpenAI, xAI, OpenRouter, LM Studio, Ollama `/v1`) and Anthropic Messages API, with API keys. |
 | Default provider | Codex CLI, model `gpt-6-luna` at `none` effort (since 2026-10-17: 19/21 on the Fix prompt test, Haiku about 9/21). Claude CLI `haiku` at `low`, Grok CLI default at `low`. All models and efforts are user settings. See the [benchmark](benchmarks/2026-10-17-fix-mode.md). |
 | Build tool | WXT. It handles MV3 manifest, content script, service worker and options page builds, plus hot reload. Less config than CRXJS, and actively maintained. |
-| UI | Preact for the options page and the in-page popup. Popup lives in a Shadow DOM. |
-| Floating button | Shows only when text is selected inside an editable field. Hidden on blocklisted sites. |
+| UI | Preact for options, toolbar, the side panel and the in-page popup. Popup lives in a Shadow DOM. |
+| Floating button | The Fix button shows only when text is selected inside an editable field. Source builds also have a separate page-selection chat sparkle. Hidden on blocklisted sites. |
 | Shortcut | `Ctrl+Shift+K` / `Cmd+Shift+K`. Works on blocklisted sites too. With no selection, it uses the whole focused field. |
-| Storage | Everything in `chrome.storage.local`. Nothing in sync storage. Keys never logged. |
+| Storage | Persistent settings, Usage and chat history use `chrome.storage.local`. Transient chat attachments and frame hints use `chrome.storage.session`. Nothing uses sync storage. Keys are never logged. |
 | Extension ID | Fixed with a manifest `key`: `ealpmjmaclnlpelpcacmbicmdipmbeei`. The bridge only accepts this ID. |
 | Platform | macOS and Windows for the bridge installer. Windows added on 2026-10-17 so T10 can run on a Windows PC. |
 | Package manager | npm. |
 | Repo | Private GitHub repo `localpolish`. One commit per task. |
 
-## Architecture
+## Architecture: rewrite path
 
 ```
 page text field
@@ -37,7 +37,7 @@ content script (Shadow DOM popup, editable.ts)
 background service worker
    │  builds {system, user} from prompts.ts, picks provider
    ├── CLI providers ──► chrome.runtime.connectNative("com.localpolish.bridge")
-   │                       └─ bridge/host.mjs spawns claude | codex | grok, streams text back
+   │                       └─ bridge/host.mjs spawns claude | codex | grok | agy, streams text back
    └── HTTP providers ─► fetch (OpenAI-compatible SSE, Anthropic SSE)
    │
    ▼  {type:"chunk"} … {type:"done", text: cleaned} | {type:"error"}
@@ -46,52 +46,18 @@ popup shows stream, then word diff → Accept / Copy / Retry / Close
 
 ## Contracts
 
-### Settings (`src/core/settings.ts`)
+### Current source contracts
 
-```ts
-type ProviderId = 'claude-cli' | 'codex-cli' | 'grok-cli' | 'openai-compatible' | 'anthropic-api';
-type Mode = 'fix' | 'rephrase' | 'shorter' | 'tone';
-type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
+The original duplicated interfaces and CLI command examples have been replaced by the source links below so this historical plan does not prescribe old behavior.
 
-interface Settings {
-  provider: ProviderId;                 // default 'claude-cli'
-  models: Record<ProviderId, string>;   // defaults: claude-cli 'haiku', codex-cli 'gpt-6-luna',
-                                        // grok-cli '' (CLI default), openai-compatible '',
-                                        // anthropic-api 'claude-haiku-5-5'
-  openaiBaseUrl: string;                // default 'http://localhost:11434/v1'
-  openaiApiKey: string;                 // default ''
-  anthropicApiKey: string;              // default ''
-  temperature: number;                  // default 0.3, HTTP providers only
-  defaultMode: 'fix' | 'rephrase' | 'shorter'; // default 'fix'; 'rephrase' keeps the tone
-  idleFix: boolean;                     // default true; the idle Fix after a 3 s pause
-  blocklist: string[];                  // hostnames, default []
-}
-```
+- [Settings](../src/core/settings.ts): six providers, checked defaults, language and selection-chat switches, and nested chat provider/models. The default Fix provider is Codex CLI.
+- [Messages](../src/core/messages.ts): the `rewrite`, `test-connection`, and `chat` ports and their event types. Disconnecting a port cancels its request. The connection test uses its own port rather than an unowned runtime message.
+- [Provider contract](../src/background/providers/types.ts): a system/user/assistant message list. Fix adapts its existing prompt pair to two messages. APIs send real message lists; CLI chats serialize turns with the system instruction kept separate.
+- [Chat entries](../src/background/chatEntries.ts): page selection, context menu, shortcut, and toolbar entry points. Pending attachments and tab/frame ownership use browser-window-scoped session storage.
+- [History](../src/core/chatHistory.ts): local saved chats, capped at 50 records, 30 days since update, and 128 KiB per record.
+- [Bridge command builders](../bridge/lib.mjs) and [host](../bridge/host.mjs): four CLI names including `agy`, stdin-only prompts, provider lockdown, and cleanup. Native rewrite requests retain `system` and `user` fields, with optional `timeoutMs` up to 180000. The omitted timeout remains 60000.
 
-### Content ↔ background
-
-- Port name `rewrite`. Content sends `{mode, tone, text}` once. Background replies `{type:'chunk', text}` many times, then `{type:'done', text}` (cleaned) or `{type:'error', message}`. Content disconnecting the port aborts the request.
-- `chrome.runtime.sendMessage({type:'test-connection'})` → `{ok:true, sample, ms}` or `{ok:false, message}`. Runs a tiny Fix request through the current provider.
-- Command `polish` → background sends `{type:'open-popup'}` to the active tab.
-
-### Background ↔ bridge (native messaging, one port per request)
-
-- `→ {type:'rewrite', cli:'claude'|'codex'|'grok', model, system, user}`
-- `← {type:'chunk', text}` …, then `{type:'done'}` or `{type:'error', message}`
-- `→ {type:'ping'}` `← {type:'pong', clis:{claude:{version}|null, codex:…, grok:…}}`
-- Port disconnect: host kills the child process and exits. Hard timeout 60 s.
-
-### CLI commands (verified by hand on 2026-10-17)
-
-User text always goes in through **stdin**. Each run uses a fresh empty temp dir as cwd.
-
-- **claude**: `claude -p --model <m> --effort <effort> --system-prompt <system> --tools "" --setting-sources "" --strict-mcp-config --no-session-persistence --output-format stream-json --include-partial-messages --verbose`
-- **grok**: `grok -p - [-m <m>] [--effort <effort>] --system-prompt-override <system> --tools "" --disable-web-search --output-format streaming-messages-json --include-partial-messages`
-- **codex** (with `CODEX_HOME=~/Library/Application Support/LocalPolish/codex-home`, its own login, so `~/.codex/AGENTS.md` is not loaded): `codex exec - --skip-git-repo-check --ephemeral -s read-only [-m <m>] -c model_reasoning_effort=<effort> -c developer_instructions=<JSON-quoted system> --json`
-
-Claude and Grok print NDJSON in the same shape. Text arrives in lines where `type == "stream_event"`, `event.type == "content_block_delta"` and `event.delta.type == "text_delta"`. Codex does not stream: the answer is in the line where `type == "item.completed"` and `item.type == "agent_message"` (`item.text`).
-
-Measured: about 4 to 7 seconds per short fix on each CLI.
+The current chat behavior and limits are documented in the [README](../README.md#chat-in-source-builds-unreleased) and [privacy policy](../PRIVACY.md). Insertion is still pending in T23f. No 1.4.0 release has been made.
 
 ## Tasks
 

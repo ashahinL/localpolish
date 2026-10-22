@@ -66,9 +66,12 @@ async function startBackground() {
     commands: { onCommand: { addListener: vi.fn() } },
     storage: {
       local: { setAccessLevel, get, set, remove },
+      session: { setAccessLevel: vi.fn().mockResolvedValue(undefined), get, set, remove },
       onChanged: { addListener: onStorageChanged },
     },
-    tabs: { query, sendMessage, create },
+    tabs: { query, sendMessage, create, onRemoved: { addListener: vi.fn() } },
+    sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
+    contextMenus: { onClicked: { addListener: vi.fn() } },
   });
   await import('../entrypoints/background');
   const message = onRuntimeMessage.mock.calls[0]?.[0];
@@ -181,6 +184,7 @@ describe('background settings and rewrite ports', () => {
       anthropicApiKey: 'fake-anthropic-secret',
       blocklist: ['blocked.example'],
       idleFix: false,
+      selectionChat: true,
       defaultMode: 'shorter',
       languages: { en: true, ar: true, franco: true, other: true },
     });
@@ -192,6 +196,7 @@ describe('background settings and rewrite ports', () => {
       expect(reply).toHaveBeenCalledExactlyOnceWith({
         blocklist: ['blocked.example'],
         idleFix: false,
+        selectionChat: true,
         defaultMode: 'shorter',
         languages: { en: true, ar: true, franco: true, other: true },
       }),
@@ -224,6 +229,7 @@ describe('background settings and rewrite ports', () => {
           settings: {
             blocklist: ['blocked.example'],
             idleFix: true,
+            selectionChat: true,
             defaultMode: 'fix',
             languages: { en: true, ar: true, franco: true, other: true },
           },
@@ -236,6 +242,7 @@ describe('background settings and rewrite ports', () => {
           settings: {
             blocklist: ['blocked.example'],
             idleFix: true,
+            selectionChat: true,
             defaultMode: 'fix',
             languages: { en: true, ar: true, franco: true, other: true },
           },
@@ -248,6 +255,7 @@ describe('background settings and rewrite ports', () => {
           settings: {
             blocklist: ['blocked.example'],
             idleFix: true,
+            selectionChat: true,
             defaultMode: 'fix',
             languages: { en: true, ar: true, franco: true, other: true },
           },
@@ -618,6 +626,7 @@ describe('page settings at the Chrome boundary', () => {
       { idleFix: null, defaultMode: 'bad', blocklist: false },
       {
         idleFix: true,
+        selectionChat: true,
         defaultMode: 'fix',
         languages: { en: true, ar: true, franco: true, other: true },
         blocklist: [],
@@ -661,6 +670,7 @@ describe('page settings at the Chrome boundary', () => {
           models: { 'openai-compatible': 'private-model' },
           blocklist: ['B.example', null, 'a.example', 'B.example'],
           idleFix: false,
+          selectionChat: true,
           defaultMode: 'shorter',
           languages: { en: true, ar: true, franco: true, other: true },
         },
@@ -678,6 +688,7 @@ describe('page settings at the Chrome boundary', () => {
             settings: {
               blocklist: ['B.example', 'a.example', 'B.example'],
               idleFix: false,
+              selectionChat: true,
               defaultMode: 'shorter',
               languages: { en: true, ar: true, franco: true, other: true },
             },
@@ -690,6 +701,7 @@ describe('page settings at the Chrome boundary', () => {
             settings: {
               blocklist: ['B.example', 'a.example', 'B.example'],
               idleFix: false,
+              selectionChat: true,
               defaultMode: 'shorter',
               languages: { en: true, ar: true, franco: true, other: true },
             },
@@ -704,12 +716,14 @@ describe('page settings at the Chrome boundary', () => {
     const blocked = {
       blocklist: ['site.example'],
       idleFix: false,
+      selectionChat: true,
       defaultMode: 'shorter',
       languages: { en: true, ar: true, franco: true, other: true },
     };
     const unblocked = {
       blocklist: [],
       idleFix: true,
+      selectionChat: true,
       defaultMode: 'fix',
       languages: { en: true, ar: true, franco: true, other: true },
     };
@@ -768,6 +782,7 @@ describe('page settings at the Chrome boundary', () => {
     expect(await initial).toEqual({
       blocklist: [],
       idleFix: true,
+      selectionChat: true,
       defaultMode: 'fix',
       languages: { en: true, ar: true, franco: true, other: true },
     });
@@ -780,6 +795,7 @@ describe('page settings at the Chrome boundary', () => {
           settings: {
             blocklist: [],
             idleFix: false,
+            selectionChat: true,
             defaultMode: 'fix',
             languages: { en: true, ar: true, franco: true, other: true },
           },
@@ -803,6 +819,7 @@ describe('page settings at the Chrome boundary', () => {
       expect(await background.request({ type: 'page-settings' })).toEqual({
         blocklist: [],
         idleFix: false,
+        selectionChat: true,
         defaultMode: 'fix',
         languages: { en: true, ar: true, franco: true, other: true },
       });
@@ -811,6 +828,7 @@ describe('page settings at the Chrome boundary', () => {
         settings: {
           blocklist: [],
           idleFix: false,
+          selectionChat: true,
           defaultMode: 'fix',
           languages: { en: true, ar: true, franco: true, other: true },
         },
@@ -834,6 +852,7 @@ describe('page settings at the Chrome boundary', () => {
       settings: {
         blocklist: [],
         idleFix: false,
+        selectionChat: true,
         defaultMode: 'fix',
         languages: { en: true, ar: true, franco: true, other: true },
       },

@@ -6,7 +6,7 @@ import { Composer } from './Composer';
 import { Conversation } from './Conversation';
 import { History } from './History';
 import { ModelPicker } from './ModelPicker';
-import { watchPending } from './pending';
+import { watchPending, type PendingChat } from './pending';
 import { useChat } from './useChat';
 import { useChatSettings } from './useChatSettings';
 
@@ -22,12 +22,12 @@ export function App() {
   const { start } = chat;
   const [historyOpen, setHistoryOpen] = useState(false);
   // The tab the panel was opened for, kept for inserting answers into that page.
-  const [tabId, setTabId] = useState<number | undefined>(undefined);
+  const [entry, setEntry] = useState<PendingChat | undefined>(undefined);
 
   useEffect(
     () =>
       watchPending((pending) => {
-        setTabId(pending.tabId);
+        setEntry(pending);
         setHistoryOpen(false);
         start(attached(pending.attachment));
       }),
@@ -50,7 +50,7 @@ export function App() {
   const { conversation, status } = chat;
 
   return (
-    <div class="panel" data-tab-id={tabId}>
+    <div class="panel" data-tab-id={entry?.tabId}>
       <header class="head">
         <div class="logo" aria-hidden="true">
           <LogoIcon />

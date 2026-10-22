@@ -280,6 +280,7 @@ test('content scripts cannot read local storage or receive stored keys', async (
     await writeSettings(sw, `${mock.url}/v1`, {
       blocklist: ['blocked.example'],
       idleFix: false,
+      selectionChat: true,
       defaultMode: 'shorter',
       languages: { en: true, ar: true, franco: true, other: true },
     });
@@ -305,6 +306,7 @@ test('content scripts cannot read local storage or receive stored keys', async (
         settings: {
           blocklist: ['blocked.example'],
           idleFix: false,
+          selectionChat: true,
           defaultMode: 'shorter',
           languages: { en: true, ar: true, franco: true, other: true },
         },
@@ -438,6 +440,7 @@ test('settings snapshots reach nested and cross-host frames without frame reread
     const blocked = {
       blocklist: ['localhost'],
       idleFix: false,
+      selectionChat: true,
       defaultMode: 'shorter',
       languages: { en: true, ar: true, franco: true, other: true },
     };
@@ -474,6 +477,7 @@ test('settings snapshots reach nested and cross-host frames without frame reread
     const unblocked = {
       blocklist: [],
       idleFix: false,
+      selectionChat: true,
       defaultMode: 'shorter',
       languages: { en: true, ar: true, franco: true, other: true },
     };

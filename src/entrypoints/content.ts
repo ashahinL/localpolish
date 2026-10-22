@@ -1,3 +1,4 @@
+import { createSelectionChat } from '../content/selectionChat';
 import { createButton } from '../content/button';
 import { createController } from '../content/controller';
 import { createIdleFix } from '../content/idle';
@@ -17,8 +18,12 @@ interface ContentChrome {
   runtime: {
     id?: string;
     connect(info: { name: string }): PortLike;
-    sendMessage(message: { type: 'page-settings' }): Promise<PageSettings | null>;
-    onMessage: { addListener(cb: (message: unknown) => void): void };
+    sendMessage(message: unknown): Promise<unknown>;
+    onMessage: {
+      addListener(
+        cb: (message: unknown, sender: { id?: string }, reply: (value: unknown) => void) => void,
+      ): void;
+    };
   };
 }
 
@@ -54,6 +59,7 @@ function start(): void {
       !Array.isArray(raw.blocklist) ||
       raw.blocklist.some((entry) => typeof entry !== 'string') ||
       raw.idleFix !== normalized.idleFix ||
+      raw.selectionChat !== normalized.selectionChat ||
       raw.defaultMode !== normalized.defaultMode ||
       typeof raw.languages !== 'object' ||
       raw.languages === null ||
@@ -67,6 +73,7 @@ function start(): void {
     settings = normalized;
     idle?.refresh();
     button?.refresh();
+    selectionChat?.refresh();
     return true;
   };
 
@@ -111,6 +118,11 @@ function start(): void {
       if (target) idle?.open(target);
     },
   });
+
+  const selectionChat = createSelectionChat(
+    ext,
+    () => settings?.selectionChat === true && isEnabled(),
+  );
 
   ext.runtime.onMessage.addListener(
     guarded((message) => {

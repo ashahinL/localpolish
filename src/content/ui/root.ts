@@ -1,6 +1,6 @@
 import css from './popup.css?inline';
 
-type Layer = 'button' | 'popup' | 'toast' | 'marks';
+type Layer = 'button' | 'chat-button' | 'popup' | 'toast' | 'marks';
 
 let shadow: ShadowRoot | null = null;
 

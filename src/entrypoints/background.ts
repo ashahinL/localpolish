@@ -1,3 +1,4 @@
+import { registerChatEntries, type ChatEntryChrome } from '../background/chatEntries';
 import { pruneChats } from '../core/chatHistory';
 import { pingBridge } from '../background/providers/cli';
 import { getProvider } from '../background/providers';
@@ -54,7 +55,9 @@ interface ExtensionChrome {
     };
   };
   commands: {
-    onCommand: { addListener(cb: (command: string) => void): void };
+    onCommand: {
+      addListener(cb: (command: string, tab?: { id?: number; windowId?: number }) => void): void;
+    };
   };
   tabs: {
     query(queryInfo: {
@@ -412,4 +415,6 @@ export default defineBackground(() => {
         // A tab without the content script rejects sendMessage.
       });
   });
+
+  registerChatEntries(extension() as ExtensionChrome & ChatEntryChrome);
 });

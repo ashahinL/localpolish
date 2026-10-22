@@ -200,6 +200,7 @@ describe('saveSettings', () => {
     expect(memory.get('settings')).toEqual({
       ...DEFAULT_SETTINGS,
       idleFix: false,
+      selectionChat: true,
       defaultMode: 'shorter',
     });
   });
@@ -219,6 +220,7 @@ describe('saveSettings', () => {
       expect(memory.get('settings')).toEqual({
         ...DEFAULT_SETTINGS,
         idleFix: false,
+        selectionChat: true,
         defaultMode: 'shorter',
       });
     },
@@ -317,6 +319,7 @@ describe('language settings', () => {
     expect(pageSettings({ languages: { ar: false, bogus: false } })).toEqual({
       blocklist: [],
       idleFix: true,
+      selectionChat: true,
       defaultMode: 'fix',
       languages: { en: true, ar: false, franco: true, other: true },
     });
@@ -432,7 +435,7 @@ describe('chat settings', () => {
     expect(badModels.models['grok-cli']).toBe('');
   });
 
-  it('keeps page settings to the same four fields when chat is stored', () => {
+  it('keeps page settings to the page fields when chat is stored', () => {
     expect(
       pageSettings({
         chat: { provider: 'grok-cli', models: { 'claude-cli': 'opus' } },
@@ -442,8 +445,20 @@ describe('chat settings', () => {
     ).toEqual({
       blocklist: ['example.com'],
       idleFix: true,
+      selectionChat: true,
       defaultMode: 'fix',
       languages: { en: true, ar: false, franco: true, other: true },
     });
   });
+});
+
+it('checks selectionChat reads and propagates only a boolean to page settings', async () => {
+  for (const selectionChat of [undefined, null, 'false', 0]) {
+    memory.set('settings', { selectionChat });
+    expect((await loadSettings()).selectionChat).toBe(true);
+    expect(pageSettings({ selectionChat }).selectionChat).toBe(true);
+  }
+  await saveSettings({ selectionChat: false });
+  expect((await loadSettings()).selectionChat).toBe(false);
+  expect(pageSettings(await loadSettings()).selectionChat).toBe(false);
 });

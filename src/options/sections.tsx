@@ -106,6 +106,21 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
   return (
     <section class="card">
       <h2>Defaults</h2>
+      <div class="field">
+        <label class="check-option" for="selection-chat">
+          <input
+            id="selection-chat"
+            type="checkbox"
+            checked={settings.selectionChat}
+            aria-describedby="selection-chat-help"
+            onChange={() => change({ selectionChat: !settings.selectionChat })}
+          />
+          <span>Show chat button on selected page text</span>
+        </label>
+        <p class="help" id="selection-chat-help">
+          Applies outside text fields.
+        </p>
+      </div>
       <div class="row">
         <Field id="default-mode" label="Default mode">
           <select
