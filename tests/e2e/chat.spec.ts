@@ -868,6 +868,44 @@ for (const type of ['password', 'text'] as const) {
   });
 }
 
+test('selects an article, asks the mock provider, then copies and inserts its answer', async ({
+  page,
+  extensionContext,
+  sw,
+  mock,
+}) => {
+  await guardProviders(sw, mock.url);
+  const article = await extensionContext.newPage();
+  try {
+    await openPanel(page);
+    await article.goto('http://localhost:5179/');
+    const field = article.locator('#ta');
+    await field.fill('');
+    await articleSelection(article, 'The fixture shop opens on Monday.');
+    await chatSparkle(article).click();
+    const attachment = page.getByRole('region', { name: 'Attached' });
+    await expect(attachment).toContainText('The fixture shop opens on Monday.');
+    await expect(attachment).toContainText('http://localhost:5179/');
+    expect(mock.requests).toHaveLength(0);
+
+    mock.reply({ chunks: ['A fixture reply.\n', 'Another line.'] });
+    await page.getByRole('button', { name: 'Draft a reply' }).click();
+    await expect(answers(page)).toContainText(/A fixture reply\.\s*Another line\./);
+    await answers(page).getByRole('button', { name: 'Copy', exact: true }).click();
+    await expect(answers(page).getByRole('button', { name: 'Copied' })).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { __copied?: string }).__copied)).toBe(
+      'A fixture reply.\nAnother line.',
+    );
+    await insertFromPanel(page, article);
+    await expect(field).toHaveValue('A fixture reply.\nAnother line.');
+    await expect(page.getByRole('status')).toContainText('Inserted into the text field.');
+    expect(await blockedAttempts(sw)).toEqual([]);
+  } finally {
+    await article.close();
+    await releaseProviders(sw);
+  }
+});
+
 async function insertFromPanel(panel: Page, article: Page): Promise<void> {
   // The real panel leaves its page tab active. A test panel tab needs this explicitly.
   await article.bringToFront();

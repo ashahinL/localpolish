@@ -40,6 +40,8 @@ below.
 
 Source builds also use `chrome.storage.session` for pending chat attachments scoped to each browser window, their tab and frame targets, and focused-frame hints. A hint contains a frame id and frame URL, never selected text. Pending entries may contain selected text after an explicit chat entry-point action. These values are kept in the current browser session, separately from saved history. The page keeps its selected-text cache in memory so a shortcut can read it after the panel takes focus. Password input values are excluded. Content scripts cannot read session storage directly.
 
+For Insert, the content script remembers the last focused supported text field. When chat opens, it captures that field's text in content-script memory to detect later changes. Only its opaque field id and frame ownership go into session storage. This target snapshot is not added to the chat attachment or sent to a provider. New chats started in the panel and reopened history do not retain a live insertion target.
+
 ## What it sends, and where
 
 LocalPolish sends text only when you ask for a rewrite (the button, the
@@ -81,7 +83,7 @@ A content script runs on every page so the button, the shortcut and Fix
 while I type work in any text field. It reads a field when you select
 text in it, press the shortcut, or use Fix while I type. While an idle marker
 is shown, it also checks the field to keep the marker current. It changes a
-field only when you press **Accept**, or accept a fix. In source builds it also reads selected page text for chat and caches frame selection locally. The automatic chat sparkle skips blocked sites and editable fields. The context menu, chat shortcut, and toolbar button remain available when requested directly, including on blocked sites. Chat cannot insert answers into fields yet.
+field only when you press **Accept**, accept a fix, or choose **Insert into field** on a chat answer. In source builds it also reads selected page text for chat and caches frame selection locally. The automatic chat sparkle skips blocked sites and editable fields. The context menu, chat shortcut, and toolbar button remain available when requested directly, including on blocked sites. Insert replaces the whole field remembered when chat opened. It checks the original active tab, window, frame, and unchanged field before writing. If the target is unavailable or changed, use Copy to paste the answer yourself.
 
 ## What it does not do
 

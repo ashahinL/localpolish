@@ -29,7 +29,7 @@
   </tr>
 </table>
 
-<p align="center">The released 1.3.0 toolbar popup. Source builds also include the unreleased chat described below. <code>npm run shots</code> refreshes these images before release.</p>
+<p align="center">The current source toolbar popup, including the unreleased chat button. The latest download is still 1.3.0. <code>npm run shots</code> refreshes these images before release.</p>
 
 ## What it does
 
@@ -89,7 +89,7 @@
 
 ## Chat in source builds, unreleased
 
-The latest downloadable release is still 1.3.0. The current source build adds an assistant in Chrome's side panel. Inserting a chat answer into a field is not implemented yet.
+The latest downloadable release is still 1.3.0. The current source build adds an assistant in Chrome's side panel.
 
 Open chat in any of these ways:
 
@@ -99,6 +99,8 @@ Open chat in any of these ways:
 - Click **Open chat** on the toolbar popup's Home tab. This always starts without an attachment.
 
 The panel shows the selected text, title, and URL before you ask. Opening it sends nothing to an AI. Choose Summarize, Explain, Translate, or Draft a reply to send immediately, or type a question. Enter sends, Shift+Enter adds a line, and Stop cancels the answer. Copy copies a completed answer. History lets you reopen or delete chats, or delete all of them.
+
+To put an answer into a page, focus the field before opening chat. **Insert into field** replaces that whole field with the completed answer, including any Markdown as plain text. It uses the same editor-writing path as Accept, including rich editors and fields in frames. Keep the original tab active. If the field changes, disappears, becomes read-only, or the page navigates, insertion refuses and leaves Copy available. After an insertion, reopen chat from the page to bind the field again. New chats started inside the panel and reopened history have no live field target.
 
 Chat has its own provider and model. They start as copies of Fix's choices, then save independently. API keys, endpoints, temperature, and CLI effort remain shared. Every turn sends the conversation so far and its attachment to the chat provider. Chat attempts appear in Usage.
 

@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 started on 22 October 2026 (T23, chat). The version stays 1.3.0 until release day. The owner requested a stop after T23e for a move to another machine.
+Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 started on 22 October 2026 (T23, chat). The owner resumed on Windows after T23e; insertion and final chat documentation follow below. The version stays 1.3.0 until release day.
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -159,11 +159,12 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - The worker accepts insertion only from this extension's side panel, validates the window-scoped sequence and original active tab/focused window, and routes only to the bound frame. The content script rejects stale sequences, edited/removed/unsupported fields and navigated frames. `applyReplacement` has an optional current-target check after focus and rich-editor waits. History and New chat drop the live entry association.
   - Review fixed extension-tab sender validation, unclear frame-navigation errors, and field identity generation on insecure HTTP pages. Removed a content test that mocked insertion itself; browser tests exercise the real path. Fourteen new mock-only browser cases cover text/rich/iframe insertion, toolbar iframe insertion, insecure HTTP, edits, removed/disabled/readonly/password fields, navigation, frame navigation, changed tabs and reopened history.
   - Full gates passed on Windows on 22 October 2026: lint, typecheck, 811 unit tests with 9 platform skips, formatting, build, and 244 browser tests. Playwright Chromium still fails before launch with a Windows side-by-side assembly error after reinstall. A temporary external hook ran the browser checks with installed Brave 155.1.97.59 and removed the Mac-only single-process launch flag; repository browser settings are unchanged. The actual 400 px chat page was visually checked after a successful Insert. No real or paid provider was used. Comment Sicko was unavailable because this session has no named reviewer tool. No reusable skill was proposed or created.
-- [ ] **T23g. Chat docs and e2e.** Depends on: T23e, T23f. README, `PRIVACY.md`, and the manual checklist were updated through T23e for the machine handoff. After T23f, document Insert and add the combined selection → chat → mock answer → Copy and Insert test. Recheck all chat docs against the final behavior.
+- [x] **T23g. Chat docs and e2e.** Depends on: T23e, T23f. Brief: [T23g-chat-docs-e2e.md](../briefs/T23g-chat-docs-e2e.md). README, privacy policy, changelog, manual checklist, release checklist, plan index, and machine handoff describe Insert and its refusal paths. The combined browser test selects fake article text, gets a multiline mock answer, checks Copy, and inserts it into an empty textarea.
+  - Documentation and test reviews passed. Local documentation links resolve. Full gates passed on Windows on 22 October 2026: lint, typecheck, 811 unit tests with 9 platform skips, formatting, build, and 245 browser tests through the same temporary Brave hook as T23f. All five toolbar screenshots were regenerated and visually checked, including the new chat button in light and dark modes. The screenshot fixture now supplies a tab and window id so the button is enabled. Comment Sicko remains unavailable. No real provider was called and no reusable skill was created.
 
 ## 1.4.0 release (T25)
 
-- [ ] **T25. Release 1.4.0.** Follow `RELEASING.md`. New toolbar screenshots, because the popup gains a chat button. The owner hand-checks the chat on a long article, with a CLI provider and an API provider.
+- [ ] **T25. Release 1.4.0.** Follow `RELEASING.md`. Toolbar screenshots were refreshed and checked in T23g. The owner still hand-checks native entry points and insertion, and chat on a long article with a CLI provider and an API provider. CI must pass before release.
 
 ## Backlog
 
@@ -179,10 +180,10 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Checkpoint: the T23e task commit containing this file, on `main`; parent `7f9d13f` is T23d. Use `git log -1 --oneline` for the exact checkpoint hash. Version remains 1.3.0; no 1.4.0 tag, zip, or release was created.
-- Completed chat tasks: T23a, T23b, T23c, T23d, T23e. Earlier 1.3.0 work remains released at [v1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0). OpenCode stays in the backlog.
-- Verification: all full T23e gates passed on 22 October 2026: lint, typecheck, 806 unit tests passed with 2 skipped, formatting, build, and 230 e2e tests. The 77 targeted browser cases passed too, including both password-cache regressions. Code, test, and documentation reviews passed. Local documentation links were checked. Comment Sicko was skipped because this session cannot launch that named reviewer. No real provider or installed CLI was called.
-- Remaining: T23f insertion; T23g's Insert documentation and combined end-to-end test; T25's screenshots, native gesture checks, owner CLI/API checks, and release. The paid language-preservation bench and Windows agy login remain unverified from earlier work.
-- Stop instruction: the owner explicitly requested commit/push/stop after T23e. Do not start T23f in this chat. Resume on the other machine only when the owner asks. Follow [the machine handoff](../handoff-1.4.md).
+- Checkpoint: `b58f7fe` implements T23f; T23g follows in its own commit. Use `git log -1 --oneline` for the exact checkpoint hash. Version remains 1.3.0; no 1.4.0 tag, zip, or release was created.
+- Completed chat tasks: T23a–g. Earlier 1.3.0 work remains released at [v1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0). OpenCode stays in the backlog.
+- Verification: full Windows gates passed as recorded in T23g. Code, test, and documentation reviews used the guard skills. Comment Sicko was skipped because this session cannot launch that named reviewer. No real provider or installed CLI was called.
+- Remaining: T25's native gesture checks, owner CLI/API checks, and release. The existing runtime-smoke CI failure needs its missing compiled module restored first. The paid language-preservation bench and Windows agy login remain unverified from earlier work.
+- Resume instruction: the owner asked to pull and continue on Windows. Follow [the machine handoff](../handoff-1.4.md). Stop at release checks that require the owner.
 - Required gates on future code changes: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none. The final gates finished; no delegate, development server, visual browser, or mock server remains running. Temporary Mac harnesses are supplementary and are not needed to resume.

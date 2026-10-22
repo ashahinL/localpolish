@@ -84,11 +84,13 @@ Use a made-up article and a local mock provider. These checks do not replace the
 - [ ] Turn off **Show chat button on selected page text** in options. The selection sparkle disappears immediately. Explicit chat entry points and manual Fix still work.
 - [ ] Select fake text in a password field after selecting normal text. The shortcut must attach neither the password nor the previous selection.
 - [ ] Ask two questions using the mock provider. Markdown, Copy, Stop and Retry work. Enter sends and Shift+Enter adds a line. The chat provider/model stay independent of Fix. Failed settings saves block requests.
+- [ ] Focus a fixture textarea, select article text, open chat, and ask the mock provider. Copy the completed answer, then use **Insert into field**. The whole remembered field becomes the answer, with line breaks preserved. Repeat with a rich editor and a field inside a frame.
+- [ ] Open chat from a focused field, then change or remove it, make it read-only, or navigate the page. Insert reports an error and Copy stays available. Switching to another tab refuses insertion too. Reopened history and New chat have no live target. Never test on a real draft.
 - [ ] Open saved history, reopen a chat, delete one, then delete all test chats. Local settings and Usage remain. An oversized save leaves its answer visible with an error. No raw HTML executes and no remote image loads automatically.
 - [ ] Open a second browser window. Its chat selection does not reset the first window's conversation. A restricted page without a content script opens plain chat through an explicit entry point.
 - [ ] Inspect the panel at narrow and wide widths in both color schemes. The attachment, error text and composer remain readable.
 
-T23f insertion and the combined selection-to-answer-to-Copy-and-Insert test are pending. Do not mark those complete from the current source build. T23e's new automated browser cases cover the selection and password-cache behavior. The new production context-menu and keyboard paths still need a native manual pass; T23a proved the browser gesture routes in a disposable spike.
+Automated browser cases cover selection, password caches, insertion and refusal paths, and the combined selection-to-answer-to-Copy-and-Insert flow. These tests open the real extension panel page as a tab. The production context-menu, physical keyboard, and native panel insertion paths still need a manual pass; T23a proved the browser gesture routes in a disposable spike. Do not tick the manual checks based only on automated results.
 
 ## Results
 

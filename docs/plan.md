@@ -57,7 +57,7 @@ The original duplicated interfaces and CLI command examples have been replaced b
 - [History](../src/core/chatHistory.ts): local saved chats, capped at 50 records, 30 days since update, and 128 KiB per record.
 - [Bridge command builders](../bridge/lib.mjs) and [host](../bridge/host.mjs): four CLI names including `agy`, stdin-only prompts, provider lockdown, and cleanup. Native rewrite requests retain `system` and `user` fields, with optional `timeoutMs` up to 180000. The omitted timeout remains 60000.
 
-The current chat behavior and limits are documented in the [README](../README.md#chat-in-source-builds-unreleased) and [privacy policy](../PRIVACY.md). Insertion is still pending in T23f. No 1.4.0 release has been made.
+The current chat behavior and limits are documented in the [README](../README.md#chat-in-source-builds-unreleased) and [privacy policy](../PRIVACY.md). T23f adds whole-field insertion with checked tab, frame, and field ownership. No 1.4.0 release has been made.
 
 ## Tasks
 

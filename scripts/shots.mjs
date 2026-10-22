@@ -58,7 +58,10 @@ function stubChrome(state) {
       getManifest: () => ({ version: state.version }),
     },
     commands: { getAll: async () => [{ name: 'polish', shortcut: '⇧⌘K' }] },
-    tabs: { query: async () => [{ url: state.tabUrl }], create: async () => ({}) },
+    tabs: {
+      query: async () => [{ id: 1, windowId: 1, url: state.tabUrl }],
+      create: async () => ({}),
+    },
   };
 }
 

@@ -1,12 +1,14 @@
-# Continue 1.4 on another machine
+# Continue the 1.4 release checks
 
-The owner stopped work after T23e on 22 October 2026. Do not start the next task until asked. The checkpoint is the T23e commit on `main`, with parent `7f9d13f`. Run `git log -1 --oneline` after pulling to identify it. The package is still version 1.3.0. No 1.4.0 release exists.
+The owner resumed work on Windows after T23e on 22 October 2026. T23f adds insertion and T23g finishes the chat documentation and combined browser flow. Run `git log -1 --oneline` after pulling to identify the current checkpoint. The package is still version 1.3.0. No 1.4.0 release exists.
 
 ## What is done
 
-T23a–e are implemented and reviewed: side-panel gesture spike, multi-turn providers, local history, chat UI/runtime, and all four entry points. The source build has Copy. It does not insert chat answers into fields yet. The [feature plan](plans/features-1.3-1.4.md) contains the task details and final gate results.
+T23a–g implement the side-panel gesture spike, multi-turn providers, local history, chat UI/runtime, all four entry points, Copy, and Insert into the remembered field. The [feature plan](plans/features-1.3-1.4.md) contains task details and gate results.
 
 Review fixed password selection caching, failed chat-settings saves, stale settings reads, unsafe Markdown nesting, and repeated scans of unmatched markers. Tests use fake text and mock providers. The final production native context-menu and physical shortcut checks remain in the manual release pass; the disposable spike already proved the gesture routes. T23d's real-panel rendering and saved history were inspected on the Mac.
+
+Insert binds the last focused supported field when a page entry opens chat. It replaces the whole field through `applyReplacement`. A changed or unavailable field, navigated frame, or inactive tab refuses insertion and keeps Copy available. Reopened history and chats started with New chat have no live target. Snapshot text stays inside content-script memory. Session storage holds only field identity and tab/frame ownership alongside the pending attachment.
 
 ## Set up the new machine
 
@@ -17,14 +19,14 @@ Review fixed password selection caching, failed chat-settings saves, stale setti
 
 ## Resume point
 
-Next is **T23f**, insertion into the last text field, using the existing `applyReplacement` path. T23e records an entry's tab/frame under window-scoped session storage; `readChatTarget(sequence)` is the helper prepared for insertion. Recheck active tab, frame, field ownership, and changed or removed targets before writing. Do not infer the target from a rendered data attribute.
+Next is **T25**, the release checks. A pre-existing CI runtime-smoke failure was reproduced: `bench/runtime/compile.mjs` omits `src/background/outputBudget`, so every core probe fails during import. Fix and verify that prerequisite before release. Keep task changes in separate commits.
 
-Then complete **T23g**. The current README, privacy policy, manual checklist, changelog and release instructions already cover T23a–e. Add Insert behavior and the combined selection-to-chat-to-mock-answer-to-Copy-and-Insert browser test. Keep T23g unchecked until that work is complete.
+The README, privacy policy, manual checklist, changelog, release instructions, and plan index now describe Insert. The combined browser test selects fake article text, asks a local mock provider, copies its multiline answer, and inserts it into an empty textarea.
 
-**T25** remains separate. Refresh screenshots, perform native gesture and long-article checks with CLI and API providers, and follow [RELEASING.md](../RELEASING.md). The owner still needs to schedule the paid language-preservation benchmark and Windows Antigravity login check.
+The five toolbar screenshots were refreshed and visually checked in T23g. Perform native gesture and long-article checks with CLI and API providers, and follow [RELEASING.md](../RELEASING.md). The owner still needs to schedule the paid language-preservation benchmark and Windows Antigravity login check. Do not call paid providers to bypass a test failure.
 
 ## Checks and processes
 
-Run lint, typecheck, unit tests, formatting, build, and the full browser suite before committing a future code task. Exact commands and the checkpoint results are in the feature plan. A sandbox may block browser launch; report that and run browser checks from an unrestricted terminal. Do not weaken tests or use paid providers as a workaround.
+Run lint, typecheck, unit tests, formatting, build, and the full browser suite before committing a future code task. Exact commands and checkpoint results are in the feature plan. On this Windows machine, Playwright Chromium 156.0.8078.4 cannot start because Windows cannot resolve its side-by-side assembly, even after a forced reinstall. Local browser checks use installed Brave 155.1.97.59 through a temporary external launch hook, with the Mac-only single-process flag removed. The repository's browser configuration is unchanged. Chromium checks still belong in CI.
 
-No delegate, dev server, browser harness, or mock server should remain running at the checkpoint. Final checkpoint gates passed: lint, typecheck, 806 unit tests passed with 2 skipped, formatting, build, and 230 browser tests. The 77 targeted browser tests and local documentation links also passed. The feature plan records the manual checks still needed. Comment Sicko was unavailable; code, tests, and documentation were reviewed by the orchestrator. No reusable skill was created. The e2e provider guard may be worth extracting into a shared helper when it is used again.
+T23g gates passed: lint, typecheck, 811 unit tests with 9 platform skips, formatting, build, and 245 browser tests through Brave. The panel page was visually checked at 400 px after insertion. All five toolbar screenshots were inspected. Native panel insertion remains a manual release check. Comment Sicko was unavailable; code, tests, and documentation were reviewed by the orchestrator. No reusable skill was proposed or created. Stop all task-owned test servers and browsers before ending work.
