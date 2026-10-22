@@ -34,7 +34,7 @@ const CODEX_LOGIN = navigator.userAgent.includes('Windows')
 
 const AGY_LOGIN = navigator.userAgent.includes('Windows')
   ? '$env:HOME="$env:USERPROFILE\\AppData\\Local\\LocalPolish\\agy-home"; $env:USERPROFILE=$env:HOME; mkdir -Force $env:HOME | Out-Null; agy'
-  : 'mkdir -p "$HOME/Library/Application Support/LocalPolish/agy-home" && HOME="$HOME/Library/Application Support/LocalPolish/agy-home" agy';
+  : 'mkdir -p "$HOME/Library/Application Support/LocalPolish/agy-home" && HOME="$HOME/Library/Application Support/LocalPolish/agy-home" SSH_TTY=localpolish agy';
 
 const BASE_URL_OPTIONS = OPENAI_BASE_URLS.map((preset) => ({
   value: preset.value,

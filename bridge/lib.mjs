@@ -434,6 +434,9 @@ export function codexLoginCommand(codexHome, platform = process.platform) {
 
 const AGY_LOGS_KEPT = 5;
 
+/** Any value works: agy only checks that SSH_TTY is set. */
+export const AGY_SSH_TTY = 'localpolish';
+
 /**
  * Removes what one run leaves in the private agy home. The id must already be checked.
  * @param {string} saved The agy home's `.gemini/antigravity-cli` folder.
@@ -491,5 +494,5 @@ export function agyLoginCommand(agyHome, platform = process.platform) {
   // The Windows login command is unverified.
   return platform === 'win32'
     ? `$env:HOME="${agyHome}"; $env:USERPROFILE="${agyHome}"; mkdir -Force $env:HOME | Out-Null; agy`
-    : `mkdir -p "${agyHome}" && HOME="${agyHome}" agy`;
+    : `mkdir -p "${agyHome}" && HOME="${agyHome}" SSH_TTY=${AGY_SSH_TTY} agy`;
 }

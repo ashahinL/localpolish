@@ -13,6 +13,7 @@ import {
 } from './constants.mjs';
 import {
   agyHomeFor,
+  AGY_SSH_TTY,
   agyLoginCommand,
   buildCommand,
   clearAgyRun,
@@ -135,6 +136,9 @@ function handleRewrite(msg) {
     fs.mkdirSync(agyHome, { recursive: true });
     env.HOME = agyHome;
     if (process.platform === 'win32') env.USERPROFILE = agyHome;
+    // agy stores its login in a file when it sees an SSH session. Otherwise it looks for the
+    // macOS keychain under the private HOME, finds none, and shows a "Keychain Not Found" dialog.
+    env.SSH_TTY = AGY_SSH_TTY;
   }
 
   let run;

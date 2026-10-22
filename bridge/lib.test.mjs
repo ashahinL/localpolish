@@ -465,7 +465,7 @@ describe('Antigravity', () => {
     expect(agyLoginCommand(home, platform)).toBe(
       platform === 'win32'
         ? `$env:HOME="${home}"; $env:USERPROFILE="${home}"; mkdir -Force $env:HOME | Out-Null; agy`
-        : `mkdir -p "${home}" && HOME="${home}" agy`,
+        : `mkdir -p "${home}" && HOME="${home}" SSH_TTY=localpolish agy`,
     );
   });
 });

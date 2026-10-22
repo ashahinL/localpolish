@@ -1058,6 +1058,7 @@ process.stdin.on('data', (chunk) => input += chunk);
 process.stdin.on('end', () => {
   assert.equal(input, JSON.stringify({ event: 'user', message: { content: 'fake draft\\nsecond line' } }) + '\\n');
   assert.equal(process.env.HOME, AGY_HOME_EXPECTED);
+  assert.equal(process.env.SSH_TTY, 'localpolish');
   assert.equal(fs.readFileSync('.agents/agents/localpolish.md', 'utf8'), ${JSON.stringify(agent)});
   persist();
   send({ event: 'step_update', step_update: { step_type: 'agent_response', text_delta: 'Fixed.' } });

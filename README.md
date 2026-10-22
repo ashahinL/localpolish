@@ -190,7 +190,7 @@ Install Google's Antigravity CLI (`agy`), then run `npm run bridge:install` agai
 Antigravity needs a separate Google login for LocalPolish. On macOS, run this once:
 
 ```bash
-mkdir -p "$HOME/Library/Application Support/LocalPolish/agy-home" && HOME="$HOME/Library/Application Support/LocalPolish/agy-home" agy
+mkdir -p "$HOME/Library/Application Support/LocalPolish/agy-home" && HOME="$HOME/Library/Application Support/LocalPolish/agy-home" SSH_TTY=localpolish agy
 ```
 
 On Windows, use PowerShell. This command has not been checked on Windows yet.
@@ -341,6 +341,7 @@ Match the message on screen, then do the fix that follows it.
 - `The LocalPolish bridge is not installed. In the LocalPolish folder run: npm run bridge:install`. Run that command in this repo.
 - `<cli> CLI not found. Install it, log in, then run "npm run bridge:install" again.` The message names the CLI, such as `codex`. Install it, log in, then run `npm run bridge:install` again.
 - `Antigravity needs its own login for LocalPolish. In a terminal run: <command>`. Run the command printed in the error to log in to the private Antigravity home. See **Set up Antigravity CLI** above.
+- A macOS dialog says **Keychain Not Found** for "antigravity". Click **Cancel**, never **Reset To Defaults**. It comes from a bridge older than 1.3.0, which let agy look for your keychain inside LocalPolish's private home. Update the repo. The bridge now tells agy to keep its login in a file there.
 - `Codex needs its own login for LocalPolish. In a terminal run: CODEX_HOME="..." codex login`. The message prints the real path in place of `...`. Run that command. The same command is in Setup.
 - `Timed out after 60 seconds.` The bridge waited 60 seconds and did not get a finished answer. Try again, or pick a faster model.
 - `Timed out after 45 seconds.` **Test connection** waited 45 seconds after the provider stream started. Check that the CLI is logged in and that the model name is valid.
