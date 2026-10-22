@@ -1,10 +1,5 @@
 import { cleanOutput } from '../core/cleanup';
-import {
-  exceedsInputLimit,
-  INPUT_LIMIT_MESSAGE,
-  MAX_OUTPUT_BYTES,
-  OUTPUT_LIMIT_MESSAGE,
-} from '../core/limits';
+import { exceedsInputLimit, INPUT_LIMIT_MESSAGE, OUTPUT_LIMIT_MESSAGE } from '../core/limits';
 import {
   type ModelMessage,
   type RewriteEvent,
@@ -14,6 +9,7 @@ import {
 import { buildPrompt } from '../core/prompts';
 import { type Settings } from '../core/settings';
 import { reattributeUsage, recordUsage } from '../core/usage';
+import { outputBudget } from './outputBudget';
 import { BridgeMissingError } from './providers/cli';
 import { type StreamFn } from './providers/types';
 
@@ -55,10 +51,8 @@ export async function runRewrite(
     { role: 'user', content: prompt.user },
   ];
   let raw = '';
-  let outputBytes = 0;
-  let endsWithHighSurrogate = false;
+  const fits = outputBudget();
   let outputExceeded = false;
-  const utf8 = new TextEncoder();
   const inner = new AbortController();
   let timedOut = false;
   let rejectStream: ((err: Error) => void) | undefined;
@@ -103,21 +97,10 @@ export async function runRewrite(
           (text) => {
             if (inner.signal.aborted) throw new Error('Cancelled.');
             if (outputExceeded) throw new Error(OUTPUT_LIMIT_MESSAGE);
-            const remainingBytes = MAX_OUTPUT_BYTES - outputBytes;
-            const first = text.charCodeAt(0);
-            // Separate encodings count a split pair as 3 + 3 bytes instead of 4.
-            const correction = endsWithHighSurrogate && first >= 0xdc00 && first <= 0xdfff ? 2 : 0;
-            const bytes =
-              text.length > remainingBytes ? Infinity : utf8.encode(text).byteLength - correction;
-            if (bytes > remainingBytes) {
+            if (!fits(text)) {
               outputExceeded = true;
               inner.abort();
               throw new Error(OUTPUT_LIMIT_MESSAGE);
-            }
-            outputBytes += bytes;
-            if (text.length > 0) {
-              const last = text.charCodeAt(text.length - 1);
-              endsWithHighSurrogate = last >= 0xd800 && last <= 0xdbff;
             }
             raw += text;
             if (req.trigger !== 'idle') post({ type: 'chunk', text });

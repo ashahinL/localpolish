@@ -1,4 +1,5 @@
 import { type LanguageId, type Mode, type Settings, type Tone } from './settings';
+import { type ChatAttachment, type ChatTurn } from './prompts';
 
 export interface ModelMessage {
   role: 'system' | 'user' | 'assistant';
@@ -23,6 +24,21 @@ export type RewriteEvent =
   | { type: 'chunk'; text: string }
   | { type: 'done'; text: string }
   | { type: 'error'; message: string; code?: typeof BRIDGE_MISSING };
+
+export const CHAT_PORT = 'chat';
+/** Error code for a conversation over the input limit, so the panel can offer a fresh chat. */
+export const CHAT_TOO_BIG = 'chat-too-big';
+
+/** Only the conversation crosses the port. The worker adds the system prompt and settings. */
+export interface ChatRequest {
+  turns: ChatTurn[];
+  attachment?: ChatAttachment;
+}
+
+export type ChatEvent =
+  | { type: 'chunk'; text: string }
+  | { type: 'done'; text: string }
+  | { type: 'error'; message: string; code?: typeof BRIDGE_MISSING | typeof CHAT_TOO_BIG };
 
 export type BridgeStatus =
   | {

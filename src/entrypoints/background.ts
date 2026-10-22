@@ -1,12 +1,16 @@
 import { pruneChats } from '../core/chatHistory';
 import { pingBridge } from '../background/providers/cli';
 import { getProvider } from '../background/providers';
+import { runChat } from '../background/chat';
 import { runRewrite, testConnection } from '../background/rewrite';
 import {
+  CHAT_PORT,
   REWRITE_PORT,
   TEST_PORT,
   type TestEvent,
   type BridgeStatus,
+  type ChatEvent,
+  type ChatRequest,
   type RewriteEvent,
   type RewriteRequest,
   type RuntimeMessage,
@@ -25,14 +29,16 @@ const TONES = new Set<Tone>(['polite', 'formal', 'casual', 'angry-civil']);
 
 interface RewritePort {
   name: string;
-  sender?: { tab?: { url?: string }; url?: string };
+  sender?: { id?: string; tab?: { url?: string }; url?: string };
   postMessage(message: unknown): void;
+  disconnect?(): void;
   onMessage: { addListener(cb: (message: unknown) => void): void };
   onDisconnect: { addListener(cb: () => void): void };
 }
 
 interface ExtensionChrome {
   runtime: {
+    id: string;
     onInstalled: { addListener(cb: (details: { reason: string }) => void): void };
     onStartup: { addListener(cb: () => void): void };
     getURL(path: string): string;
@@ -103,6 +109,45 @@ function isRewriteRequest(value: unknown): value is RewriteRequest {
   );
 }
 
+function hasOnlyKeys(value: object, keys: readonly string[]): boolean {
+  return Object.keys(value).every((key) => keys.includes(key));
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// Turns alternate user, assistant, ..., user, so the request always asks for one new answer.
+function isChatRequest(value: unknown): value is ChatRequest {
+  if (!isPlainRecord(value) || !hasOnlyKeys(value, ['turns', 'attachment'])) return false;
+  const { turns, attachment } = value;
+  if (!Array.isArray(turns) || turns.length % 2 === 0) return false;
+  const turnsOk = turns.every(
+    (turn: unknown, index) =>
+      isPlainRecord(turn) &&
+      hasOnlyKeys(turn, ['role', 'content']) &&
+      turn.role === (index % 2 === 0 ? 'user' : 'assistant') &&
+      typeof turn.content === 'string' &&
+      turn.content.trim() !== '',
+  );
+  if (!turnsOk) return false;
+  if (attachment === undefined) return true;
+  return (
+    isPlainRecord(attachment) &&
+    hasOnlyKeys(attachment, ['text', 'title', 'url']) &&
+    typeof attachment.text === 'string' &&
+    typeof attachment.title === 'string' &&
+    typeof attachment.url === 'string'
+  );
+}
+
+function copyChatRequest(request: ChatRequest): ChatRequest {
+  const turns = request.turns.map(({ role, content }) => ({ role, content }));
+  if (!request.attachment) return { turns };
+  const { text, title, url } = request.attachment;
+  return { turns, attachment: { text, title, url } };
+}
+
 function isRuntimeMessage(value: unknown): value is RuntimeMessage {
   if (typeof value !== 'object' || value === null) return false;
   const type = (value as { type?: unknown }).type;
@@ -114,7 +159,7 @@ function isRuntimeMessage(value: unknown): value is RuntimeMessage {
   );
 }
 
-function post(port: RewritePort, event: RewriteEvent): void {
+function post(port: RewritePort, event: RewriteEvent | ChatEvent): void {
   try {
     port.postMessage(event);
   } catch {
@@ -124,6 +169,49 @@ function post(port: RewritePort, event: RewriteEvent): void {
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
+}
+
+// Only the extension's own panel page may chat. Content scripts report the web page URL.
+function isPanelSender(sender: RewritePort['sender']): boolean {
+  if (sender?.id !== extension().runtime.id || typeof sender.url !== 'string') return false;
+  return sender.url.split(/[?#]/)[0] === extension().runtime.getURL('/sidepanel.html');
+}
+
+function handleChatPort(port: RewritePort): void {
+  if (!isPanelSender(port.sender)) {
+    post(port, { type: 'error', message: 'Chat is only available in the LocalPolish panel.' });
+    port.disconnect?.();
+    return;
+  }
+  const controller = new AbortController();
+  let started = false;
+  port.onDisconnect.addListener(() => controller.abort());
+  port.onMessage.addListener((message: unknown) => {
+    if (started || controller.signal.aborted) return;
+    started = true;
+    if (!isChatRequest(message)) {
+      post(port, { type: 'error', message: 'The chat request was not understood.' });
+      return;
+    }
+    const request = copyChatRequest(message);
+    const send = (event: ChatEvent) => {
+      if (!controller.signal.aborted) post(port, event);
+    };
+    void loadSettings()
+      .then((settings) => {
+        if (controller.signal.aborted) return;
+        return runChat(
+          request,
+          settings,
+          getProvider(settings.chat.provider),
+          send,
+          controller.signal,
+        );
+      })
+      .catch((err: unknown) => {
+        send({ type: 'error', message: errorMessage(err, 'Could not load settings.') });
+      });
+  });
 }
 
 export default defineBackground(() => {
@@ -190,6 +278,10 @@ export default defineBackground(() => {
   });
 
   extension().runtime.onConnect.addListener((port) => {
+    if (port.name === CHAT_PORT) {
+      handleChatPort(port);
+      return;
+    }
     if (port.name === TEST_PORT) {
       const controller = new AbortController();
       let started = false;

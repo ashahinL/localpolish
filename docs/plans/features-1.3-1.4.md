@@ -137,10 +137,15 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Saves and startup pruning keep the 50 most recently updated valid chats. Records expire at `updatedAt <= now - 30 days`. Reads exclude expired records and sort by descending `updatedAt`, then ascending id. Stored records are validated, unknown fields are removed, and duplicate ids keep the newest valid record. Each read returns fresh plain objects. History stores plain text and no provider or model choice.
   - Decision: cap each complete serialized record at 128 KiB in UTF-8, including attachment, title, timestamps, id, and turns. Fifty records use at most about 6.25 MiB plus array framing. Oversized saves throw without truncation or replacing the stored chat. This is separate from the 256 KiB conversation input and 1 MiB output limits. An answer can still be shown when it exceeds the history save cap. T23d must show the save error without losing the answer.
   - The orchestrator reviewed code, tests, and notes. Full local gates passed on 22 October 2026: lint, typecheck, formatting, build, 741 unit tests passed with 2 skipped, and 208 e2e tests. The bridge lifecycle fixture needed a no-op `onStartup` listener. Version stays 1.3.0. Comment Sicko was skipped because this session cannot launch that named reviewer.
-- [ ] **T23d. Side panel chat UI.** Art lane (Claude Opus). Depends on: T23a, T23b, T23c.
-  - The panel layout: the attached selection, the messages, the quick asks, the input box, and the history list.
-  - Markdown rendering with no raw HTML. Use a small, well-known Markdown library and sanitize, or render a safe subset.
-  - Copy and Insert on each answer. The chat provider picker.
+- [x] **T23d. Side panel chat UI.** Implemented, reviewed, and verified on base `fc9370b`. Full automated checks and the real-panel visual check passed. Brief: [T23d-side-panel.md](../briefs/T23d-side-panel.md).
+  - Panel: History and New chat, independent chat provider and model controls, the attached selection with title and full URL, turns, quick asks, composer, Stop, Retry, and Copy. Enter sends and Shift+Enter adds a line. Insert follows in T23f. History failures keep the answer visible. Oversized input offers a new chat with the last answer.
+  - Runtime: `CHAT_PORT` accepts only this extension's `sidepanel.html`. The worker validates turns and attachment fields, builds the system prompt, selects chat settings, counts Usage, and streams raw Markdown. It aborts on disconnect, caps UTF-8 output at 1 MiB, and times out at 180 seconds. Fix shares only the output byte counter and retains its existing behavior.
+  - Markdown uses a safe Preact subset without raw HTML or automatic remote images. Links allow http, https, and mailto. Quotes and inline nesting are bounded, with deeper content retained as text. Forward-search caching avoids repeated scans of unmatched markers.
+  - Review fixes: settings writes now persist the full displayed chat choice, a failed save blocks sending, and retry can recover. Reads and writes use generation checks to reject stale reads. Port tests exercise the real chat runtime and fake network traffic. Settings-failure browser tests block all native connections and non-mock fetches. Composer drafts reset for each new chat. History times use Cairo time.
+  - T23e must write `chat-pending` in session storage as `{sequence, tabId, attachment?}`. The panel reads it before opening and follows later changes. Fresh sequences cancel the running turn and start a new chat. WXT generates `side_panel.default_path = sidepanel.html` and the `sidePanel` permission. Version remains 1.3.0.
+  - Verified by the orchestrator on 22 October 2026, about 06:18 Cairo time: lint, typecheck, formatting, build, 782 unit tests passed with 2 skipped, and 218 e2e tests. This includes all 10 chat browser tests and both settings-failure regressions. Code, test, and docs reviews are complete. Comment Sicko was skipped because this session cannot launch that named reviewer.
+  - Native UI verification passed on 22 October 2026, about 11:28 Cairo time, after the owner unlocked the Mac. The actual Chromium side panel showed the attachment and metadata, rendered a mock answer with a heading, list, emphasis, and inline code, and listed the saved chat in History. The Copy action was exercised. Only the local mock provider was called. The disposable browser and server were stopped. The temporary reproduction harness is `/tmp/localpolish-t23d-visual.mjs`.
+  - Reusable skill candidates from Claude: extension-page screenshots, parser stress checks, and an e2e provider guard. The provider guard is worth extracting into a shared test helper if reused. The parser checks belong in a short checklist. No skill was created.
 - [ ] **T23e. Entry points.** Sol medium. Depends on: T23a, T23d.
   - The selection sparkle in the content script. Reuse `FloatingButton`. Skip blocked sites, text fields and short selections.
   - The context menu, the shortcut and the toolbar popup button.
@@ -166,12 +171,12 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current base commit: `1157244` (T23b). T23c and this handoff are in the following task commit. Released version: `v1.3.0`.
+- Current base commit: `fc9370b` (T23c). T23d and this handoff are in the following task commit. Review, automated gates, and native UI inspection passed. Released version: `v1.3.0`.
 - Released: [LocalPolish 1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0), zip SHA-256 `f14d71e0…c3`. Notes: [docs/releases/1.3.0.md](../releases/1.3.0.md).
-- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a, T23b, T23c. T21b (OpenCode) is in the Backlog.
-- Last checks: T23c full local gates passed on 22 October 2026: lint, typecheck, formatting, build, 741 unit tests passed with 2 skipped, and 208 e2e tests. Code, tests, and docs were reviewed. Comment Sicko was skipped because this session cannot launch that named reviewer.
+- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a, T23b, T23c, T23d. T21b (OpenCode) is in the Backlog.
+- Last checks: T23d full local gates passed on 22 October 2026, about 06:18 Cairo time: lint, typecheck, formatting, build, 782 unit tests passed with 2 skipped, and 218 e2e tests. Code, tests, and docs were reviewed. Comment Sicko was skipped because this session cannot launch that named reviewer.
 - Still the owner's to schedule: the paid bench check of the keep line, and the Windows agy login (not verified).
-- 1.4.0 in progress. T23a passed all four entry points. T23b is the provider, prompt and settings foundation for chat. T23c history is complete. Panel UI, entry points and insertion are not started.
-- Next task: T23d. T23b is finished. Choose fleet routing by task size, not the historical model labels.
+- 1.4.0 in progress. T23a-d are complete. T23d passed the native UI check after the Mac was unlocked. Entry points and insertion are not started.
+- Next task: T23e. Choose fleet routing by task size, not the historical model labels.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
-- Active processes: none. T23c checks have finished. The disposable T23a harness remains in `/private/tmp/localpolish-t23a-spike/` and may disappear after a reboot.
+- Active processes: none. T23d checks finished and the visual browser and mock server were stopped. The disposable T23a harness remains in `/private/tmp/localpolish-t23a-spike/` and may disappear after a reboot.
