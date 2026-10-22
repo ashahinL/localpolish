@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: in progress. All 1.3.0 build tasks are done (T21a, T21c, T21d, T22a-c). T24 waits for the owner's agy login and hand check. OpenCode moved to the backlog (owner, 22 October 2026).
+Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 (T23, chat) waits for the owner's go-ahead.
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -86,7 +86,7 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## 1.3.0 release (T24)
 
-- [ ] **T24. Release 1.3.0.** Follow `RELEASING.md`. The notes say: run `npm run bridge:install` again only if you want Antigravity. The owner hand-checks Fix with Antigravity and an Arabic draft with Arabic off.
+- [x] **T24. Release 1.3.0.** Follow `RELEASING.md`. The notes say: run `npm run bridge:install` again only if you want Antigravity. The owner hand-checks Fix with Antigravity and an Arabic draft with Arabic off.
 
 ## 1.4.0: the assistant chat (T23)
 
@@ -154,10 +154,11 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current commit: `3fb3b53`. T21d is implemented and uncommitted, waiting for the owner to review.
-- Finished: T21a (spike), T22a, T22b, T21c (Antigravity provider), T22c, T21d (Antigravity model and effort). Popup screenshots were retaken for T22c.
-- Last checks (T21d): targeted tests (172 passed), full unit tests (668 passed, 2 skipped), lint, typecheck, Prettier, and build passed. Browser tests are blocked by the macOS Codex sandbox. The owner must run `npm run test:e2e` outside the sandbox.
-- The Antigravity live check is done (see T21c). Still the owner's to schedule: the paid bench check of the keep line.
-- Next task: owner review and browser checks for T21d, then T24 (release 1.3.0) after the owner's hand check. T23 (chat) work can start before the release.
+- Current commit: `8fa485d` (Version 1.3.0), tag `v1.3.0`, plus the release record commit after it.
+- Released: [LocalPolish 1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0), zip SHA-256 `f14d71e0…c3`. Notes: [docs/releases/1.3.0.md](../releases/1.3.0.md).
+- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24. T21b (OpenCode) is in the Backlog.
+- Last checks: full gates green on `59721e6` (668 unit passed, 2 skipped; 208 e2e), CI and platforms green. The downloaded zip matched its SHA-256, its manifest says 1.3.0, and it passed the 8 Test connection browser tests.
+- Still the owner's to schedule: the paid bench check of the keep line, and the Windows agy login (not verified).
+- Next task: T23a (chat, 1.4.0), only when the owner says to start.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none.
