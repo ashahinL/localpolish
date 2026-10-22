@@ -22,6 +22,7 @@ finished but not released yet waits under Unreleased. How a version ships:
 **For contributors**
 
 - T23a–g cover chat, entry points, insertion, documentation, and the combined selection-to-answer-to-Copy-and-Insert browser check. The 1.4.0 release still needs the T25 checks. Version remains 1.3.0. See [the machine handoff](docs/handoff-1.4.md).
+- Restore the runtime benchmark compiler's output-budget module so its core smoke probes can run in CI.
 
 ## 1.3.0 — 2026-10-22
 

@@ -19,7 +19,7 @@ Insert binds the last focused supported field when a page entry opens chat. It r
 
 ## Resume point
 
-Next is **T25**, the release checks. A pre-existing CI runtime-smoke failure was reproduced: `bench/runtime/compile.mjs` omits `src/background/outputBudget`, so every core probe fails during import. Fix and verify that prerequisite before release. Keep task changes in separate commits.
+Next is **T25**, the release checks. T23h fixes the pre-existing runtime-smoke failure by adding `src/background/outputBudget` to the runtime compiler's module list. All 15 smoke scenarios then passed twice locally, including the five core probes that previously failed during import. Check the latest GitHub test and platforms runs before release. Keep task changes in separate commits.
 
 The README, privacy policy, manual checklist, changelog, release instructions, and plan index now describe Insert. The combined browser test selects fake article text, asks a local mock provider, copies its multiline answer, and inserts it into an empty textarea.
 

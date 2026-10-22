@@ -6,6 +6,7 @@ import ts from 'typescript';
 // Only core probes use compiled source. Browser probes always load dist.
 const modules = [
   'src/background/rewrite',
+  'src/background/outputBudget',
   'src/background/sse',
   'src/background/providers/cli',
   'src/content/popupAnalysis',

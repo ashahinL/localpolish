@@ -164,6 +164,8 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## 1.4.0 release (T25)
 
+- [x] **T23h. Restore runtime smoke imports.** Release prerequisite discovered during the Windows continuation. Brief: [T23h-runtime-smoke.md](../briefs/T23h-runtime-smoke.md). The runtime compiler omitted `src/background/outputBudget`, so the GitHub workflow failed before core probes ran. Added that module to the existing list. The same missing-import failure was reproduced locally before the edit. Afterward all 15 smoke scenarios passed twice through Brave, including the five previously failing core probes. Lint, formatting, and three fixture tests passed, with one macOS-only test skipped. Production code and browser configuration are unchanged. Check the latest GitHub test and platforms runs before release.
+
 - [ ] **T25. Release 1.4.0.** Follow `RELEASING.md`. Toolbar screenshots were refreshed and checked in T23g. The owner still hand-checks native entry points and insertion, and chat on a long article with a CLI provider and an API provider. CI must pass before release.
 
 ## Backlog
@@ -180,10 +182,10 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Checkpoint: `b58f7fe` implements T23f; T23g follows in its own commit. Use `git log -1 --oneline` for the exact checkpoint hash. Version remains 1.3.0; no 1.4.0 tag, zip, or release was created.
+- Checkpoint: `b58f7fe` implements T23f and `80b6930` completes T23g. T23h restores the runtime smoke compiler in its own commit. Use `git log -1 --oneline` for the exact checkpoint hash. Version remains 1.3.0; no 1.4.0 tag, zip, or release was created.
 - Completed chat tasks: T23a–g. Earlier 1.3.0 work remains released at [v1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0). OpenCode stays in the backlog.
 - Verification: full Windows gates passed as recorded in T23g. Code, test, and documentation reviews used the guard skills. Comment Sicko was skipped because this session cannot launch that named reviewer. No real provider or installed CLI was called.
-- Remaining: T25's native gesture checks, owner CLI/API checks, and release. The existing runtime-smoke CI failure needs its missing compiled module restored first. The paid language-preservation bench and Windows agy login remain unverified from earlier work.
+- Remaining: T25's native gesture checks, owner CLI/API checks, passing GitHub workflows, and release. T23h fixes the existing runtime-smoke import failure. The paid language-preservation bench and Windows agy login remain unverified from earlier work.
 - Resume instruction: the owner asked to pull and continue on Windows. Follow [the machine handoff](../handoff-1.4.md). Stop at release checks that require the owner.
 - Required gates on future code changes: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none. The final gates finished; no delegate, development server, visual browser, or mock server remains running. Temporary Mac harnesses are supplementary and are not needed to resume.
