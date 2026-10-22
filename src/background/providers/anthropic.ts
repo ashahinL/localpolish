@@ -1,3 +1,4 @@
+import { exceedsMultiTurnInput, INPUT_LIMIT_MESSAGE } from '../../core/limits';
 import { readSSE } from '../sse';
 import { readErrorDetail } from './httpError';
 import { type StreamFn } from './types';
@@ -10,11 +11,15 @@ interface AnthropicEvent {
   error?: { message?: string };
 }
 
-export const anthropicProvider: StreamFn = async (prompt, settings, onText, signal) => {
+export const anthropicProvider: StreamFn = async (messages, settings, onText, signal) => {
   if (settings.anthropicApiKey === '') {
     throw new Error('Add your Anthropic API key in LocalPolish settings.');
   }
+  if (exceedsMultiTurnInput(messages)) throw new Error(INPUT_LIMIT_MESSAGE);
 
+  const first = messages[0];
+  const system = first?.role === 'system' ? first.content : '';
+  const turns = first?.role === 'system' ? messages.slice(1) : messages;
   const res = await fetch(ANTHROPIC_URL, {
     method: 'POST',
     headers: {
@@ -27,9 +32,9 @@ export const anthropicProvider: StreamFn = async (prompt, settings, onText, sign
       model: settings.models['anthropic-api'],
       max_tokens: 4096,
       temperature: settings.temperature,
-      system: prompt.system,
+      system,
       stream: true,
-      messages: [{ role: 'user', content: prompt.user }],
+      messages: turns.map((message) => ({ role: message.role, content: message.content })),
     }),
     signal,
   });

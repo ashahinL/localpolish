@@ -1,5 +1,10 @@
 import { type LanguageId, type Mode, type Settings, type Tone } from './settings';
 
+export interface ModelMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 export const HOST_NAME = 'com.localpolish.bridge';
 export const REWRITE_PORT = 'rewrite';
 export const TEST_PORT = 'test-connection';

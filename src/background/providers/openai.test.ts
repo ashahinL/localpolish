@@ -1,9 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { type ModelMessage } from '../../core/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../../core/settings';
 import { openaiProvider } from './openai';
-import { type PromptPair } from './types';
 
-const prompt: PromptPair = { system: 'SYSTEM', user: 'USER' };
+const messages: readonly ModelMessage[] = [
+  { role: 'system', content: 'SYSTEM' },
+  { role: 'user', content: 'USER' },
+];
+const conversation: readonly ModelMessage[] = [
+  { role: 'system', content: 'SYSTEM' },
+  { role: 'user', content: 'one' },
+  { role: 'assistant', content: 'two' },
+  { role: 'user', content: 'three' },
+];
 const errorByteBudget = 8 * 1024;
 const errorCodePoints = 300;
 
@@ -54,7 +63,7 @@ function errorResponse(
 ): Promise<unknown> {
   globalThis.fetch = vi.fn(async () => response) as typeof fetch;
   return openaiProvider(
-    prompt,
+    messages,
     settings({
       openaiBaseUrl: baseUrl,
       models: { 'openai-compatible': 'llama3.2' },
@@ -84,7 +93,7 @@ describe('openaiProvider', () => {
     const onText = vi.fn();
     await expect(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -111,7 +120,7 @@ describe('openaiProvider', () => {
     const signal = new AbortController().signal;
 
     await openaiProvider(
-      prompt,
+      messages,
       settings({
         openaiBaseUrl: 'http://localhost:11434/v1/',
         models: { 'openai-compatible': 'llama3.2' },
@@ -139,6 +148,95 @@ describe('openaiProvider', () => {
     });
   });
 
+  it('sends a system, user, assistant and user list and streams the answer', async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"I "}}]}\n\n' +
+      'data: {"choices":[{"delta":{"content":"went."}}]}\n\n' +
+      'data: {"choices":[{"finish_reason":"stop"}]}\n\n' +
+      'data: [DONE]\n\n';
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => streamResponse(uneven(sse)),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+    const parts: string[] = [];
+
+    await openaiProvider(
+      conversation,
+      settings({
+        openaiBaseUrl: 'http://localhost:11434/v1',
+        models: { 'openai-compatible': 'llama3.2' },
+        temperature: 0.3,
+      }),
+      (text) => parts.push(text),
+      new AbortController().signal,
+    );
+
+    expect(parts).toEqual(['I ', 'went.']);
+    const call = fetchMock.mock.calls[0];
+    if (call === undefined) throw new Error('fetch was not called');
+    expect(JSON.parse(String(call[1]?.body))).toEqual({
+      model: 'llama3.2',
+      temperature: 0.3,
+      stream: true,
+      messages: [
+        { role: 'system', content: 'SYSTEM' },
+        { role: 'user', content: 'one' },
+        { role: 'assistant', content: 'two' },
+        { role: 'user', content: 'three' },
+      ],
+    });
+  });
+
+  it('rejects a multi-turn conversation over 256 KiB and still sends a large Fix pair', async () => {
+    const limit =
+      'This text is over the 256 KiB limit, so it was not sent. Shorten it and try again.';
+    const utf8 = new TextEncoder();
+    const bytes = (items: readonly { content: string }[]) =>
+      items.reduce((sum, item) => sum + utf8.encode(item.content).byteLength, 0);
+    const ready = settings({
+      openaiBaseUrl: 'http://localhost:11434/v1',
+      models: { 'openai-compatible': 'llama3.2' },
+    });
+    const fixed = bytes([{ content: 'S' }, { content: 'A' }, { content: 'B' }]);
+    const exact: ModelMessage[] = [
+      { role: 'system', content: 'S' },
+      { role: 'user', content: 'a'.repeat(256 * 1024 - fixed) },
+      { role: 'assistant', content: 'A' },
+      { role: 'user', content: 'B' },
+    ];
+    expect(bytes(exact)).toBe(256 * 1024);
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => streamResponse(['data: [DONE]\n\n']),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+    await openaiProvider(exact, ready, () => undefined, new AbortController().signal);
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    const emoji = '😀'.repeat(70_000);
+    const over: ModelMessage[] = [
+      { role: 'system', content: 'S' },
+      { role: 'user', content: emoji },
+      { role: 'assistant', content: 'A' },
+      { role: 'user', content: 'B' },
+    ];
+    expect(over.reduce((sum, item) => sum + item.content.length, 0)).toBeLessThan(256 * 1024);
+    expect(bytes(over)).toBeGreaterThan(256 * 1024);
+    fetchMock.mockClear();
+    await expect(
+      openaiProvider(over, ready, () => undefined, new AbortController().signal),
+    ).rejects.toThrow(limit);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const pair: ModelMessage[] = [
+      { role: 'system', content: 'S'.repeat(2000) },
+      { role: 'user', content: `<text>\n${'a'.repeat(256 * 1024)}\n</text>` },
+    ];
+    expect(bytes(pair)).toBeGreaterThan(256 * 1024);
+    fetchMock.mockClear();
+    await openaiProvider(pair, ready, () => undefined, new AbortController().signal);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it('sends a bearer token only when an API key is set', async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
       async () => streamResponse(['data: [DONE]\n\n']),
@@ -149,7 +247,7 @@ describe('openaiProvider', () => {
       openaiApiKey: 'sk-test',
     });
 
-    await openaiProvider(prompt, ready, () => undefined, new AbortController().signal);
+    await openaiProvider(messages, ready, () => undefined, new AbortController().signal);
 
     const call = fetchMock.mock.calls[0];
     if (call === undefined) throw new Error('fetch was not called');
@@ -163,7 +261,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => new Response('nope', { status: 401 })) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({ models: { 'openai-compatible': 'llama3.2' } }),
         () => undefined,
         new AbortController().signal,
@@ -178,7 +276,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => new Response('blocked', { status: 403 })) as typeof fetch;
     const ollama = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -193,7 +291,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => new Response('blocked', { status: 403 })) as typeof fetch;
     const other = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'https://api.example.com/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -207,7 +305,7 @@ describe('openaiProvider', () => {
 
   it('asks for a model name when the setting is empty', async () => {
     const message = await rejection(
-      openaiProvider(prompt, settings(), () => undefined, new AbortController().signal),
+      openaiProvider(messages, settings(), () => undefined, new AbortController().signal),
     );
     expect(message).toBe(
       'Set a model name for the OpenAI-compatible provider in LocalPolish settings.',
@@ -222,7 +320,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -245,7 +343,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({ models: { 'openai-compatible': 'llama3.2' } }),
         () => undefined,
         new AbortController().signal,
@@ -259,7 +357,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -276,7 +374,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse([sse])) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -293,7 +391,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -315,7 +413,7 @@ describe('openaiProvider', () => {
       globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
       const parts: string[] = [];
       await openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1',
           models: { 'openai-compatible': 'llama3.2' },
@@ -333,7 +431,7 @@ describe('openaiProvider', () => {
     }) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://example.com/v1',
           openaiApiKey: 'sk-test',
@@ -361,7 +459,7 @@ describe('openaiProvider', () => {
     globalThis.fetch = fetchMock as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: baseUrl,
           openaiApiKey: 'sk-test',
@@ -381,7 +479,7 @@ describe('openaiProvider', () => {
     }) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'not a url',
           openaiApiKey: 'sk-test',
@@ -405,7 +503,7 @@ describe('openaiProvider', () => {
       const fetchMock = vi.fn(async () => streamResponse(['data: [DONE]\n\n']));
       globalThis.fetch = fetchMock as typeof fetch;
       await openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: baseUrl,
           openaiApiKey: 'sk-test',
@@ -424,7 +522,7 @@ describe('openaiProvider', () => {
     );
     globalThis.fetch = fetchMock as typeof fetch;
     await openaiProvider(
-      prompt,
+      messages,
       settings({
         openaiBaseUrl: 'http://192.168.1.5:11434/v1',
         models: { 'openai-compatible': 'llama3.2' },
@@ -443,7 +541,7 @@ describe('openaiProvider', () => {
     }) as typeof fetch;
     const message = await rejection(
       openaiProvider(
-        prompt,
+        messages,
         settings({
           openaiBaseUrl: 'http://localhost:11434/v1/',
           models: { 'openai-compatible': 'llama3.2' },

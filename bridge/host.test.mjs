@@ -1176,3 +1176,70 @@ send({ event: 'result', result: { status: 'SUCCESS' } });
     },
   );
 });
+
+describe('rewrite timeout', () => {
+  it('rejects a timeout past the cap before starting a CLI', async () => {
+    const bin = tempDir('lp-bin-');
+    const marker = path.join(bin, 'started');
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+fs.writeFileSync(${JSON.stringify(marker)}, 'started');
+setInterval(() => {}, 1000);
+`,
+    );
+    const host = startHost(bin, 3000);
+    host.child.stdin.write(
+      encodeMessage({
+        type: 'rewrite',
+        cli: 'claude',
+        model: 'm1',
+        system: 'S',
+        user: 'hello',
+        timeoutMs: 180_001,
+      }),
+    );
+    await host.closed;
+    expect(host.messages).toEqual([
+      {
+        type: 'error',
+        message: 'timeoutMs must be a positive whole number of milliseconds up to 180000.',
+      },
+    ]);
+    expect(fs.existsSync(marker)).toBe(false);
+  });
+
+  it('uses a short supplied timeout and cleans up', async () => {
+    const bin = tempDir('lp-bin-');
+    const pidFile = path.join(bin, 'pid');
+    writeCli(
+      bin,
+      'claude',
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+fs.writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+setInterval(() => {}, 1000);
+`,
+    );
+    const host = startHost(bin, 8000);
+    host.child.stdin.write(
+      encodeMessage({
+        type: 'rewrite',
+        cli: 'claude',
+        model: 'm1',
+        system: 'S',
+        user: 'hello',
+        timeoutMs: 2000,
+      }),
+    );
+    const pid = await waitForPid(pidFile);
+    pids.push(pid);
+    const code = await host.closed;
+    expect(code).toBe(0);
+    expect(host.messages).toEqual([{ type: 'error', message: 'Timed out after 2 seconds.' }]);
+    expect(fs.readdirSync(host.hostTemp)).toEqual([]);
+    expect(() => process.kill(pid, 0)).toThrow();
+  }, 10_000);
+});

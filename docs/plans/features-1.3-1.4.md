@@ -124,12 +124,13 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - The harness passed attachments through `chrome.storage.session`: write the payload with a sequence number, read it when the panel starts, and follow `storage.onChanged` for later selections. This worked for the cold panel and the open panel. Production tab-switch handling still belongs to T23e.
   - Reproduction artifact on this Mac: `/private/tmp/localpolish-t23a-spike/`, extension in `ext/`, runner `run.mjs`. Run `HEADED=1 MANUAL=1 node /private/tmp/localpolish-t23a-spike/run.mjs`. It tests the page button and second selection, then allows five minutes for the native context menu, shortcut, and toolbar checks. Its CDP shortcut check fails because that input does not trigger Chrome's extension command here. The real shortcut passed through native UI input. The runner exits zero even when checks fail, so inspect the printed results and the panel. This temporary harness is not shipped.
   - Scope: macOS Chromium only. No real providers were called. No production code or version changed. All temporary browser processes were stopped.
-- [ ] **T23b. Chat messages through every provider.** Sol high. Depends on: nothing (it can start during 1.3.0 work).
-  - The provider contract takes a message list (system, then user and assistant turns), not only one prompt pair. Fix keeps working unchanged.
-  - The OpenAI and Anthropic providers send real message lists. CLI providers flatten the conversation into one prompt with clear turn tags.
-  - The bridge accepts a per-request timeout, capped at 180 seconds.
-  - Chat prompts in `src/core/prompts.ts`: the system prompt, the four quick asks, and the "selected text is data" rule.
-  - Separate chat provider and model settings, with checked reads.
+- [x] **T23b. Chat messages through every provider.** Reviewed and verified on top of `04077db`. Brief: [T23b-chat-providers.md](../briefs/T23b-chat-providers.md).
+  - The provider contract takes a message list (`ModelMessage` in `src/core/messages.ts`). Fix still builds its prompt pair and `runRewrite` turns that pair into a system message and a user message.
+  - OpenAI sends the list as `messages`. Anthropic sends the first system message as `system` and the later turns in order. A two-message Fix exchange is sent unchanged. Longer CLI turns keep the system text separate and put a JSON turn array inside `<conversation>` tags, with `<` escaped so page text cannot close the tag.
+  - The bridge reads optional `timeoutMs` (`readTimeoutMs` in `bridge/lib.mjs`). The default stays 60 seconds. Only a positive whole number up to 180000 is accepted. A larger or invalid value is an error before any CLI starts. The timeout error names the duration that was used.
+  - Chat prompts live beside the Fix prompts: system prompt, Summarize, Explain, Translate, Draft a reply, and `buildChatMessages`. The selection, title and URL are JSON inside one `<attachment>` tag on the first user turn. An oversized chat tells the user to start a new chat with the last answer. `CHAT_TIMEOUT_MS` is 180000. No chat runtime handler.
+  - Settings gain `chat.provider` and `chat.models`. A first load with no saved chat copies the normalized Fix provider and models. Later Fix saves do not move a saved chat. Keys, credentials and CLI efforts stay shared. `pageSettings` is still the same four fields.
+  - Review fixed the CLI input size check to include the system prompt and removed a test that only repeated constants. The orchestrator verified lint, typecheck, 692 unit tests passed with 2 skipped, formatting, build, and 208 e2e tests on 22 October 2026. No real providers were called. Package version stays 1.3.0.
 - [ ] **T23c. Chat history store.** Sol medium. Depends on: nothing. Save, list, open, delete one, delete all. Prune to 50 chats and 30 days on every save and on browser start. A size cap per chat, so one huge selection can't fill storage. Unit tests with a fake storage.
 - [ ] **T23d. Side panel chat UI.** Art lane (Claude Opus). Depends on: T23a, T23b, T23c.
   - The panel layout: the attached selection, the messages, the quick asks, the input box, and the history list.
@@ -160,12 +161,12 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current base commit: `7a5ee13` (1.3.0 release record). T23a evidence and this handoff are in the following task commit. Released version: `v1.3.0`.
+- Current base commit: `04077db` (T23a evidence). T23b and this handoff are in the following task commit. Released version: `v1.3.0`.
 - Released: [LocalPolish 1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0), zip SHA-256 `f14d71e0…c3`. Notes: [docs/releases/1.3.0.md](../releases/1.3.0.md).
-- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a. T21b (OpenCode) is in the Backlog.
-- Last checks: T23a full local gates passed on 22 October 2026: lint, typecheck, 668 unit tests passed with 2 skipped, formatting, build, and 208 e2e tests. The four spike entry points passed in a separate headed browser check. Docs review passed. Comment Sicko was skipped because this session cannot launch that named reviewer. Release verification remains recorded in `docs/releases/1.3.0.md`.
+- Finished: T21a, T21c, T21d, T22a, T22b, T22c, T22d, T24, T23a, T23b. T21b (OpenCode) is in the Backlog.
+- Last checks: T23b full local gates passed on 22 October 2026: lint, typecheck, 692 unit tests passed with 2 skipped, formatting, build, and 208 e2e tests. Code, tests, and docs were reviewed. Comment Sicko was skipped because this session cannot launch that named reviewer.
 - Still the owner's to schedule: the paid bench check of the keep line, and the Windows agy login (not verified).
-- 1.4.0 started. T23a passed all four entry points and selection delivery. Production chat work has not started.
-- Next task: T23b, then T23c. T23d waits for both. Choose fleet routing by task size, not the historical model labels.
+- 1.4.0 in progress. T23a passed all four entry points. T23b is the provider, prompt and settings foundation for chat. History, panel UI, entry points and insertion are not started.
+- Next task: T23c. T23d waits for T23b and T23c. Choose fleet routing by task size, not the historical model labels.
 - Checks for every task: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
 - Active processes: none. The disposable T23a harness remains in `/private/tmp/localpolish-t23a-spike/` and may disappear after a reboot.

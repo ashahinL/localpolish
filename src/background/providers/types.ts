@@ -1,14 +1,15 @@
+import { type ModelMessage } from '../../core/messages';
 import { type Settings } from '../../core/settings';
 
-export interface PromptPair {
-  system: string;
-  user: string;
+export interface StreamOptions {
+  timeoutMs?: number;
 }
 
 export type StreamFn = (
-  prompt: PromptPair,
+  messages: readonly ModelMessage[],
   settings: Settings,
-  onText: (t: string) => void,
+  onText: (text: string) => void,
   signal: AbortSignal,
   onModel?: (model: string) => void,
+  options?: StreamOptions,
 ) => Promise<void>;

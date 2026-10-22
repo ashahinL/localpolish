@@ -28,3 +28,24 @@ export function exceedsInputLimit(text: string): boolean {
   if (text.length > MAX_INPUT_BYTES) return true;
   return utf8.encode(text).byteLength > MAX_INPUT_BYTES;
 }
+
+export function exceedsConversationLimit(messages: readonly { content: string }[]): boolean {
+  let total = 0;
+  for (const message of messages) {
+    const text = message.content;
+    if (text.length > MAX_INPUT_BYTES) return true;
+    total += utf8.encode(text).byteLength;
+    if (total > MAX_INPUT_BYTES) return true;
+  }
+  return false;
+}
+
+// Fix uses this two-message shape and checks its raw text limit before wrapping.
+export function exceedsMultiTurnInput(
+  messages: readonly { role: string; content: string }[],
+): boolean {
+  const first = messages[0];
+  const second = messages[1];
+  if (messages.length === 2 && first?.role === 'system' && second?.role === 'user') return false;
+  return exceedsConversationLimit(messages);
+}

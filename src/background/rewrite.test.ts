@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../core/settings';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
+import { buildPrompt } from '../core/prompts';
 import { recordUsage } from '../core/usage';
 import { BridgeMissingError, cliProvider } from './providers/cli';
 import { openaiProvider } from './providers/openai';
@@ -221,8 +222,11 @@ describe('runRewrite', () => {
   );
 
   it('posts each chunk and then the cleaned text', async () => {
-    const stream: StreamFn = async (prompt, _settings, onText) => {
-      expect(prompt.user).toContain('<text>\ni went home\n</text>');
+    const stream: StreamFn = async (sent, _settings, onText) => {
+      expect(sent).toEqual([
+        { role: 'system', content: buildPrompt('fix', 'polite', 'i went home').system },
+        { role: 'user', content: '<text>\ni went home\n</text>' },
+      ]);
       onText('Here is the text:\n');
       onText('I went home.');
     };
@@ -385,8 +389,13 @@ describe('runRewrite', () => {
       expect(new TextEncoder().encode(text).byteLength).toBe(262144 + bytesFromExact);
 
       let seen = '';
-      const stream = vi.fn<StreamFn>(async (prompt, _settings, onText) => {
-        seen = prompt.user;
+      const stream = vi.fn<StreamFn>(async (sent, _settings, onText) => {
+        const user = sent.find((message) => message.role === 'user');
+        seen = user?.content ?? '';
+        expect(sent[0]).toEqual({
+          role: 'system',
+          content: buildPrompt('fix', 'polite', text).system,
+        });
         onText('ok');
       });
       const events: RewriteEvent[] = [];
@@ -588,8 +597,14 @@ describe('testConnection', () => {
   });
 
   it('returns the cleaned sample and how long it took', async () => {
-    const stream: StreamFn = async (prompt, _settings, onText) => {
-      expect(prompt.user).toContain('<text>\nthis are a test sentence\n</text>');
+    const stream: StreamFn = async (sent, _settings, onText) => {
+      expect(sent).toEqual([
+        {
+          role: 'system',
+          content: buildPrompt('fix', 'polite', 'this are a test sentence').system,
+        },
+        { role: 'user', content: '<text>\nthis are a test sentence\n</text>' },
+      ]);
       onText('This is a test sentence.');
     };
 

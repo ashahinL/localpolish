@@ -1,3 +1,4 @@
+import { exceedsMultiTurnInput, INPUT_LIMIT_MESSAGE } from '../../core/limits';
 import { readSSE } from '../sse';
 import { readErrorDetail } from './httpError';
 import { type StreamFn } from './types';
@@ -14,7 +15,7 @@ export function isLoopbackHost(hostname: string): boolean {
   );
 }
 
-export const openaiProvider: StreamFn = async (prompt, settings, onText, signal) => {
+export const openaiProvider: StreamFn = async (messages, settings, onText, signal) => {
   const model = settings.models['openai-compatible'];
   if (model === '') {
     throw new Error('Set a model name for the OpenAI-compatible provider in LocalPolish settings.');
@@ -43,6 +44,8 @@ export const openaiProvider: StreamFn = async (prompt, settings, onText, signal)
     headers.authorization = `Bearer ${settings.openaiApiKey}`;
   }
 
+  if (exceedsMultiTurnInput(messages)) throw new Error(INPUT_LIMIT_MESSAGE);
+
   let res: Response;
   try {
     res = await fetch(`${baseUrl}/chat/completions`, {
@@ -52,10 +55,7 @@ export const openaiProvider: StreamFn = async (prompt, settings, onText, signal)
         model,
         temperature: settings.temperature,
         stream: true,
-        messages: [
-          { role: 'system', content: prompt.system },
-          { role: 'user', content: prompt.user },
-        ],
+        messages: messages.map((message) => ({ role: message.role, content: message.content })),
       }),
       signal,
     });

@@ -322,3 +322,128 @@ describe('language settings', () => {
     });
   });
 });
+
+describe('chat settings', () => {
+  it('copies stored Fix choices on first load and does not alias the model maps', async () => {
+    const storedModels = {
+      'claude-cli': 'opus',
+      'antigravity-cli': 'gemini-3.8-flash-high',
+      'openai-compatible': 'local-model',
+    };
+    memory.set('settings', { provider: 'openai-compatible', models: storedModels });
+    const loaded = await loadSettings();
+    storedModels['claude-cli'] = 'changed';
+    expect(loaded.provider).toBe('openai-compatible');
+    expect(loaded.models['claude-cli']).toBe('opus');
+    expect(loaded.models['antigravity-cli']).toBe('gemini-3.8-flash');
+    expect(loaded.efforts['antigravity-cli']).toBe('high');
+    expect(loaded.models['openai-compatible']).toBe('local-model');
+    expect(loaded.chat.provider).toBe('openai-compatible');
+    expect(loaded.chat.models).toEqual(loaded.models);
+    expect(loaded.chat.models).not.toBe(loaded.models);
+    expect(loaded.chat.models).not.toBe(DEFAULT_SETTINGS.chat.models);
+    expect(loaded.models).not.toBe(DEFAULT_SETTINGS.models);
+    expect(DEFAULT_SETTINGS.chat.models).not.toBe(DEFAULT_SETTINGS.models);
+    loaded.chat.models['codex-cli'] = 'changed';
+    loaded.models['codex-cli'] = 'changed-too';
+    expect(DEFAULT_SETTINGS.chat.models['codex-cli']).toBe('gpt-6-luna');
+    expect(DEFAULT_SETTINGS.models['codex-cli']).toBe('gpt-6-luna');
+    expect((await loadSettings()).chat.models['codex-cli']).toBe('gpt-6-luna');
+    expect((await loadSettings()).models['codex-cli']).toBe('gpt-6-luna');
+  });
+
+  it('keeps saved chat choices when Fix changes later', async () => {
+    await saveSettings({
+      chat: { provider: 'grok-cli', models: { 'grok-cli': 'grok-4' } },
+    });
+    await saveSettings({
+      provider: 'anthropic-api',
+      models: { ...DEFAULT_SETTINGS.models, 'claude-cli': 'opus', 'grok-cli': 'other' },
+    });
+    const loaded = await loadSettings();
+    expect(loaded.provider).toBe('anthropic-api');
+    expect(loaded.models['claude-cli']).toBe('opus');
+    expect(loaded.models['grok-cli']).toBe('other');
+    expect(loaded.chat.provider).toBe('grok-cli');
+    expect(loaded.chat.models['grok-cli']).toBe('grok-4');
+    expect(loaded.chat.models['claude-cli']).toBe('haiku');
+    const stored = memory.get('settings') as Settings;
+    expect(Object.keys(stored.chat.models).sort()).toEqual(
+      Object.keys(DEFAULT_SETTINGS.models).sort(),
+    );
+  });
+
+  it('merges partial chat model saves and keeps the other chat models', async () => {
+    await saveSettings({ chat: { models: { 'claude-cli': 'opus' } } });
+    await saveSettings({ chat: { models: { 'codex-cli': 'gpt-6' } } });
+    const loaded = await loadSettings();
+    expect(loaded.chat.provider).toBe('codex-cli');
+    expect(loaded.chat.models['claude-cli']).toBe('opus');
+    expect(loaded.chat.models['codex-cli']).toBe('gpt-6');
+    expect(loaded.chat.models['anthropic-api']).toBe('claude-haiku-5-5');
+    loaded.chat.models['claude-cli'] = 'mutated';
+    expect((await loadSettings()).chat.models['claude-cli']).toBe('opus');
+  });
+
+  it('fills missing chat fields from normalized Fix values and drops bad data', async () => {
+    memory.set('settings', {
+      provider: 'anthropic-api',
+      models: { 'claude-cli': 'opus', 'anthropic-api': 'sonnet-custom' },
+      chat: { models: { 'codex-cli': 'custom' } },
+    });
+    const partial = await loadSettings();
+    expect(partial.chat.provider).toBe('anthropic-api');
+    expect(partial.chat.models['codex-cli']).toBe('custom');
+    expect(partial.chat.models['claude-cli']).toBe('opus');
+    expect(partial.chat.models['anthropic-api']).toBe('sonnet-custom');
+
+    memory.set('settings', {
+      provider: 'openai-compatible',
+      models: { 'openai-compatible': 'local-model' },
+      chat: ['claude-cli'],
+    });
+    const array = await loadSettings();
+    expect(array.chat.provider).toBe('openai-compatible');
+    expect(array.chat.models).toEqual(array.models);
+    expect(array.chat).not.toHaveProperty('0');
+
+    memory.set('settings', {
+      provider: 'codex-cli',
+      chat: {
+        provider: 'nope',
+        models: { 'claude-cli': 5, 'codex-cli': 'custom', bogus: 'x' },
+        extra: true,
+      },
+    });
+    const malformed = await loadSettings();
+    expect(malformed.chat.provider).toBe('codex-cli');
+    expect(malformed.chat.models['claude-cli']).toBe('haiku');
+    expect(malformed.chat.models['codex-cli']).toBe('custom');
+    expect(malformed.chat.models).not.toHaveProperty('bogus');
+    expect(malformed.chat).not.toHaveProperty('extra');
+
+    memory.set('settings', {
+      provider: 'grok-cli',
+      chat: { provider: 'claude-cli', models: [] },
+    });
+    const badModels = await loadSettings();
+    expect(badModels.chat.provider).toBe('claude-cli');
+    expect(badModels.chat.models).toEqual(badModels.models);
+    expect(badModels.models['grok-cli']).toBe('');
+  });
+
+  it('keeps page settings to the same four fields when chat is stored', () => {
+    expect(
+      pageSettings({
+        chat: { provider: 'grok-cli', models: { 'claude-cli': 'opus' } },
+        languages: { ar: false },
+        blocklist: ['example.com'],
+      }),
+    ).toEqual({
+      blocklist: ['example.com'],
+      idleFix: true,
+      defaultMode: 'fix',
+      languages: { en: true, ar: false, franco: true, other: true },
+    });
+  });
+});

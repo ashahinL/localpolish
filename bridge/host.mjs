@@ -9,7 +9,6 @@ import {
   MAX_OUTPUT_BYTES,
   MAX_USER_PROMPT_BYTES,
   OUTPUT_LIMIT_MESSAGE,
-  TIMEOUT_MS,
 } from './constants.mjs';
 import {
   agyHomeFor,
@@ -25,8 +24,10 @@ import {
   findOnPath,
   GROK_IMPORTS_OFF,
   parseLine,
+  readTimeoutMs,
   resolveCommand,
   splitText,
+  timeoutErrorMessage,
 } from './lib.mjs';
 
 const CLI_NAMES = ['claude', 'codex', 'grok', 'agy'];
@@ -99,6 +100,13 @@ function handleRewrite(msg) {
   const effort = typeof msg.effort === 'string' ? msg.effort : '';
   const system = typeof msg.system === 'string' ? msg.system : '';
   const user = typeof msg.user === 'string' ? msg.user : '';
+  let timeoutMs;
+  try {
+    timeoutMs = readTimeoutMs(msg.timeoutMs);
+  } catch (err) {
+    sendAndExit({ type: 'error', message: /** @type {Error} */ (err).message });
+    return;
+  }
   if (user.length > MAX_USER_PROMPT_BYTES || Buffer.byteLength(user) > MAX_USER_PROMPT_BYTES) {
     sendAndExit({ type: 'error', message: INPUT_LIMIT_MESSAGE });
     return;
@@ -258,8 +266,8 @@ function handleRewrite(msg) {
 
   runTimer = setTimeout(() => {
     killChild();
-    finish({ type: 'error', message: 'Timed out after 60 seconds.' });
-  }, TIMEOUT_MS);
+    finish({ type: 'error', message: timeoutErrorMessage(timeoutMs) });
+  }, timeoutMs);
 
   onDisconnect = () => {
     if (settled) return;

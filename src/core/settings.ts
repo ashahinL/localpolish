@@ -18,6 +18,11 @@ export type Tone = 'polite' | 'formal' | 'casual' | 'angry-civil';
 
 export type DefaultMode = 'fix' | 'rephrase' | 'shorter';
 
+export interface ChatSettings {
+  provider: ProviderId;
+  models: Record<ProviderId, string>;
+}
+
 export interface Settings {
   provider: ProviderId;
   models: Record<ProviderId, string>;
@@ -30,18 +35,21 @@ export interface Settings {
   idleFix: boolean;
   languages: Record<LanguageId, boolean>;
   blocklist: string[];
+  chat: ChatSettings;
 }
+
+const MODEL_DEFAULTS: Record<ProviderId, string> = {
+  'claude-cli': 'haiku',
+  'codex-cli': 'gpt-6-luna',
+  'grok-cli': '',
+  'antigravity-cli': 'gemini-3.8-flash',
+  'openai-compatible': '',
+  'anthropic-api': 'claude-haiku-5-5',
+};
 
 export const DEFAULT_SETTINGS: Settings = {
   provider: 'codex-cli',
-  models: {
-    'claude-cli': 'haiku',
-    'codex-cli': 'gpt-6-luna',
-    'grok-cli': '',
-    'antigravity-cli': 'gemini-3.8-flash',
-    'openai-compatible': '',
-    'anthropic-api': 'claude-haiku-5-5',
-  },
+  models: { ...MODEL_DEFAULTS },
   efforts: {
     'claude-cli': 'low',
     'codex-cli': 'none',
@@ -56,6 +64,10 @@ export const DEFAULT_SETTINGS: Settings = {
   idleFix: true,
   languages: { en: true, ar: true, franco: true, other: true },
   blocklist: [],
+  chat: {
+    provider: 'codex-cli',
+    models: { ...MODEL_DEFAULTS },
+  },
 };
 
 const STORAGE_KEY = 'settings';
@@ -80,22 +92,29 @@ function isDefaultMode(value: unknown): value is DefaultMode {
   return value === 'fix' || value === 'rephrase' || value === 'shorter';
 }
 
+function isProviderId(value: unknown): value is ProviderId {
+  return typeof value === 'string' && Object.hasOwn(DEFAULT_SETTINGS.models, value);
+}
+
+function checkedModels(value: unknown): Partial<Record<ProviderId, string>> | undefined {
+  if (!isRecord(value)) return undefined;
+  const models: Partial<Record<ProviderId, string>> = {};
+  for (const [key, model] of Object.entries(value)) {
+    if (isProviderId(key) && typeof model === 'string') models[key] = model;
+  }
+  return models;
+}
+
+function cloneChat(provider: ProviderId, models: Record<ProviderId, string>): ChatSettings {
+  return { provider, models: { ...models } };
+}
+
 function storedPatch(value: unknown): Partial<Settings> {
   if (!isRecord(value)) return {};
   const patch: Partial<Settings> = {};
-  if (
-    typeof value.provider === 'string' &&
-    Object.hasOwn(DEFAULT_SETTINGS.models, value.provider)
-  ) {
-    patch.provider = value.provider as ProviderId;
-  }
-  if (isRecord(value.models)) {
-    patch.models = Object.fromEntries(
-      Object.entries(value.models).filter(
-        ([key, model]) => Object.hasOwn(DEFAULT_SETTINGS.models, key) && typeof model === 'string',
-      ),
-    ) as Settings['models'];
-  }
+  if (isProviderId(value.provider)) patch.provider = value.provider;
+  const models = checkedModels(value.models);
+  if (models !== undefined) patch.models = models as Settings['models'];
   if (isRecord(value.efforts)) {
     patch.efforts = Object.fromEntries(
       Object.entries(value.efforts).filter(
@@ -143,6 +162,7 @@ function storedPatch(value: unknown): Partial<Settings> {
 }
 
 function mergeSettings(patch: Partial<Settings>): Settings {
+  const chat = patch.chat ?? DEFAULT_SETTINGS.chat;
   return {
     ...DEFAULT_SETTINGS,
     ...patch,
@@ -158,12 +178,23 @@ function mergeSettings(patch: Partial<Settings>): Settings {
     blocklist: Array.isArray(patch.blocklist)
       ? [...patch.blocklist]
       : [...DEFAULT_SETTINGS.blocklist],
+    chat: cloneChat(chat.provider, chat.models),
   };
+}
+
+function chatFromStored(raw: unknown, fix: Settings): ChatSettings {
+  const stored = isRecord(raw) && isRecord(raw.chat) ? raw.chat : undefined;
+  const provider =
+    stored !== undefined && isProviderId(stored.provider) ? stored.provider : fix.provider;
+  const models = stored === undefined ? undefined : checkedModels(stored.models);
+  return cloneChat(provider, { ...fix.models, ...models });
 }
 
 export async function loadSettings(): Promise<Settings> {
   const stored = await storageLocal().get(STORAGE_KEY);
-  return mergeSettings(storedPatch(stored[STORAGE_KEY]));
+  const raw = stored[STORAGE_KEY];
+  const fix = mergeSettings(storedPatch(raw));
+  return { ...fix, chat: chatFromStored(raw, fix) };
 }
 
 export function pageSettings(value: unknown): PageSettings {
@@ -185,23 +216,38 @@ function withSettingsLock<T>(work: () => Promise<T>): Promise<T> {
   return result;
 }
 
+type ChatPatch = {
+  provider?: ProviderId;
+  models?: Partial<Record<ProviderId, string>>;
+};
+
 export async function saveSettings(
-  patch: Omit<Partial<Settings>, 'languages'> & { languages?: Partial<Settings['languages']> },
+  patch: Omit<Partial<Settings>, 'languages' | 'chat'> & {
+    languages?: Partial<Settings['languages']>;
+    chat?: ChatPatch;
+  },
 ): Promise<void> {
   return withSettingsLock(async () => {
     const current = await loadSettings();
+    const { chat: chatPatch, ...rest } = patch;
+    const provider =
+      chatPatch !== undefined && isProviderId(chatPatch.provider)
+        ? chatPatch.provider
+        : current.chat.provider;
+    const modelUpdates = chatPatch === undefined ? {} : (checkedModels(chatPatch.models) ?? {});
     const next = mergeSettings({
       ...current,
-      ...patch,
+      ...rest,
       models: {
         ...current.models,
-        ...patch.models,
+        ...rest.models,
       },
-      languages: { ...current.languages, ...patch.languages },
+      languages: { ...current.languages, ...rest.languages },
       efforts: {
         ...current.efforts,
-        ...patch.efforts,
+        ...rest.efforts,
       },
+      chat: cloneChat(provider, { ...current.chat.models, ...modelUpdates }),
     });
     await storageLocal().set({ [STORAGE_KEY]: next });
   });

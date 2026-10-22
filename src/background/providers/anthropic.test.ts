@@ -1,9 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { type ModelMessage } from '../../core/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../../core/settings';
 import { anthropicProvider } from './anthropic';
-import { type PromptPair } from './types';
 
-const prompt: PromptPair = { system: 'SYSTEM', user: 'USER' };
+const messages: readonly ModelMessage[] = [
+  { role: 'system', content: 'SYSTEM' },
+  { role: 'user', content: 'USER' },
+];
+const conversation: readonly ModelMessage[] = [
+  { role: 'system', content: 'SYSTEM' },
+  { role: 'user', content: 'one' },
+  { role: 'assistant', content: 'two' },
+  { role: 'user', content: 'three' },
+];
 const originalFetch = globalThis.fetch;
 const errorByteBudget = 8 * 1024;
 const errorCodePoints = 300;
@@ -50,7 +59,7 @@ async function rejection(pending: Promise<unknown>): Promise<string> {
 function errorResponse(response: Response): Promise<unknown> {
   globalThis.fetch = vi.fn(async () => response) as typeof fetch;
   return anthropicProvider(
-    prompt,
+    messages,
     settings({ anthropicApiKey: 'sk-ant' }),
     () => undefined,
     new AbortController().signal,
@@ -77,7 +86,7 @@ describe('anthropicProvider', () => {
     const onText = vi.fn();
     await expect(
       anthropicProvider(
-        prompt,
+        messages,
         settings({ anthropicApiKey: 'sk-ant' }),
         onText,
         new AbortController().signal,
@@ -105,7 +114,7 @@ describe('anthropicProvider', () => {
     const signal = new AbortController().signal;
 
     await anthropicProvider(
-      prompt,
+      messages,
       settings({ anthropicApiKey: 'sk-ant', temperature: 0.2 }),
       (text) => parts.push(text),
       signal,
@@ -133,13 +142,98 @@ describe('anthropicProvider', () => {
     });
   });
 
+  it('sends the first system message separately and streams the later turns', async () => {
+    const sse = [
+      'event: content_block_delta\n',
+      'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"I "}}\n\n',
+      'event: content_block_delta\n',
+      'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"went."}}\n\n',
+      'event: message_stop\n',
+      'data: {"type":"message_stop"}\n\n',
+    ].join('');
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => streamResponse(uneven(sse)),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+    const parts: string[] = [];
+
+    await anthropicProvider(
+      conversation,
+      settings({ anthropicApiKey: 'sk-ant', temperature: 0.2 }),
+      (text) => parts.push(text),
+      new AbortController().signal,
+    );
+
+    expect(parts).toEqual(['I ', 'went.']);
+    const call = fetchMock.mock.calls[0];
+    if (call === undefined) throw new Error('fetch was not called');
+    expect(JSON.parse(String(call[1]?.body))).toEqual({
+      model: 'claude-haiku-5-5',
+      max_tokens: 4096,
+      temperature: 0.2,
+      system: 'SYSTEM',
+      stream: true,
+      messages: [
+        { role: 'user', content: 'one' },
+        { role: 'assistant', content: 'two' },
+        { role: 'user', content: 'three' },
+      ],
+    });
+  });
+
+  it('rejects a multi-turn conversation over 256 KiB and still sends a large Fix pair', async () => {
+    const limit =
+      'This text is over the 256 KiB limit, so it was not sent. Shorten it and try again.';
+    const utf8 = new TextEncoder();
+    const bytes = (items: readonly { content: string }[]) =>
+      items.reduce((sum, item) => sum + utf8.encode(item.content).byteLength, 0);
+    const ready = settings({ anthropicApiKey: 'sk-ant' });
+    const fixed = bytes([{ content: 'S' }, { content: 'A' }, { content: 'B' }]);
+    const exact: ModelMessage[] = [
+      { role: 'system', content: 'S' },
+      { role: 'user', content: 'a'.repeat(256 * 1024 - fixed) },
+      { role: 'assistant', content: 'A' },
+      { role: 'user', content: 'B' },
+    ];
+    expect(bytes(exact)).toBe(256 * 1024);
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => streamResponse(['event: message_stop\n', 'data: {"type":"message_stop"}\n\n']),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+    await anthropicProvider(exact, ready, () => undefined, new AbortController().signal);
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    const over: ModelMessage[] = [
+      { role: 'system', content: 'S' },
+      { role: 'user', content: '😀'.repeat(70_000) },
+      { role: 'assistant', content: 'A' },
+      { role: 'user', content: 'B' },
+    ];
+    expect(over.reduce((sum, item) => sum + item.content.length, 0)).toBeLessThan(256 * 1024);
+    expect(bytes(over)).toBeGreaterThan(256 * 1024);
+    fetchMock.mockClear();
+    await expect(
+      anthropicProvider(over, ready, () => undefined, new AbortController().signal),
+    ).rejects.toThrow(limit);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const pair: ModelMessage[] = [
+      { role: 'system', content: 'S'.repeat(2000) },
+      { role: 'user', content: `<text>\n${'a'.repeat(256 * 1024)}\n</text>` },
+    ];
+    expect(bytes(pair)).toBeGreaterThan(256 * 1024);
+    fetchMock.mockClear();
+    await anthropicProvider(pair, ready, () => undefined, new AbortController().signal);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it('rejects with the message from an error event', async () => {
     const sse =
       'event: error\ndata: {"type":"error","error":{"type":"api_error","message":"Overloaded"}}\n\n';
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const message = await rejection(
       anthropicProvider(
-        prompt,
+        messages,
         settings({ anthropicApiKey: 'sk-ant' }),
         () => undefined,
         new AbortController().signal,
@@ -156,7 +250,7 @@ describe('anthropicProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const message = await rejection(
       anthropicProvider(
-        prompt,
+        messages,
         settings({ anthropicApiKey: 'sk-ant' }),
         () => undefined,
         new AbortController().signal,
@@ -171,7 +265,7 @@ describe('anthropicProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const message = await rejection(
       anthropicProvider(
-        prompt,
+        messages,
         settings({ anthropicApiKey: 'sk-ant' }),
         () => undefined,
         new AbortController().signal,
@@ -189,7 +283,7 @@ describe('anthropicProvider', () => {
     globalThis.fetch = vi.fn(async () => streamResponse(uneven(sse))) as typeof fetch;
     const parts: string[] = [];
     await anthropicProvider(
-      prompt,
+      messages,
       settings({ anthropicApiKey: 'sk-ant' }),
       (text) => parts.push(text),
       new AbortController().signal,
@@ -202,7 +296,7 @@ describe('anthropicProvider', () => {
       throw new Error('fetch should not run');
     }) as typeof fetch;
     const message = await rejection(
-      anthropicProvider(prompt, settings(), () => undefined, new AbortController().signal),
+      anthropicProvider(messages, settings(), () => undefined, new AbortController().signal),
     );
     expect(message).toBe('Add your Anthropic API key in LocalPolish settings.');
   });

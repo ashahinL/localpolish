@@ -1,6 +1,35 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { MAX_NATIVE_FRAME_BYTES } from './constants.mjs';
+import { MAX_NATIVE_FRAME_BYTES, MAX_TIMEOUT_MS, TIMEOUT_MS } from './constants.mjs';
+
+const TIMEOUT_MESSAGE = 'timeoutMs must be a positive whole number of milliseconds up to 180000.';
+
+/**
+ * Omitted means the Fix default. A supplied value cannot raise the 180 second cap.
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function readTimeoutMs(value) {
+  if (value === undefined) return TIMEOUT_MS;
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    value > MAX_TIMEOUT_MS
+  ) {
+    throw new Error(TIMEOUT_MESSAGE);
+  }
+  return value;
+}
+
+/**
+ * @param {number} ms
+ * @returns {string}
+ */
+export function timeoutErrorMessage(ms) {
+  return `Timed out after ${ms / 1000} seconds.`;
+}
 
 /**
  * @param {unknown} obj

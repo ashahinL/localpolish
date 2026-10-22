@@ -5,7 +5,12 @@ import {
   MAX_OUTPUT_BYTES,
   OUTPUT_LIMIT_MESSAGE,
 } from '../core/limits';
-import { type RewriteEvent, type RewriteRequest, type TestResult } from '../core/messages';
+import {
+  type ModelMessage,
+  type RewriteEvent,
+  type RewriteRequest,
+  type TestResult,
+} from '../core/messages';
 import { buildPrompt } from '../core/prompts';
 import { type Settings } from '../core/settings';
 import { reattributeUsage, recordUsage } from '../core/usage';
@@ -45,6 +50,10 @@ export async function runRewrite(
   if (signal.aborted) return;
 
   const prompt = buildPrompt(req.mode, req.tone, req.text, req.keep);
+  const messages: readonly ModelMessage[] = [
+    { role: 'system', content: prompt.system },
+    { role: 'user', content: prompt.user },
+  ];
   let raw = '';
   let outputBytes = 0;
   let endsWithHighSurrogate = false;
@@ -89,7 +98,7 @@ export async function runRewrite(
       }
       Promise.resolve(
         stream(
-          prompt,
+          messages,
           settings,
           (text) => {
             if (inner.signal.aborted) throw new Error('Cancelled.');

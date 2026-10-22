@@ -1,4 +1,10 @@
-import { BRIDGE_MISSING, type BridgeStatus, HOST_NAME } from '../../core/messages';
+import { exceedsConversationLimit, INPUT_LIMIT_MESSAGE } from '../../core/limits';
+import {
+  BRIDGE_MISSING,
+  type BridgeStatus,
+  HOST_NAME,
+  type ModelMessage,
+} from '../../core/messages';
 import { type Settings } from '../../core/settings';
 import { type StreamFn } from './types';
 
@@ -88,11 +94,42 @@ function readPong(value: unknown): BridgeStatus | undefined {
   return { ok: true, clis: { claude, codex, grok, agy } };
 }
 
+function singleExchange(messages: readonly ModelMessage[]): boolean {
+  const first = messages[0];
+  const second = messages[1];
+  return messages.length === 2 && first?.role === 'system' && second?.role === 'user';
+}
+
+function wirePrompt(messages: readonly ModelMessage[]): { system: string; user: string } {
+  const first = messages[0];
+  if (singleExchange(messages)) {
+    return { system: first?.content ?? '', user: messages[1]?.content ?? '' };
+  }
+  const turns = first?.role === 'system' ? messages.slice(1) : messages;
+  // JSON keeps a turn inside its string. Escaping "<" stops page text from closing the tag.
+  const json = JSON.stringify(
+    turns.map((message) => ({ role: message.role, content: message.content })),
+  ).replaceAll('<', '\\u003c');
+  return {
+    system: first?.role === 'system' ? first.content : '',
+    user: `<conversation>${json}</conversation>`,
+  };
+}
+
 export function cliProvider(cli: CliName): StreamFn {
-  return (prompt, settings, onText, signal, onModel) =>
+  return (messages, settings, onText, signal, onModel, options) =>
     new Promise((resolve, reject) => {
       if (signal.aborted) {
         reject(new Error('Cancelled.'));
+        return;
+      }
+
+      const wire = wirePrompt(messages);
+      if (
+        !singleExchange(messages) &&
+        exceedsConversationLimit([{ content: wire.system }, { content: wire.user }])
+      ) {
+        reject(new Error(INPUT_LIMIT_MESSAGE));
         return;
       }
 
@@ -162,8 +199,9 @@ export function cliProvider(cli: CliName): StreamFn {
         cli,
         model: settings.models[MODEL_KEY[cli]],
         effort: settings.efforts[MODEL_KEY[cli]],
-        system: prompt.system,
-        user: prompt.user,
+        system: wire.system,
+        user: wire.user,
+        ...(options?.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       });
     });
 }

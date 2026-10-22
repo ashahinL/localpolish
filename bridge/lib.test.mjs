@@ -15,8 +15,10 @@ import {
   GROK_DENY_RULES,
   GROK_REMOVED_TOOLS,
   parseLine,
+  readTimeoutMs,
   resolveCommand,
   splitText,
+  timeoutErrorMessage,
 } from './lib.mjs';
 
 describe('encodeMessage', () => {
@@ -518,5 +520,25 @@ describe('clearAgyRun', () => {
     fs.writeFileSync(path.join(saved, 'conversation_summaries.db'), '');
     expect(() => clearAgyRun(saved, id)).not.toThrow();
     expect(fs.existsSync(path.join(saved, 'conversations', `${id}.db`))).toBe(false);
+  });
+});
+
+describe('readTimeoutMs', () => {
+  it('uses 60 seconds when the request omits a timeout', () => {
+    expect(readTimeoutMs(undefined)).toBe(60_000);
+    expect(timeoutErrorMessage(60_000)).toBe('Timed out after 60 seconds.');
+  });
+
+  it('accepts the 180 second cap and rejects anything past it', () => {
+    expect(readTimeoutMs(1)).toBe(1);
+    expect(readTimeoutMs(179_999)).toBe(179_999);
+    expect(readTimeoutMs(180_000)).toBe(180_000);
+    expect(timeoutErrorMessage(180_000)).toBe('Timed out after 180 seconds.');
+    expect(timeoutErrorMessage(2_000)).toBe('Timed out after 2 seconds.');
+    for (const value of [0, -1, 1.5, 180_001, Infinity, NaN, '60000', null, true]) {
+      expect(() => readTimeoutMs(value)).toThrow(
+        'timeoutMs must be a positive whole number of milliseconds up to 180000.',
+      );
+    }
   });
 });
