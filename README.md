@@ -58,6 +58,9 @@
 - It skips single-line inputs, search boxes, code editors, fields with spellcheck off, and text
   under four words.
 - Adding spaces or one period at the end reuses the current check. Accept keeps that ending.
+- Pick its languages: English, Arabic, Franco-Arabic (Arabic in Latin letters) and Other. A draft
+  mostly in a language that is off is skipped. In a mixed draft, parts in a language that is off
+  are left as they are. The button and the shortcut still fix every language.
   After other edits, clicking the marker cancels the old check and sends the full updated text.
 - Closing a whole-field Fix popup lets its check finish in the background. Selecting part of
   the text starts a separate request for that selection.
@@ -211,6 +214,8 @@ Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS.
 
 **Fix while I type** is on by default. When you stop typing for 3 seconds in a message field, LocalPolish runs a Fix in the background, and a small marker shows how many fixes it found. Click the marker to see the diff. If you switch to another tab before that check starts, LocalPolish waits. When you come back, it uses the text in the field you are typing in and keeps the time you already waited. A check that already started keeps going. Turn it off with the **Fix while I type** switch in the toolbar popup.
 
+Under that switch, **Languages** has EN, AR, Franco and Other. Turn one off, and Fix while I type skips drafts that are mostly in that language. In a draft that is mostly in a language that is on, the parts in a language that is off are left as they are. LocalPolish guesses the language with Chrome's built-in detector, plus a check for Franco-Arabic (Arabic written in Latin letters, like `ana 3ayez`). A short or mixed draft can be guessed wrong. The button and the shortcut always fix every language. The options page has the same four switches.
+
 The rewrite popup next to the field has three tabs: **Fix**, **Rephrase**, and **Shorter**. Fix runs when the popup opens. The Rephrase tab sends nothing by itself. Pick a tone first: **Keep tone**, **Polite**, **Formal**, **Casual**, or **Angry but civil**. Until you pick one, the last answer stays shown. Each answer is kept while the popup is open, so going back to it sends no new request. The answer streams in. The popup then shows a word diff. Removed words are red. Added words are green. Click **Final** above the diff to see only the new text, ready to select. **Changes** brings the diff back. The view you pick stays while the popup is open.
 
 LocalPolish accepts at most 256 KiB of text, counted in UTF-8 bytes. A longer selection shows an error that names the 256 KiB limit. The text is not sent, the attempt is not counted, and the text is not shortened.
@@ -229,9 +234,9 @@ To hide LocalPolish on the site you are on, turn off the **Show on** switch for 
 
 Click the pen nib icon in the toolbar (pin it from the puzzle-piece menu). Every setting is here, and changes save as you make them. A short **Saved** note shows in the header. The gear opens the full options page, which has the same settings.
 
-- **Fix while I type** and **Show on** _this site_ sit above the tabs, so they are always one click away.
+- **Fix while I type**, its **Languages**, and **Show on** _this site_ sit above the tabs, so they are always one click away.
 - **Home** shows the provider, model and effort you use, with a status pill (Bridge ready, No bridge, Key saved, No API key or Local server). **Change** jumps to the Provider tab. **Test connection** sends a short sample and shows the answer and how long it took. The default mode is Fix, Rephrase or Shorter. **Usage** lists each provider and model you have used, with its request count and a total. The options page shows the same card.
-- **Provider** has the five providers in two groups, _Your subscription · via the bridge_ and _API_. CLI providers have Model and Thinking effort pickers, and the Bridge card with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
+- **Provider** has the six providers in two groups, _Your subscription · via the bridge_ and _API_. CLI providers have Model and Thinking effort pickers (Antigravity shows effort only for models that have one), and the Bridge card with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
 - **Sites** lists the hidden sites, with remove buttons and an Add field. The current host is tagged _This tab_, and **Hide on** _host_ adds it in one click.
 - **About** shows the shortcut, **Change shortcut** (opens `chrome://extensions/shortcuts`), **All options**, a short How it works, and the version.
 
@@ -247,7 +252,7 @@ Choose a provider on the popup's **Provider** tab or on the options page. The de
 | Codex                 | Bridge to the `codex` CLI, on your ChatGPT subscription                                    | `gpt-6-luna`, effort `none`                                  |
 | Grok CLI              | Bridge to the `grok` CLI, on your SuperGrok subscription                                   | CLI default, `grok-4.7`, effort `low`                        |
 | OpenAI-compatible API | HTTP, with an optional API key. This covers OpenAI, xAI, OpenRouter, LM Studio, and Ollama | Base URL `http://localhost:11434/v1` for Ollama. Set a model |
-| Antigravity CLI       | Bridge to `agy`, through your Google account                                               | `gemini-3.8-flash-low`, model default effort                 |
+| Antigravity CLI       | Bridge to `agy`, through your Google account                                               | `gemini-3.8-flash`, effort `low`                             |
 | Anthropic API         | HTTP, with an API key                                                                      | `claude-haiku-5-5`                                           |
 
 Those defaults are the cheapest setups that scored well on a Fix benchmark. The scores are in the [Fix mode benchmark, 2026-10-17](docs/benchmarks/2026-10-17-fix-mode.md) and the [Fix prompt test](bench/README.md).

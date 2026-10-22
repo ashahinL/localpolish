@@ -6,6 +6,24 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+**Bridge users:** run `git pull` in your LocalPolish folder to get the new bridge code. To use Antigravity, also run `npm run bridge:install` again and log in once with the command it prints. Nobody else needs a reinstall.
+
+**New**
+
+- **Antigravity CLI provider.** LocalPolish can use Google's `agy` CLI with your Google account, including its free Gemini 3.8 Flash. Models are Gemini 3.8 Flash (effort Low, Medium or High), GPT-OSS 120B, Claude Sonnet 4.6 and Claude Opus 4.6. The effort picker shows only for models that have one.
+- **Languages for Fix while I type.** English, Arabic, Franco-Arabic and Other can each be turned off, in the toolbar popup and on the options page. A draft mostly in a language that is off is skipped. In a mixed draft, parts in a language that is off are left as they are. The button and the shortcut still fix every language.
+- The toolbar popup is wider (400 px), and the provider choices sit in an even grid, so no name wraps.
+
+**Safer**
+
+- Antigravity runs locked down, like the other CLIs. It gets an agent with no tools, a private home folder with its own login (so your rules and plugins don't load), and the draft only on stdin. After each answer, the bridge deletes that run's saved conversation and its generated title, and keeps only the 5 newest logs.
+- Antigravity keeps its LocalPolish login in a file in that private folder, so macOS shows no "Keychain Not Found" dialog. If you saw one during testing, click Cancel, never Reset To Defaults.
+
+**For contributors**
+
+- `docs/plans/cli-spike.md` records the lockdown spike. OpenCode is not included: its free tier refuses requests with the file tools turned off, and with them on, text on a page could make it read local files.
+- The popup screenshots are 400 px wide.
+
 ## 1.2.0 — 2026-10-21
 
 **Bridge users:** run `git pull` in your LocalPolish folder to get the new bridge code. No `npm run bridge:install` is needed.
