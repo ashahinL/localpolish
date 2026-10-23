@@ -1013,6 +1013,7 @@ const CHAT_SETTINGS = {
   chat: {
     provider: 'openai-compatible' as const,
     models: { ...DEFAULT_SETTINGS.models, 'openai-compatible': 'chat-model' },
+    efforts: { ...DEFAULT_SETTINGS.chat.efforts },
   },
 };
 

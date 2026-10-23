@@ -342,8 +342,10 @@ describe('chat settings', () => {
       'antigravity-cli': 'high',
     });
     expect(migrated.chat.efforts).not.toBe(migrated.efforts);
+    await saveSettings({ efforts: { 'codex-cli': 'low' } });
+    expect((await loadSettings()).chat.efforts['codex-cli']).toBe('medium');
     await saveSettings({ chat: { efforts: { 'codex-cli': 'high' } } });
-    expect((await loadSettings()).efforts['codex-cli']).toBe('medium');
+    expect((await loadSettings()).efforts['codex-cli']).toBe('low');
     await saveSettings({ efforts: { 'codex-cli': 'low', 'antigravity-cli': 'low' } });
     const changed = await loadSettings();
     expect(changed.chat.efforts['codex-cli']).toBe('high');

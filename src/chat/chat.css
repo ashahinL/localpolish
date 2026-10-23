@@ -225,10 +225,15 @@ button[aria-pressed='true'] {
 .model-bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-auto-flow: row dense;
   gap: 6px;
   padding: 6px 10px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
+}
+
+.model-bar:has(#chat-effort) {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 0.8fr);
 }
 
 .model-bar select,
@@ -241,11 +246,6 @@ button[aria-pressed='true'] {
 
 .model-bar .custom-choice {
   grid-column: 1 / -1;
-}
-
-.effort-label {
-  align-self: center;
-  font-size: 12px;
 }
 
 .conversation {

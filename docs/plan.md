@@ -50,7 +50,7 @@ popup shows stream, then word diff → Accept / Copy / Retry / Close
 
 The original duplicated interfaces and CLI command examples have been replaced by the source links below so this historical plan does not prescribe old behavior.
 
-- [Settings](../src/core/settings.ts): six providers, checked defaults, language and selection-chat switches, and nested chat provider/models. The default Fix provider is Codex CLI.
+- [Settings](../src/core/settings.ts): six providers, checked defaults, language and selection-chat switches, and nested chat provider/models/efforts. The default Fix provider is Codex CLI.
 - [Messages](../src/core/messages.ts): the `rewrite`, `test-connection`, and `chat` ports and their event types. Disconnecting a port cancels its request. The connection test uses its own port rather than an unowned runtime message.
 - [Provider contract](../src/background/providers/types.ts): a system/user/assistant message list. Fix adapts its existing prompt pair to two messages. APIs send real message lists; CLI chats serialize turns with the system instruction kept separate.
 - [Chat entries](../src/background/chatEntries.ts): page selection, context menu, shortcut, and toolbar entry points. Pending attachments and tab/frame ownership use browser-window-scoped session storage.

@@ -48,6 +48,7 @@ function PresetChoice({
         <select
           id={id}
           aria-label={label}
+          title={label}
           value={selected}
           disabled={disabled}
           onChange={(event) => {
@@ -128,21 +129,16 @@ export function ModelPicker({ api, disabled }: { api: ChatSettingsApi; disabled:
           onValue={(value) => api.setModel(provider, value)}
         />
         {isCli(provider) && efforts.length > 0 && (
-          <>
-            <label class="effort-label" for="chat-effort">
-              Thinking effort
-            </label>
-            <PresetChoice
-              key={`${provider}-effort`}
-              id="chat-effort"
-              label="Chat thinking effort"
-              presets={efforts}
-              value={settings.chat.efforts[provider]}
-              placeholder="Effort"
-              disabled={disabled}
-              onValue={(value) => api.setEffort(provider, value)}
-            />
-          </>
+          <PresetChoice
+            key={`${provider}-effort`}
+            id="chat-effort"
+            label="Chat thinking effort"
+            presets={efforts}
+            value={settings.chat.efforts[provider]}
+            placeholder="Effort"
+            disabled={disabled}
+            onValue={(value) => api.setEffort(provider, value)}
+          />
         )}
       </div>
       {error && (

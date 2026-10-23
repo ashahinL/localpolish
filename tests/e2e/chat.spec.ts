@@ -237,8 +237,31 @@ test('Claude chat lists every model and preserves a custom choice across provide
   await openPanel(page);
   await page.getByLabel('Chat provider').selectOption('claude-cli');
   const model = page.getByLabel('Chat model', { exact: true });
-  await expect(model.locator('option')).toHaveText(['Haiku', 'Sonnet', 'Opus', 'Custom…']);
-  for (const choice of ['sonnet', 'opus']) {
+  await expect(model.locator('option')).toHaveText([
+    'Haiku',
+    'Haiku 5.5',
+    'Haiku 4.5',
+    'Sonnet',
+    'Sonnet 5.5',
+    'Sonnet 5',
+    'Sonnet 4.6',
+    'Sonnet 4.5',
+    'Opus',
+    'Opus 5.5',
+    'Opus 5',
+    'Opus 4.8',
+    'Opus 4.7',
+    'Opus 4.6',
+    'Opus 4.5',
+    'Custom…',
+  ]);
+  for (const choice of [
+    'claude-haiku-5-5',
+    'claude-sonnet-5',
+    'claude-opus-4-8',
+    'claude-opus-5',
+    'claude-opus-5-5',
+  ]) {
     await model.selectOption(choice);
     await expect
       .poll(async () => {
@@ -253,6 +276,9 @@ test('Claude chat lists every model and preserves a custom choice across provide
   const custom = page.getByLabel('Custom chat model', { exact: true });
   await custom.fill('claude-sonnet-5-5[1m]');
   await custom.press('Enter');
+  await expect
+    .poll(async () => (await storedChat(sw)).models['claude-cli'])
+    .toBe('claude-sonnet-5-5[1m]');
   await page.getByLabel('Chat provider').selectOption('codex-cli');
   await page.getByLabel('Chat provider').selectOption('claude-cli');
   await expect(custom).toHaveValue('claude-sonnet-5-5[1m]');
@@ -265,6 +291,47 @@ test('Claude chat lists every model and preserves a custom choice across provide
   };
   expect(settings.provider).toBe('openai-compatible');
   expect(settings.models['openai-compatible']).toBe('fix-model');
+});
+
+test('chat dropdowns stay on one row with custom inputs below at narrow and wide widths', async ({
+  page,
+}) => {
+  await openPanel(page);
+  await page.getByLabel('Chat provider').selectOption('claude-cli');
+  const model = page.getByLabel('Chat model', { exact: true });
+  const effort = page.getByLabel('Chat thinking effort', { exact: true });
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    for (const width of [320, 640]) {
+      await page.setViewportSize({ width, height: 800 });
+      await model.selectOption('claude-opus-5-5');
+      await effort.selectOption('high');
+      for (const custom of [false, true]) {
+        if (custom) {
+          await model.selectOption('__custom__');
+          await effort.selectOption('__custom__');
+        }
+        const boxes = await page.locator('.model-bar select').evaluateAll((controls) =>
+          controls.map((control) => {
+            const { top, right, bottom } = control.getBoundingClientRect();
+            return { top, right, bottom };
+          }),
+        );
+        expect(boxes).toHaveLength(3);
+        expect(boxes.map((box) => box.top)).toEqual([boxes[0]!.top, boxes[0]!.top, boxes[0]!.top]);
+        expect(boxes[2]!.right).toBeLessThanOrEqual(width);
+        if (custom) {
+          const inputs = page.locator('.model-bar input');
+          await expect(inputs).toHaveCount(2);
+          for (const input of await inputs.all()) {
+            const box = await input.boundingBox();
+            expect(box!.y).toBeGreaterThanOrEqual(boxes[0]!.bottom);
+            expect(box!.width).toBe(width - 20);
+          }
+        }
+      }
+    }
+  }
 });
 
 for (const [provider, model] of [
@@ -652,7 +719,9 @@ test('failed effort saves block sending and a later provider save retains the ef
     await page.getByLabel('Chat thinking effort', { exact: true }).selectOption('high');
     await expect(page.getByText('Could not save: Disk is full.')).toBeVisible();
     await page.getByRole('button', { name: 'Explain', exact: true }).click();
-    await expect(page.locator('.notice.error').last()).toContainText('Disk is full.');
+    await expect(page.locator('.conversation .notice.error')).toContainText(
+      'The chat settings were not saved, so nothing was sent. Disk is full.',
+    );
     expect(mock.requests).toHaveLength(0);
     expect(await blockedAttempts(sw)).toEqual([]);
     await allowSaves();

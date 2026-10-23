@@ -9,10 +9,14 @@ The owner found that Claude chat appeared to offer only Haiku. The model input u
 5. Update the existing settings-save browser tests and add coverage that selects non-default models for each preset provider, plus a custom-model round trip, effort visibility, failed effort saves, and in-flight effort changes. Use no real providers.
 6. Review code, tests, and docs; run full gates and inspect the picker at narrow and wide widths. Keep this task in its own commit. The owner has reported the earlier native entry and insertion release checks as good. Recheck the changed picker before release.
 
-## Checkpoint requests, 23 October 2026
+## Checkpoint requests, resumed 23 October 2026
 
-Stop after documenting, committing, and pushing this unfinished task. Resume only when asked. The complete state and failing checks are in [the handoff](../handoff-1.4.md).
+The owner resumed this checkpoint on 23 October 2026. Finish T23i before starting the T25 release checks. The complete state and failing checks are in [the handoff](../handoff-1.4.md).
 
-- Show explicit Claude versions rather than only family aliases. The owner named Opus 4.8, 5, and 5.5 and corresponding Haiku variants. Verify supported IDs first. This expansion is not implemented.
-- Put provider, model, and effort dropdowns on one line. This layout is not implemented.
-- Finish and verify independent `chat.efforts`. The final source passed 95 targeted tests but fails typecheck in entrypoint test fixtures. Earlier shared-effort test results are not proof for the final source.
+- Show explicit Claude versions rather than only family aliases. Implemented with verified model IDs, including Opus 4.8, 5, and 5.5 and supported Haiku variants.
+- Put provider, model, and effort dropdowns on one line. Implemented, with custom inputs below.
+- Finish and verify independent `chat.efforts`. The missing entrypoint fixture fields are fixed. The handoff records final gate results. Earlier shared-effort results are historical.
+
+## Model ID source
+
+The explicit Haiku, Sonnet, and Opus CLI presets were checked against [Anthropic’s supported Claude Code models](https://support.claude.com/en/articles/11940350-claude-code-model-configuration) on 23 October 2026. Existing family aliases stay available. Custom remains available for other supported models. No live provider request is needed to populate these choices.
