@@ -73,7 +73,7 @@ Use any page whose field is a plain `<textarea>`. One example is `tests/e2e/fixt
 - [ ] If **Accept** fails, the note says the new text is copied. Press `Cmd+V`. The new text pastes into the field.
 - [ ] With the browser in dark mode, you can read the popup text.
 
-## Assistant chat, unreleased source build
+## Assistant chat, 1.4.0
 
 - [ ] Check the compact text, attachment preview, quick asks, and Markdown spacing in both themes. Narrow and wide panels keep the controls usable, and browser zoom still works. A long source URL has its full address on hover.
 Use a made-up article and a local mock provider. These checks do not replace the owner's CLI and API hand checks before the 1.4.0 release.

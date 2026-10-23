@@ -6,6 +6,10 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+## 1.4.0 — 2026-10-23
+
+**Bridge users:** run `git pull --rebase` in your LocalPolish repo to update the chat bridge. No bridge reinstall or new login is needed on an existing setup.
+
 **New**
 
 - Assistant chat in Chrome's side panel, with streamed Markdown, quick asks, Copy, an independent provider and model, and local history. History keeps up to 50 chats for 30 days, with a 128 KiB save limit per chat.
@@ -26,7 +30,7 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **For contributors**
 
-- T23a–g cover chat, entry points, insertion, documentation, and the combined selection-to-answer-to-Copy-and-Insert browser check. The 1.4.0 release still needs the T25 checks. Version remains 1.3.0. See [the machine handoff](docs/handoff-1.4.md).
+- T23a–j cover chat, entry points, insertion, independent model/effort settings, compact UI, and the combined browser flow. Local gates passed with 822 unit tests and 254 browser tests. The owner approved the manual checks. See [the release record](docs/handoff-1.4.md).
 - Restore the runtime benchmark compiler's output-budget module so its core smoke probes can run in CI.
 
 ## 1.3.0 — 2026-10-22

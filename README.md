@@ -29,7 +29,7 @@
   </tr>
 </table>
 
-<p align="center">The current source toolbar popup, including the unreleased chat button. The latest download is still 1.3.0. <code>npm run shots</code> refreshes these images before release.</p>
+<p align="center">The LocalPolish 1.4.0 toolbar popup, including the chat button. <code>npm run shots</code> refreshes these images before release.</p>
 
 ## What it does
 
@@ -87,9 +87,9 @@
 - Any OpenAI-compatible server (OpenAI, xAI, OpenRouter, LM Studio, Ollama), with an optional
   key, and the Anthropic API with a key.
 
-## Chat in source builds, unreleased
+## Assistant chat
 
-The latest downloadable release is still 1.3.0. The current source build adds an assistant in Chrome's side panel.
+LocalPolish 1.4.0 includes an assistant in Chrome's side panel.
 
 Open chat in any of these ways:
 
@@ -108,7 +108,7 @@ History stays in this browser: up to 50 chats, expiring 30 days after their last
 
 The selection sparkle is on by default. Turn it off in options under **Show chat button on selected page text**. It stays hidden on blocked sites and inside text fields. The context menu, chat shortcut, and toolbar button still work when the sparkle is off or the site is blocked. Entry points and attachments are kept separate for each browser window.
 
-Bridge users need the current repo code with `git pull --rebase`; the installed wrapper reads the bridge from this repo. On another machine, or after moving the repo, run `npm run bridge:install` and set up that machine's provider login. Settings, API keys, and chat history do not move between browsers. See the [1.4 handoff](docs/handoff-1.4.md) for the exact stopping point and remaining work.
+Bridge users need the current repo code with `git pull --rebase`; the installed wrapper reads the bridge from this repo. On another machine, or after moving the repo, run `npm run bridge:install` and set up that machine's provider login. Settings, API keys, and chat history do not move between browsers. See the [1.4 handoff](docs/handoff-1.4.md) for the release checks and remaining optional work.
 
 ## Install
 
@@ -118,7 +118,7 @@ server.
 
 **From the release:**
 
-1. Download `localpolish-1.3.0.zip` from the
+1. Download `localpolish-1.4.0.zip` from the
    [latest release](https://github.com/ashahinL/localpolish/releases/latest) and extract it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the
    extracted folder.
@@ -445,13 +445,13 @@ docs/               plan, ADR, benchmark, briefs, design, screenshots
 bench/              the Fix prompt benchmark
 ```
 
-The original build plan is in [docs/plan.md](docs/plan.md). Current work is in the [1.3–1.4 feature plan](docs/plans/features-1.3-1.4.md), with a [machine handoff](docs/handoff-1.4.md). Release notes are in [CHANGELOG.md](CHANGELOG.md). How a version ships is in [RELEASING.md](RELEASING.md).
+The original build plan is in [docs/plan.md](docs/plan.md). The completed release work is in the [1.3–1.4 feature plan](docs/plans/features-1.3-1.4.md), with a [machine handoff](docs/handoff-1.4.md). Release notes are in [CHANGELOG.md](CHANGELOG.md). How a version ships is in [RELEASING.md](RELEASING.md).
 
 ## Not yet
 
 - Passive underlines while you type.
 - A tone setting per site.
-- Saved history for Fix and rewrite results. Chat history is available in source builds.
+- Saved history for Fix and rewrite results. Chat already has its own history.
 - A Linux bridge installer.
 
 ## Bugs and ideas

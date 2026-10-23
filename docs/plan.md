@@ -2,7 +2,7 @@
 
 Status: T0-T14 done.
 Released follow-up: [1.1.0 audit fixes and release record](plans/next-release.md).
-Current work: [1.3–1.4 feature plan](plans/features-1.3-1.4.md). Resume from the [1.4 machine handoff](handoff-1.4.md). The [performance plan](plans/performance.md) records completed earlier work.
+Completed release work: [1.3–1.4 feature plan](plans/features-1.3-1.4.md). See the [1.4 release record](handoff-1.4.md). The [performance plan](plans/performance.md) records completed earlier work.
 Started: 2026-10-17
 Current orchestrator: Codex. Choose fleet implementers by task size as the owner directed. The task assignments below are the original build history.
 
@@ -57,7 +57,7 @@ The original duplicated interfaces and CLI command examples have been replaced b
 - [History](../src/core/chatHistory.ts): local saved chats, capped at 50 records, 30 days since update, and 128 KiB per record.
 - [Bridge command builders](../bridge/lib.mjs) and [host](../bridge/host.mjs): four CLI names including `agy`, stdin-only prompts, provider lockdown, and cleanup. Native rewrite requests retain `system` and `user` fields, with optional `timeoutMs` up to 180000. The omitted timeout remains 60000.
 
-The current chat behavior and limits are documented in the [README](../README.md#chat-in-source-builds-unreleased) and [privacy policy](../PRIVACY.md). T23f adds whole-field insertion with checked tab, frame, and field ownership. No 1.4.0 release has been made.
+The current chat behavior and limits are documented in the [README](../README.md#assistant-chat) and [privacy policy](../PRIVACY.md). T23f adds whole-field insertion with checked tab, frame, and field ownership. These changes ship in 1.4.0.
 
 ## Tasks
 

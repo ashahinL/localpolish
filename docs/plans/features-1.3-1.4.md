@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: T23i completed on 23 October 2026. Chat has versioned Claude presets, one-row controls, and independent effort settings. All local gates passed. The owner approved the T23i checks, then paused release for T23j, a compact chat UI polish using Impeccable. Version remains 1.3.0; no 1.4.0 release exists.
+Status: 1.4.0 released on 23 October 2026. T23a–j and T25 are complete. The owner approved the compact panel, native entry points, insertion, independent effort, and long-article CLI/API chat. Local and pre-release GitHub checks passed.
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -168,9 +168,9 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 - [x] **T23h. Restore runtime smoke imports.** Release prerequisite discovered during the Windows continuation. Brief: [T23h-runtime-smoke.md](../briefs/T23h-runtime-smoke.md). The runtime compiler omitted `src/background/outputBudget`, so the GitHub workflow failed before core probes ran. Added that module to the existing list. The same missing-import failure was reproduced locally before the edit. Afterward all 15 smoke scenarios passed twice through Brave, including the five previously failing core probes. Lint, formatting, and three fixture tests passed, with one macOS-only test skipped. Production code and browser configuration are unchanged. Check the latest GitHub test and platforms runs before release.
 
-- [x] **T23j. Compact chat UI polish.** Requested by the owner before publishing 1.4.0 on 23 October 2026. Use Impeccable to make panel type and controls more compact, reduce attachment weight, and improve spacing while preserving the existing identity and behavior. Check narrow/wide panels, both themes, keyboard use, long text, and zoom. Keep one-row provider/model/effort controls and full-width custom inputs. Lint, typecheck, formatting, build, 822 unit tests with 2 platform skips, and 254 Chromium browser tests passed. Screenshots and keyboard/200% zoom checks passed. The Impeccable scan flagged the old thick quote border; it is now 1 px. Code and docs reviews passed; no new tests were needed. Comment Sicko is unavailable. Release remains on hold until the owner checks the updated panel.
+- [x] **T23j. Compact chat UI polish.** Requested by the owner before publishing 1.4.0 on 23 October 2026. Use Impeccable to make panel type and controls more compact, reduce attachment weight, and improve spacing while preserving the existing identity and behavior. Check narrow/wide panels, both themes, keyboard use, long text, and zoom. Keep one-row provider/model/effort controls and full-width custom inputs. Lint, typecheck, formatting, build, 822 unit tests with 2 platform skips, and 254 Chromium browser tests passed. Screenshots and keyboard/200% zoom checks passed. The Impeccable scan flagged the old thick quote border; it is now 1 px. Code and docs reviews passed; no new tests were needed. Comment Sicko is unavailable. The owner approved the updated panel on 23 October 2026.
 
-- [ ] **T25. Release 1.4.0.** Follow `RELEASING.md`. Toolbar screenshots were refreshed and checked in T23g. The owner still hand-checks native entry points and insertion, and chat on a long article with a CLI provider and an API provider. CI must pass before release.
+- [x] **T25. Release 1.4.0.** Followed `RELEASING.md`. The owner approved native entry points, insertion, long-article CLI/API chat, T23i controls, and T23j compact UI. All local gates passed. Pre-release GitHub [test](https://github.com/ashahinL/localpolish/actions/runs/40001655041) and [platforms](https://github.com/ashahinL/localpolish/actions/runs/40001912153) passed on `8af0ea9`. The release commit changes version and documentation only. See [the release record](../handoff-1.4.md) and [v1.4.0](https://github.com/ashahinL/localpolish/releases/tag/v1.4.0) for the package and verification.
 
 ## Backlog
 
@@ -186,9 +186,8 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
 
 ## Handoff
 
-- Current base: main `9712d79`; T23i completes the saved `c89129e` checkpoint in its own task commit. Use `git log -1 --oneline` for the completion commit. See [the current machine handoff](../handoff-1.4.md). Version remains 1.3.0; no 1.4.0 tag, zip, or release exists.
-- Finished: T23a–j. Earlier 1.3.0 work remains released at [v1.3.0](https://github.com/ashahinL/localpolish/releases/tag/v1.3.0). OpenCode stays in the backlog.
-- Verification: lint, typecheck, formatting, build, 822 unit tests with 2 platform skips, and 254 Chromium browser tests passed. Narrow/wide picker screenshots were inspected in both themes. Code, test, and docs guard reviews passed. Comment Sicko was unavailable. No delegate or real provider ran; no reusable skill was proposed.
-- Next: T25. The owner approved native chat entry, insertion, T23i's controls, and long-article CLI/API chat. After that approval, the owner paused publication for T23j. The revised compact panel now needs the owner's visual check. Check GitHub test/platform workflows on the completed main commit before release. Paid language-preservation benchmarking and Windows agy login remain unverified.
-- Required gates on future code changes: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
-- Active local processes: none. Full gates finished and task-owned browsers/servers closed. GitHub release checks are the next automated step; see the current chat for their result.
+- Current release: `v1.4.0`, whose tag identifies the release commit. Feature code is `8af0ea9`; T23i was `407da01`. All T21–T25 tasks that remain in this plan are complete. OpenCode stays in the backlog.
+- Verification: lint, typecheck, formatting, build, 822 unit tests with 2 platform skips, and 254 browser tests passed. The owner approved the manual checks and final compact UI. GitHub test and platforms passed before tagging. Downloaded-package checks are recorded on the release page and in the release chat.
+- Next: no implementation task is queued. The owner still schedules the optional paid language-preservation benchmark and Windows Antigravity login check. See [the release record](../handoff-1.4.md).
+- Required gates for future code changes: `npm run lint`, `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run test:e2e`.
+- Active implementation processes: none. No delegate, development server, or test browser remains. Release-triggered GitHub jobs can be checked in Actions. The old work branch was deleted locally and remotely after merge.
