@@ -206,8 +206,7 @@ test('keeps the chat provider and model separate from Fix', async ({ page, sw })
     .poll(async () => ((await stored(sw, 'settings')) as { chat: { provider: string } }).chat)
     .toMatchObject({ provider: 'anthropic-api' });
   const model = page.getByLabel('Chat model');
-  await model.fill('claude-sonnet-5-5');
-  await model.press('Enter');
+  await model.selectOption('claude-sonnet-5-5');
   await expect
     .poll(async () => {
       const settings = (await stored(sw, 'settings')) as {
@@ -229,6 +228,103 @@ test('keeps the chat provider and model separate from Fix', async ({ page, sw })
   await page.reload();
   await expect(page.getByLabel('Chat provider')).toHaveValue('anthropic-api');
   await expect(page.getByLabel('Chat model')).toHaveValue('claude-sonnet-5-5');
+});
+
+test('Claude chat lists every model and preserves a custom choice across providers and reloads', async ({
+  page,
+  sw,
+}) => {
+  await openPanel(page);
+  await page.getByLabel('Chat provider').selectOption('claude-cli');
+  const model = page.getByLabel('Chat model', { exact: true });
+  await expect(model.locator('option')).toHaveText(['Haiku', 'Sonnet', 'Opus', 'Custom…']);
+  for (const choice of ['sonnet', 'opus']) {
+    await model.selectOption(choice);
+    await expect
+      .poll(async () => {
+        const settings = (await stored(sw, 'settings')) as {
+          chat: { models: Record<string, string> };
+        };
+        return settings.chat.models['claude-cli'];
+      })
+      .toBe(choice);
+  }
+  await model.selectOption('__custom__');
+  const custom = page.getByLabel('Custom chat model', { exact: true });
+  await custom.fill('claude-sonnet-5-5[1m]');
+  await custom.press('Enter');
+  await page.getByLabel('Chat provider').selectOption('codex-cli');
+  await page.getByLabel('Chat provider').selectOption('claude-cli');
+  await expect(custom).toHaveValue('claude-sonnet-5-5[1m]');
+  await page.reload();
+  await expect(model).toHaveValue('__custom__');
+  await expect(custom).toHaveValue('claude-sonnet-5-5[1m]');
+  const settings = (await stored(sw, 'settings')) as {
+    provider: string;
+    models: Record<string, string>;
+  };
+  expect(settings.provider).toBe('openai-compatible');
+  expect(settings.models['openai-compatible']).toBe('fix-model');
+});
+
+for (const [provider, model] of [
+  ['codex-cli', 'gpt-6.1-sol'],
+  ['grok-cli', 'grok-4.6'],
+  ['antigravity-cli', 'gpt-oss-120b'],
+  ['anthropic-api', 'claude-sonnet-5-5'],
+] as const) {
+  test(`${provider} chat selects a non-default model and keeps it after reload`, async ({
+    page,
+    sw,
+  }) => {
+    await openPanel(page);
+    await page.getByLabel('Chat provider').selectOption(provider);
+    await page.getByLabel('Chat model', { exact: true }).selectOption(model);
+    await expect
+      .poll(async () => {
+        const settings = (await stored(sw, 'settings')) as {
+          chat: { models: Record<string, string> };
+        };
+        return settings.chat.models[provider];
+      })
+      .toBe(model);
+    await page.reload();
+    await expect(page.getByLabel('Chat model', { exact: true })).toHaveValue(model);
+  });
+}
+
+test('chat keeps its thinking effort separate and hides it for models without an effort choice', async ({
+  page,
+  sw,
+}) => {
+  await openPanel(page);
+  await page.getByLabel('Chat provider').selectOption('claude-cli');
+  const effort = page.getByLabel('Chat thinking effort', { exact: true });
+  await expect(page.getByText('Shared with Fix', { exact: true })).toHaveCount(0);
+  await effort.selectOption('high');
+  await expect
+    .poll(
+      async () =>
+        ((await stored(sw, 'settings')) as { chat: { efforts: Record<string, string> } }).chat
+          .efforts['claude-cli'],
+    )
+    .toBe('high');
+  expect(
+    ((await stored(sw, 'settings')) as { efforts: Record<string, string> }).efforts['claude-cli'],
+  ).toBe('low');
+  await page.reload();
+  await expect(effort).toHaveValue('high');
+  await effort.selectOption('__custom__');
+  const custom = page.getByLabel('Custom chat thinking effort', { exact: true });
+  await custom.fill('max');
+  await custom.press('Enter');
+  await expect(custom).toHaveValue('max');
+  await page.getByLabel('Chat provider').selectOption('antigravity-cli');
+  await expect(effort).toBeVisible();
+  await page.getByLabel('Chat model', { exact: true }).selectOption('gpt-oss-120b');
+  await expect(effort).toHaveCount(0);
+  await page.getByLabel('Chat provider').selectOption('openai-compatible');
+  await expect(effort).toHaveCount(0);
 });
 
 interface GuardedWorker {
@@ -543,6 +639,94 @@ test('offers a new chat with the last answer when the chat is over the input lim
   const attachment = page.getByRole('region', { name: 'Attached' });
   await expect(attachment).toContainText('Previous answer');
   await expect(page.locator('.turn')).toHaveCount(0);
+});
+
+test('failed effort saves block sending and a later provider save retains the effort edit', async ({
+  page,
+  sw,
+  mock,
+}) => {
+  await guardProviders(sw, mock.url);
+  try {
+    const allowSaves = await openWithFailingSaves(page, sw);
+    await page.getByLabel('Chat thinking effort', { exact: true }).selectOption('high');
+    await expect(page.getByText('Could not save: Disk is full.')).toBeVisible();
+    await page.getByRole('button', { name: 'Explain', exact: true }).click();
+    await expect(page.locator('.notice.error').last()).toContainText('Disk is full.');
+    expect(mock.requests).toHaveLength(0);
+    expect(await blockedAttempts(sw)).toEqual([]);
+    await allowSaves();
+    await page.getByLabel('Chat provider').selectOption('openai-compatible');
+    await expect
+      .poll(
+        async () =>
+          ((await stored(sw, 'settings')) as { chat: { efforts: Record<string, string> } }).chat
+            .efforts['claude-cli'],
+      )
+      .toBe('high');
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await expect(answers(page)).toContainText('I went home.');
+    expect(await blockedAttempts(sw)).toEqual([]);
+  } finally {
+    await releaseProviders(sw);
+  }
+});
+
+test('effort edits made during a held save settle before a chat request is sent', async ({
+  page,
+  sw,
+  mock,
+}) => {
+  await guardProviders(sw, mock.url);
+  try {
+    await openPanel(page);
+    await page.getByLabel('Chat provider').selectOption('claude-cli');
+    await expect.poll(async () => (await storedChat(sw)).provider).toBe('claude-cli');
+    await page.evaluate(() => {
+      const local = (globalThis as unknown as { chrome: ExtensionChrome }).chrome.storage.local;
+      const write = local.set.bind(local);
+      let first = true;
+      Object.defineProperty(local, 'set', {
+        configurable: true,
+        value: async (items: Record<string, unknown>) => {
+          if (first && 'settings' in items) {
+            first = false;
+            await new Promise<void>((resolve) => {
+              (window as unknown as { __releaseEffortSave: () => void }).__releaseEffortSave =
+                resolve;
+            });
+          }
+          return write(items);
+        },
+      });
+    });
+    const effort = page.getByLabel('Chat thinking effort', { exact: true });
+    await effort.selectOption('high');
+    await page.waitForFunction(
+      () =>
+        typeof (window as unknown as { __releaseEffortSave?: unknown }).__releaseEffortSave ===
+        'function',
+    );
+    await effort.selectOption('medium');
+    await page.getByLabel('Chat provider').selectOption('openai-compatible');
+    await page.getByRole('button', { name: 'Explain', exact: true }).click();
+    expect(mock.requests).toHaveLength(0);
+    await page.evaluate(() =>
+      (window as unknown as { __releaseEffortSave: () => void }).__releaseEffortSave(),
+    );
+    await expect(answers(page)).toContainText('I went home.');
+    const settings = (await stored(sw, 'settings')) as {
+      efforts: Record<string, string>;
+      chat: { efforts: Record<string, string> };
+      provider: string;
+    };
+    expect(settings.chat.efforts['claude-cli']).toBe('medium');
+    expect(settings.efforts['claude-cli']).toBe('low');
+    expect(settings.provider).toBe('openai-compatible');
+    expect(await blockedAttempts(sw)).toEqual([]);
+  } finally {
+    await releaseProviders(sw);
+  }
 });
 
 const chatSparkle = (page: Page) =>

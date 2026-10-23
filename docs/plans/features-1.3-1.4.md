@@ -1,6 +1,6 @@
 # LocalPolish 1.3.0 and 1.4.0 feature plan
 
-Status: 1.3.0 released on 22 October 2026 (T21a, T21c, T21d, T22a-d, T24). OpenCode moved to the backlog. 1.4.0 started on 22 October 2026 (T23, chat). The owner resumed on Windows after T23e; insertion and final chat documentation follow below. The version stays 1.3.0 until release day.
+Status: stopped at the owner's request on 23 October 2026. T23f–h are complete on main at `9712d79`. T23i is unfinished on `wip/chat-model-effort-handoff`; current typecheck fails and the latest model-version and one-row layout requests are pending. Read [the checkpoint handoff](../handoff-1.4.md) before continuing. Version remains 1.3.0; no 1.4.0 release exists.
 Baseline: `v1.2.0`, commit `a4ba7fc`.
 Owner answers: the grill session on 22 October 2026. Each decision below is the owner's pick unless it says "default (Claude)".
 
@@ -163,6 +163,8 @@ If the Antigravity spike fails, 1.3.0 ships without it, and Antigravity moves to
   - Documentation and test reviews passed. Local documentation links resolve. Full gates passed on Windows on 22 October 2026: lint, typecheck, 811 unit tests with 9 platform skips, formatting, build, and 245 browser tests through the same temporary Brave hook as T23f. All five toolbar screenshots were regenerated and visually checked, including the new chat button in light and dark modes. The screenshot fixture now supplies a tab and window id so the button is enabled. Comment Sicko remains unavailable. No real provider was called and no reusable skill was created.
 
 ## 1.4.0 release (T25)
+
+- [ ] **T23i. Finish chat model and effort controls.** Unfinished checkpoint requested by the owner on 23 October 2026. Brief: [T23i-chat-model-picker.md](../briefs/T23i-chat-model-picker.md). Preset/Custom controls are implemented. Independent chat efforts are partially implemented and need final review/full verification; 95 targeted tests pass, but typecheck fails in two entrypoint test fixtures missing `chat.efforts`. Still missing: explicit versioned Claude choices with verified IDs, all three dropdowns on one line, current-doc consistency, and final gates. The owner rejected sharing effort with Fix. Do not release from this checkpoint.
 
 - [x] **T23h. Restore runtime smoke imports.** Release prerequisite discovered during the Windows continuation. Brief: [T23h-runtime-smoke.md](../briefs/T23h-runtime-smoke.md). The runtime compiler omitted `src/background/outputBudget`, so the GitHub workflow failed before core probes ran. Added that module to the existing list. The same missing-import failure was reproduced locally before the edit. Afterward all 15 smoke scenarios passed twice through Brave, including the five previously failing core probes. Lint, formatting, and three fixture tests passed, with one macOS-only test skipped. Production code and browser configuration are unchanged. Check the latest GitHub test and platforms runs before release.
 

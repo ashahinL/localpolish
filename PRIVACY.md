@@ -65,7 +65,7 @@ and tone. Where it goes depends on the provider you chose:
   such as Ollama or LM Studio.
 - **Anthropic API.** The text goes to Anthropic's API with your key.
 
-For chat in source builds, opening an entry point only attaches text to the panel. Nothing is sent to an AI until you submit a question or choose a quick ask. Each turn sends the conversation so far, the selected text, its page title and URL, and the chat system instruction to the selected chat provider. It does not send the whole page or your browsing history. The panel shows the attachment. Chat uses the same CLI lockdown and provider connection as Fix. Its provider and model can differ from Fix's, while credentials and CLI effort are shared. A failed chat-settings save blocks sending until the displayed choices can be stored.
+For chat in source builds, opening an entry point only attaches text to the panel. Nothing is sent to an AI until you submit a question or choose a quick ask. Each turn sends the conversation so far, the selected text, its page title and URL, and the chat system instruction to the selected chat provider. It does not send the whole page or your browsing history. The panel shows the attachment. Chat uses the same CLI lockdown and provider connection as Fix. Its provider, model, and CLI effort have separate settings; credentials remain shared. The independent-effort change is unfinished in the current checkpoint and still needs final verification, as recorded in [the handoff](docs/handoff-1.4.md). A failed chat-settings save blocks sending until the displayed choices can be stored.
 
 **Test connection** sends a short fixed sample, not your text.
 

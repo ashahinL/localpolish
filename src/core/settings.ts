@@ -21,6 +21,7 @@ export type DefaultMode = 'fix' | 'rephrase' | 'shorter';
 export interface ChatSettings {
   provider: ProviderId;
   models: Record<ProviderId, string>;
+  efforts: Record<CliProviderId, string>;
 }
 
 export interface Settings {
@@ -48,15 +49,17 @@ const MODEL_DEFAULTS: Record<ProviderId, string> = {
   'anthropic-api': 'claude-haiku-5-5',
 };
 
+const EFFORT_DEFAULTS: Record<CliProviderId, string> = {
+  'claude-cli': 'low',
+  'codex-cli': 'none',
+  'grok-cli': 'low',
+  'antigravity-cli': 'low',
+};
+
 export const DEFAULT_SETTINGS: Settings = {
   provider: 'codex-cli',
   models: { ...MODEL_DEFAULTS },
-  efforts: {
-    'claude-cli': 'low',
-    'codex-cli': 'none',
-    'grok-cli': 'low',
-    'antigravity-cli': 'low',
-  },
+  efforts: { ...EFFORT_DEFAULTS },
   openaiBaseUrl: 'http://localhost:11434/v1',
   openaiApiKey: '',
   anthropicApiKey: '',
@@ -69,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   chat: {
     provider: 'codex-cli',
     models: { ...MODEL_DEFAULTS },
+    efforts: { ...EFFORT_DEFAULTS },
   },
 };
 
@@ -107,8 +111,21 @@ function checkedModels(value: unknown): Partial<Record<ProviderId, string>> | un
   return models;
 }
 
-function cloneChat(provider: ProviderId, models: Record<ProviderId, string>): ChatSettings {
-  return { provider, models: { ...models } };
+function checkedEfforts(value: unknown): Partial<Record<CliProviderId, string>> | undefined {
+  if (!isRecord(value)) return undefined;
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      ([key, effort]) => Object.hasOwn(EFFORT_DEFAULTS, key) && typeof effort === 'string',
+    ),
+  );
+}
+
+function cloneChat(
+  provider: ProviderId,
+  models: Record<ProviderId, string>,
+  efforts: Record<CliProviderId, string>,
+): ChatSettings {
+  return { provider, models: { ...models }, efforts: { ...efforts } };
 }
 
 function storedPatch(value: unknown): Partial<Settings> {
@@ -117,14 +134,8 @@ function storedPatch(value: unknown): Partial<Settings> {
   if (isProviderId(value.provider)) patch.provider = value.provider;
   const models = checkedModels(value.models);
   if (models !== undefined) patch.models = models as Settings['models'];
-  if (isRecord(value.efforts)) {
-    patch.efforts = Object.fromEntries(
-      Object.entries(value.efforts).filter(
-        ([key, effort]) =>
-          Object.hasOwn(DEFAULT_SETTINGS.efforts, key) && typeof effort === 'string',
-      ),
-    ) as Settings['efforts'];
-  }
+  const efforts = checkedEfforts(value.efforts);
+  if (efforts !== undefined) patch.efforts = efforts as Settings['efforts'];
   const agyModel = patch.models?.['antigravity-cli'];
   const geminiEffort = /^gemini-3\.8-flash-(low|medium|high)$/.exec(agyModel ?? '')?.[1];
   if (geminiEffort || agyModel === 'gpt-oss-120b-medium') {
@@ -181,7 +192,7 @@ function mergeSettings(patch: Partial<Settings>): Settings {
     blocklist: Array.isArray(patch.blocklist)
       ? [...patch.blocklist]
       : [...DEFAULT_SETTINGS.blocklist],
-    chat: cloneChat(chat.provider, chat.models),
+    chat: cloneChat(chat.provider, chat.models, chat.efforts),
   };
 }
 
@@ -190,7 +201,8 @@ function chatFromStored(raw: unknown, fix: Settings): ChatSettings {
   const provider =
     stored !== undefined && isProviderId(stored.provider) ? stored.provider : fix.provider;
   const models = stored === undefined ? undefined : checkedModels(stored.models);
-  return cloneChat(provider, { ...fix.models, ...models });
+  const efforts = stored === undefined ? undefined : checkedEfforts(stored.efforts);
+  return cloneChat(provider, { ...fix.models, ...models }, { ...fix.efforts, ...efforts });
 }
 
 export async function loadSettings(): Promise<Settings> {
@@ -224,11 +236,13 @@ function withSettingsLock<T>(work: () => Promise<T>): Promise<T> {
 type ChatPatch = {
   provider?: ProviderId;
   models?: Partial<Record<ProviderId, string>>;
+  efforts?: Partial<Record<CliProviderId, string>>;
 };
 
 export async function saveSettings(
-  patch: Omit<Partial<Settings>, 'languages' | 'chat'> & {
+  patch: Omit<Partial<Settings>, 'languages' | 'chat' | 'efforts'> & {
     languages?: Partial<Settings['languages']>;
+    efforts?: Partial<Settings['efforts']>;
     chat?: ChatPatch;
   },
 ): Promise<void> {
@@ -240,6 +254,7 @@ export async function saveSettings(
         ? chatPatch.provider
         : current.chat.provider;
     const modelUpdates = chatPatch === undefined ? {} : (checkedModels(chatPatch.models) ?? {});
+    const effortUpdates = chatPatch === undefined ? {} : (checkedEfforts(chatPatch.efforts) ?? {});
     const next = mergeSettings({
       ...current,
       ...rest,
@@ -252,7 +267,11 @@ export async function saveSettings(
         ...current.efforts,
         ...rest.efforts,
       },
-      chat: cloneChat(provider, { ...current.chat.models, ...modelUpdates }),
+      chat: cloneChat(
+        provider,
+        { ...current.chat.models, ...modelUpdates },
+        { ...current.chat.efforts, ...effortUpdates },
+      ),
     });
     await storageLocal().set({ [STORAGE_KEY]: next });
   });

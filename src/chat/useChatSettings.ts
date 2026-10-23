@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { loadSettings, saveSettings, type ProviderId, type Settings } from '../core/settings';
+import {
+  loadSettings,
+  saveSettings,
+  type CliProviderId,
+  type ProviderId,
+  type Settings,
+} from '../core/settings';
 import { errorMessage, onSettingsChanged } from '../options/chrome';
 
 export interface ChatSettingsApi {
@@ -7,6 +13,7 @@ export interface ChatSettingsApi {
   error: string | null;
   setProvider(provider: ProviderId): void;
   setModel(provider: ProviderId, model: string): void;
+  setEffort(provider: CliProviderId, effort: string): void;
   /**
    * Resolves once the shown chat settings are stored. After a failed write it saves the shown
    * choice again, and rejects if that fails too, so nothing is sent to a provider the user left.
@@ -14,7 +21,7 @@ export interface ChatSettingsApi {
   saved(): Promise<void>;
 }
 
-// Writes only the nested chat settings. Fix's provider and models stay as they are.
+// Writes only the nested chat settings. Fix's choices stay as they are.
 export function useChatSettings(): ChatSettingsApi {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +66,7 @@ export function useChatSettings(): ChatSettingsApi {
     queue.current = queue.current
       .then(() => {
         const chat = shown.current?.chat;
-        if (chat) return saveSettings({ chat: { provider: chat.provider, models: chat.models } });
+        if (chat) return saveSettings({ chat });
       })
       .then(
         () => {
@@ -102,10 +109,25 @@ export function useChatSettings(): ChatSettingsApi {
   );
 
   const saved = useCallback(async () => {
-    await queue.current;
-    if (failure.current !== undefined) await write();
-    if (failure.current !== undefined) throw new Error(errorMessage(failure.current));
+    let retried = false;
+    while (true) {
+      const pending = queue.current;
+      await pending;
+      if (pending !== queue.current) continue;
+      if (failure.current === undefined) return;
+      if (retried) throw new Error(errorMessage(failure.current));
+      retried = true;
+      void write();
+    }
   }, [write]);
 
-  return { settings, error, setProvider, setModel, saved };
+  const setEffort = useCallback(
+    (provider: CliProviderId, effort: string) => {
+      const chat = shown.current?.chat;
+      if (chat) update({ ...chat, efforts: { ...chat.efforts, [provider]: effort } });
+    },
+    [update],
+  );
+
+  return { settings, error, setProvider, setModel, setEffort, saved };
 }

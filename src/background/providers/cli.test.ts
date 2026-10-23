@@ -3,6 +3,7 @@ import { INPUT_LIMIT_MESSAGE, MAX_INPUT_BYTES } from '../../core/limits';
 import { type ModelMessage, type RewriteEvent } from '../../core/messages';
 import { DEFAULT_SETTINGS, type Settings } from '../../core/settings';
 import { runRewrite } from '../rewrite';
+import { runChat } from '../chat';
 import { BridgeMissingError, cliProvider, pingBridge } from './cli';
 import { recordUsage } from '../../core/usage';
 
@@ -79,6 +80,52 @@ async function rejection(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('cliProvider', () => {
+  it('sends independent chat and Fix efforts to the native bridge', async () => {
+    const saved = settings({
+      provider: 'codex-cli',
+      efforts: { ...DEFAULT_SETTINGS.efforts, 'codex-cli': 'low' },
+      chat: {
+        ...DEFAULT_SETTINGS.chat,
+        efforts: { ...DEFAULT_SETTINGS.chat.efforts, 'codex-cli': 'high' },
+      },
+    });
+    const chat = runChat(
+      { turns: [{ role: 'user', content: 'Hello.' }] },
+      saved,
+      cliProvider('codex'),
+      () => undefined,
+      new AbortController().signal,
+    );
+    await vi.waitFor(() => expect(port.postMessage).toHaveBeenCalledOnce());
+    expect(port.postMessage.mock.calls[0]?.[0]).toMatchObject({
+      type: 'rewrite',
+      cli: 'codex',
+      effort: 'high',
+      timeoutMs: 180_000,
+    });
+    emitMessage({ type: 'chunk', text: 'Hello.' });
+    emitMessage({ type: 'done' });
+    await chat;
+
+    port.postMessage.mockClear();
+    const fix = runRewrite(
+      { mode: 'fix', tone: 'polite', text: 'hello' },
+      saved,
+      cliProvider('codex'),
+      () => undefined,
+      new AbortController().signal,
+    );
+    await vi.waitFor(() => expect(port.postMessage).toHaveBeenCalledOnce());
+    expect(port.postMessage.mock.calls[0]?.[0]).toMatchObject({
+      type: 'rewrite',
+      cli: 'codex',
+      effort: 'low',
+    });
+    emitMessage({ type: 'chunk', text: 'Hello.' });
+    emitMessage({ type: 'done' });
+    await fix;
+  });
+
   it('rejects the original callback error before a synchronous disconnect and ignores late events', async () => {
     const controller = new AbortController();
     const error = new Error('consumer failed');

@@ -19,6 +19,10 @@ finished but not released yet waits under Unreleased. How a version ships:
 - Selected page text is treated as untrusted data. Markdown uses a safe subset without raw HTML or automatic remote images, with bounded nesting and parsing of unmatched markers.
 - Chat settings must save before sending. Attachments stay within their browser window, and password values are excluded from shortcut selection caches.
 
+**Fixes**
+
+- Chat's model dropdown shows every preset, including Claude's Haiku, Sonnet, and Opus, with Custom for other names. The old autocomplete filtered the list to the model already entered. Chat also has its own thinking-effort selector, separate from Fix, and failed setting edits remain available for retry.
+
 **For contributors**
 
 - T23a–g cover chat, entry points, insertion, documentation, and the combined selection-to-answer-to-Copy-and-Insert browser check. The 1.4.0 release still needs the T25 checks. Version remains 1.3.0. See [the machine handoff](docs/handoff-1.4.md).

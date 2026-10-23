@@ -161,14 +161,15 @@ describe('loadSettings', () => {
   });
 
   it('keeps the other CLI efforts when one is saved', async () => {
-    await saveSettings({ efforts: { 'codex-cli': 'xhigh' } as Settings['efforts'] });
+    await saveSettings({ efforts: { 'claude-cli': 'high', 'antigravity-cli': 'medium' } });
+    await saveSettings({ efforts: { 'codex-cli': 'xhigh' } });
 
     const settings = await loadSettings();
     expect(settings.efforts).toEqual({
-      'claude-cli': 'low',
+      'claude-cli': 'high',
       'codex-cli': 'xhigh',
       'grok-cli': 'low',
-      'antigravity-cli': 'low',
+      'antigravity-cli': 'medium',
     });
   });
 });
@@ -327,6 +328,64 @@ describe('language settings', () => {
 });
 
 describe('chat settings', () => {
+  it('copies normalized Fix efforts when saved chat has no efforts, then keeps them independent', async () => {
+    memory.set('settings', {
+      models: { 'antigravity-cli': 'gemini-3.8-flash-high' },
+      efforts: { 'codex-cli': 'medium' },
+      chat: { provider: 'codex-cli' },
+    });
+    const migrated = await loadSettings();
+    expect(migrated.chat.efforts).toEqual({
+      'claude-cli': 'low',
+      'codex-cli': 'medium',
+      'grok-cli': 'low',
+      'antigravity-cli': 'high',
+    });
+    expect(migrated.chat.efforts).not.toBe(migrated.efforts);
+    await saveSettings({ chat: { efforts: { 'codex-cli': 'high' } } });
+    expect((await loadSettings()).efforts['codex-cli']).toBe('medium');
+    await saveSettings({ efforts: { 'codex-cli': 'low', 'antigravity-cli': 'low' } });
+    const changed = await loadSettings();
+    expect(changed.chat.efforts['codex-cli']).toBe('high');
+    expect(changed.chat.efforts['antigravity-cli']).toBe('high');
+    expect(changed.efforts['codex-cli']).toBe('low');
+    expect(changed.efforts['antigravity-cli']).toBe('low');
+  });
+
+  it('merges partial chat effort saves without changing Fix or other chat efforts', async () => {
+    await saveSettings({ chat: { efforts: { 'claude-cli': 'high' } } });
+    await saveSettings({ chat: { efforts: { 'codex-cli': 'medium' } } });
+    await saveSettings({ chat: { provider: 'grok-cli', models: { 'grok-cli': 'grok-4' } } });
+    const loaded = await loadSettings();
+    expect(loaded.chat.efforts).toEqual({
+      'claude-cli': 'high',
+      'codex-cli': 'medium',
+      'grok-cli': 'low',
+      'antigravity-cli': 'low',
+    });
+    expect(loaded.efforts).toEqual(DEFAULT_SETTINGS.efforts);
+    expect(loaded.provider).toBe('codex-cli');
+    expect(loaded.models).toEqual(DEFAULT_SETTINGS.models);
+    loaded.chat.efforts['claude-cli'] = 'low';
+    expect((await loadSettings()).chat.efforts['claude-cli']).toBe('high');
+    expect(DEFAULT_SETTINGS.chat.efforts['claude-cli']).toBe('low');
+  });
+
+  it('drops damaged chat effort entries and fills missing values from Fix', async () => {
+    memory.set('settings', {
+      efforts: { 'codex-cli': 'medium' },
+      chat: {
+        efforts: { 'codex-cli': null, 'claude-cli': 'high', 'anthropic-api': 'low', bogus: 'x' },
+      },
+    });
+    expect((await loadSettings()).chat.efforts).toEqual({
+      'claude-cli': 'high',
+      'codex-cli': 'medium',
+      'grok-cli': 'low',
+      'antigravity-cli': 'low',
+    });
+  });
+
   it('copies stored Fix choices on first load and does not alias the model maps', async () => {
     const storedModels = {
       'claude-cli': 'opus',
@@ -340,6 +399,8 @@ describe('chat settings', () => {
     expect(loaded.models['claude-cli']).toBe('opus');
     expect(loaded.models['antigravity-cli']).toBe('gemini-3.8-flash');
     expect(loaded.efforts['antigravity-cli']).toBe('high');
+    expect(loaded.chat.efforts['antigravity-cli']).toBe('high');
+    expect(loaded.chat.efforts).not.toBe(loaded.efforts);
     expect(loaded.models['openai-compatible']).toBe('local-model');
     expect(loaded.chat.provider).toBe('openai-compatible');
     expect(loaded.chat.models).toEqual(loaded.models);

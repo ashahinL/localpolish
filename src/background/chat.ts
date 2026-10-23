@@ -14,9 +14,14 @@ import { type StreamFn } from './providers/types';
 
 const TIMEOUT_MESSAGE = `Timed out after ${CHAT_TIMEOUT_MS / 1000} seconds.`;
 
-/** Fix's settings with the chat's own provider and models, so streams and Usage follow the chat. */
+/** Fix's settings with the chat's own choices, so streams and Usage follow the chat. */
 export function chatSettings(settings: Settings): Settings {
-  return { ...settings, provider: settings.chat.provider, models: { ...settings.chat.models } };
+  return {
+    ...settings,
+    provider: settings.chat.provider,
+    models: { ...settings.chat.models },
+    efforts: { ...settings.chat.efforts },
+  };
 }
 
 export async function runChat(

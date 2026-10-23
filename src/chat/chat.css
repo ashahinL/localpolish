@@ -223,7 +223,8 @@ button[aria-pressed='true'] {
 }
 
 .model-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 6px;
   padding: 6px 10px;
   background: var(--card);
@@ -238,12 +239,13 @@ button[aria-pressed='true'] {
   min-width: 0;
 }
 
-.model-bar select {
-  flex: 1 1 55%;
+.model-bar .custom-choice {
+  grid-column: 1 / -1;
 }
 
-.model-bar input {
-  flex: 1 1 45%;
+.effort-label {
+  align-self: center;
+  font-size: 12px;
 }
 
 .conversation {

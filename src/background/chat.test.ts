@@ -26,6 +26,7 @@ function settings(chat: Partial<Settings['chat']> = {}): Settings {
     chat: {
       provider: 'openai-compatible',
       models: { ...DEFAULT_SETTINGS.models, 'openai-compatible': 'chat-model' },
+      efforts: { ...DEFAULT_SETTINGS.efforts },
       ...chat,
     },
   };
