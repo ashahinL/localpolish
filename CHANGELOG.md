@@ -21,6 +21,7 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 **Fixes**
 
+- Compact chat typography and controls, a smaller attachment preview, quieter quick asks, and consistent Markdown spacing. Long source URLs stay on one line with the full address available on hover.
 - Chat's model dropdown shows every preset, including explicit Claude versions and latest-family aliases, with Custom for other names. Provider, model, and effort dropdowns share one row, with custom inputs below. The old autocomplete filtered the list to the model already entered. Chat also has its own thinking-effort selector, separate from Fix, and failed setting edits remain available for retry.
 
 **For contributors**

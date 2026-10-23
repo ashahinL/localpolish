@@ -29,7 +29,11 @@ export function Attachment({
         )}
       </div>
       {title && <p class="attach-title">{title}</p>}
-      {url && <p class="attach-url">{url}</p>}
+      {url && (
+        <p class="attach-url" title={url}>
+          {url}
+        </p>
+      )}
       {text && <p class={open || !long ? 'attach-text' : 'attach-text clamp'}>{text}</p>}
       {text && long && (
         <button type="button" class="link" aria-expanded={open} onClick={() => setOpen(!open)}>

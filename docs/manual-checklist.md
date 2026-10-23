@@ -75,6 +75,7 @@ Use any page whose field is a plain `<textarea>`. One example is `tests/e2e/fixt
 
 ## Assistant chat, unreleased source build
 
+- [ ] Check the compact text, attachment preview, quick asks, and Markdown spacing in both themes. Narrow and wide panels keep the controls usable, and browser zoom still works. A long source URL has its full address on hover.
 Use a made-up article and a local mock provider. These checks do not replace the owner's CLI and API hand checks before the 1.4.0 release.
 
 - [ ] Select two or more words outside text fields. The chat sparkle appears. A short or collapsed selection, editable field, blocked page, or blocked ancestor frame has no chat sparkle. The existing Fix button still works inside fields.

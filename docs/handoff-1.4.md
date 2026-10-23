@@ -1,6 +1,6 @@
 # Continue the 1.4 release checks
 
-T23i resumed on 23 October 2026 at the owner's request. The chat model and independent effort controls are implemented. Code, test, and documentation reviews and all local gates passed. Package version remains 1.3.0. No 1.4.0 release or tag exists.
+T23i completed at `407da01` on 23 October 2026. The owner approved its manual checks, then paused publication for T23j, a compact chat UI polish using Impeccable. T23j is complete, with all local gates passed. Its task commit is the latest commit touching this handoff; use `git log -1 --oneline`. The revised panel awaits the owner's visual approval. Package version remains 1.3.0. No 1.4.0 release or tag exists.
 
 ## Checkpoint
 
@@ -28,9 +28,15 @@ npm run test:e2e
 
 Review uses clean-code-guard, test-guard, and docs-guard. The no-comments skill's named Comment Sicko reviewer is unavailable in this session, so that named pass is skipped. No delegate ran and no reusable skill was proposed. The small picker layout and save-test timing fixes belong in the existing tests rather than a new skill.
 
+## Completed task: T23j
+
+Impeccable's scoped polish keeps the existing visual identity. Chat body text is 13 px, controls are 12 px, and the header and composer are smaller. The attachment has a three-line preview and quieter metadata. Long URLs truncate on one line but keep the full accessible text and a hover title. Answers have a 75-character reading measure and consistent Markdown block spacing. Quick asks use neutral borders and an accent on hover.
+
+Built-panel checks cover 320 px, 400 px, and 640 px in both themes, long titles/URLs, keyboard attachment expansion, history, Markdown, Arabic text, and actual 200% browser zoom without horizontal overflow. All 41 targeted chat browser tests passed before the final visual refinements. Final full gates passed: lint, typecheck, formatting, build, 822 unit tests with 2 platform skips, and 254 Chromium browser tests. Code and docs reviews passed. No real provider was called. The Impeccable scan found one old thick Markdown quote border, now reduced to 1 px. No new skill is needed for this small style pass.
+
 ## Next task: T25
 
-The owner previously said the native chat entry and insertion checks looked good. T23i changes still need the owner's picker check before release. Reload `dist/` in the browser and check the versioned model choices, one-row controls, and separate chat/Fix effort. Then confirm a long-article chat with one CLI and one API provider. Never submit a real page draft while testing.
+The owner approved native entry, insertion, T23i's picker and separate efforts, and long-article CLI/API chat. The revised T23j panel still needs the owner's visual check before release. Reload `dist/` in the browser and check the versioned model choices, one-row controls, and separate chat/Fix effort. Then confirm a long-article chat with one CLI and one API provider. Never submit a real page draft while testing.
 
 Check the latest GitHub test and platforms workflows on main, then follow [RELEASING.md](../RELEASING.md). Both workflows passed on the base `9712d79`; that does not verify T23i. Run platforms again on the completed main commit before tagging. Keep the version unchanged until the release checks pass.
 
@@ -44,4 +50,4 @@ The Windows machine's bundled Chromium previously failed with a side-by-side ass
 
 ## Active processes
 
-No local implementation, browser, test server, or delegate remains running. GitHub test and platforms workflows are the next automated checks; their result is reported in the current chat. Keep the work branch until Git lists it as merged; then delete it locally and remotely under the owner's branch rules.
+T23j local checks finished and task-owned browsers and test servers closed. GitHub checks continue separately and are reported in the current chat. Platforms passed on `407da01`. Keep the work branch until Git lists it as merged; then delete it locally and remotely under the owner's branch rules.

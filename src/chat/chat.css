@@ -29,7 +29,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -109,7 +109,7 @@ button.primary:hover:not(:disabled) {
 button.sm {
   height: 26px;
   padding: 0 10px;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 button.link {
@@ -118,7 +118,7 @@ button.link {
   background: none;
   color: var(--accent);
   padding: 2px 4px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -196,7 +196,7 @@ button[aria-pressed='true'] {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px 8px 12px;
+  padding: 7px 10px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
 }
@@ -208,14 +208,20 @@ button[aria-pressed='true'] {
 }
 
 .logo svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+}
+
+.head button {
+  height: 28px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .brand {
   flex: 1;
   min-width: 0;
-  font-size: 14.5px;
+  font-size: 13px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -240,7 +246,7 @@ button[aria-pressed='true'] {
 .model-bar input {
   height: 28px;
   padding: 3px 8px;
-  font-size: 12.5px;
+  font-size: 12px;
   min-width: 0;
 }
 
@@ -252,7 +258,7 @@ button[aria-pressed='true'] {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -268,10 +274,9 @@ button[aria-pressed='true'] {
 
 .attach {
   flex: none;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -288,34 +293,38 @@ button[aria-pressed='true'] {
 }
 
 .attach-label {
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 .attach-title {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-weight: 600;
   font-size: 13px;
 }
 
 .attach-url {
-  font-size: 12px;
+  max-width: 100%;
+  font-size: 11px;
   color: var(--muted);
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .attach-text {
+  max-width: 100%;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .attach-text.clamp {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -341,6 +350,7 @@ button[aria-pressed='true'] {
 }
 
 .turn.answer {
+  max-width: 75ch;
   padding: 2px 2px 0;
 }
 
@@ -351,12 +361,12 @@ button[aria-pressed='true'] {
 }
 
 .writing {
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 /* Markdown */
 
-.md > * + * {
+.md > :not(:first-child) {
   margin-top: 8px;
 }
 
@@ -366,7 +376,7 @@ button[aria-pressed='true'] {
 
 .md .md-heading {
   font-weight: 600;
-  font-size: 14.5px;
+  font-size: 14px;
 }
 
 .md ul,
@@ -381,7 +391,7 @@ button[aria-pressed='true'] {
 
 .md code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12.5px;
+  font-size: 12px;
   padding: 1px 4px;
   background: var(--code);
   border: 1px solid var(--border);
@@ -407,7 +417,7 @@ button[aria-pressed='true'] {
 .md blockquote {
   margin: 0;
   padding-left: 10px;
-  border-left: 3px solid var(--border);
+  border-left: 1px solid var(--border);
   color: var(--muted);
 }
 
@@ -543,7 +553,7 @@ button.history-open {
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .quick {
@@ -553,14 +563,16 @@ button.history-open {
 }
 
 button.chip {
-  border-radius: 999px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: transparent;
-  font-weight: 500;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  border-color: var(--border);
+  font-weight: 400;
 }
 
 button.chip:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft);
   border-color: var(--accent);
 }
 
@@ -574,16 +586,17 @@ button.chip:hover:not(:disabled) {
   flex: 1;
   min-width: 0;
   height: auto;
-  min-height: 36px;
+  min-height: 34px;
   max-height: 160px;
-  padding: 7px 10px;
+  padding: 7px 9px;
   resize: none;
   field-sizing: content;
   line-height: 1.4;
 }
 
 .compose-row button {
-  height: 36px;
+  height: 34px;
+  font-size: 12px;
 }
 
 button.stop {
