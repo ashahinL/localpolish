@@ -29,7 +29,7 @@
   </tr>
 </table>
 
-<p align="center">The LocalPolish 1.4.0 toolbar popup, including the chat button. <code>npm run shots</code> refreshes these images before release.</p>
+<p align="center">The LocalPolish 1.5.0 toolbar popup. <code>npm run shots</code> refreshes these images before release.</p>
 
 ## What it does
 
@@ -67,18 +67,26 @@
 
 **Toolbar popup**
 
-- Quick rewrite settings in one place, with the pen nib icon. Two switches sit on top: **Fix while I
-  type**, and **Show on** the site you are on.
-- **Home**: the provider in use with its model and effort, a status pill, **Test connection**,
-  and the default mode (Fix, Rephrase or Shorter).
-- **Provider**: pick Claude Code, Codex or Grok CLI (your subscription, through the bridge), or
-  the OpenAI-compatible or Anthropic API. Model and thinking effort are presets plus **Custom**.
-  The bridge card lists each CLI's version.
-- **Sites**: the sites where the button and Fix while I type stay off, with an Add field and a
-  one-click **Hide on** for this tab. Subdomains are included. The shortcut still works there.
-- **About**: the shortcut, a button to change it, and a link to the full options page.
+- Click the pen nib icon. **New chat** and **New document** sit at the top. Under them, one line
+  shows the provider, model and effort, with **Change** and **Test**.
+- **Home**: your three newest documents, and what the button and shortcut do (Fix, Rephrase or
+  Shorter).
+- **Provider**: pick Claude Code, Codex, Antigravity or Grok CLI (your subscription, through the
+  bridge), or the OpenAI-compatible or Anthropic API. Model and thinking effort are presets plus
+  **Custom**. Each found CLI shows its version.
+- **Sites**: **Show on** the site you are on, **Fix while I type** with its languages, and the
+  sites where the button and Fix while I type stay off. Subdomains are included. The shortcut
+  still works there.
+- **More**: the shortcut, a button to change it, the full options page, and usage counts.
 - Hold the pointer on a label for 2 seconds to see what it does. Light and dark follow your
   system.
+
+**Documents**
+
+- A drafting board in the side panel. Write in Markdown, see it formatted with **Preview**, and
+  Fix it the same way as a web field: Fix while I type, the button and the shortcut.
+- Saved in this browser as you type, until you delete it. **Copy**, **Insert** into the page
+  field, or **Ask in chat** about it.
 
 **Providers**
 
@@ -96,19 +104,35 @@ Open chat in any of these ways:
 - Select at least two words outside a text field and click the selection sparkle.
 - Right-click selected text and choose **Ask LocalPolish about this**.
 - Press `Alt+Shift+L`, or `Option+Shift+L` on macOS. With no readable selection, this opens a plain chat. Password fields are excluded.
-- Click **Open chat** on the toolbar popup's Home tab. This always starts without an attachment.
+- Click **New chat** at the top of the toolbar popup. This always starts without an attachment.
 
-The panel shows the selected text, title, and URL before you ask. Opening it sends nothing to an AI. Choose Summarize, Explain, Translate, or Draft a reply to send immediately, or type a question. Enter sends, Shift+Enter adds a line, and Stop cancels the answer. Copy copies a completed answer. History lets you reopen or delete chats, or delete all of them.
+The panel shows the selected text, title, and URL before you ask. Opening it sends nothing to an AI. Choose Summarize, Explain, Translate, or Draft a reply to send immediately, or type a question. Enter sends, Shift+Enter adds a line, and Stop cancels the answer. Copy copies a completed answer. **History** has two lists, Chats and Documents. Reopen or delete chats there, or delete all of them.
 
 To put an answer into a page, focus the field before opening chat. **Insert into field** replaces that whole field with the completed answer, including any Markdown as plain text. It uses the same editor-writing path as Accept, including rich editors and fields in frames. Keep the original tab active. If the field changes, disappears, becomes read-only, or the page navigates, insertion refuses and leaves Copy available. After an insertion, reopen chat from the page to bind the field again. New chats started inside the panel and reopened history have no live field target.
 
-Chat has its own provider, model, and thinking effort. They start as copies of Fix's choices, then save independently. Changing chat effort does not change Fix. Provider, model, and CLI thinking effort share one row. The model dropdown shows every preset for the chosen provider, including explicit Claude versions and the latest-family aliases. Custom inputs appear below that row. Choose **Custom…** to enter another model name. OpenAI-compatible endpoints use a model-name field. CLI providers also show **Thinking effort** when the model supports it, with a Custom option. API keys, endpoints, and temperature remain shared. Every turn sends the conversation so far and its attachment to the chat provider. Chat attempts appear in Usage.
+Chat has its own provider, model, and thinking effort. They start as copies of Fix's choices, then save independently. Changing chat effort does not change Fix. The chip in the message box shows the chat provider and model. Click it to open a small panel with Provider, Model, and Thinking. The model dropdown shows every preset for the chosen provider, including explicit Claude versions and the latest-family aliases. Choose **Custom…** to enter another model name. OpenAI-compatible endpoints use a model-name field. CLI providers also show **Thinking effort** when the model supports it, with a Custom option. API keys, endpoints, and temperature remain shared. Every turn sends the conversation so far and its attachment to the chat provider. Chat attempts appear in Usage.
 
 History stays in this browser: up to 50 chats, expiring 30 days after their last update. Each saved chat is limited to 128 KiB, including the attachment. If saving fails, the answer stays visible with an error. The whole conversation input is limited to 256 KiB, counted in UTF-8, and answers to 1 MiB. Chat turns time out after 180 seconds; Fix keeps its 60-second timeout. If the input is too large, start a new chat with the last answer.
 
 The selection sparkle is on by default. Turn it off in options under **Show chat button on selected page text**. It stays hidden on blocked sites and inside text fields. The context menu, chat shortcut, and toolbar button still work when the sparkle is off or the site is blocked. Entry points and attachments are kept separate for each browser window.
 
 Bridge users need the current repo code with `git pull --rebase`; the installed wrapper reads the bridge from this repo. On another machine, or after moving the repo, run `npm run bridge:install` and set up that machine's provider login. Settings, API keys, and chat history do not move between browsers. See the [1.4 handoff](docs/handoff-1.4.md) for the release checks and remaining optional work.
+
+## Documents
+
+LocalPolish 1.5.0 adds documents: a drafting board in the side panel, in the same place as chat.
+
+Start one with **New document** in the toolbar popup, or **+ Doc** in the side panel. The popup's Home tab lists your three newest documents. The panel's **History** has a Documents list with all of them.
+
+A document has a title and a text area. Write in Markdown; it stays plain text. **Preview** shows it formatted, read-only. **Edit** goes back. The footer shows the word count and whether it is saved.
+
+Fix works in the text the same way as in a web field. Fix while I type checks the whole document after a 3-second pause, the round button works on a selection, and the shortcut opens the rewrite popup. Accept puts the change in, and `Cmd+Z` or `Ctrl+Z` undoes it. Fix while I type follows its switch and the language choices. The **Sites** list does not apply to documents.
+
+- **Copy** copies the text as plain Markdown, without the title.
+- **Insert** puts the text into the page field the panel was opened from. It shows only when the panel knows that field, and works like Insert into field in chat.
+- **Ask in chat** starts a new chat with the document attached. The document does not change.
+
+Documents save 800 ms after you stop typing, and again when you close the panel or switch to something else. An empty new document is not saved. Each document can be up to 128 KiB (about 20,000 words); a larger one shows **Not saved** with the reason, and the text stays on screen. Documents are kept until you delete them in **History**, which asks first. They stay in this browser only. Two windows editing the same document are not merged: the last save wins.
 
 ## Install
 
@@ -233,7 +257,7 @@ It deletes each conversation database and brain folder after the CLI exits.
 
 Select text in a text field. A small round button appears under the spot where your selection ends. Click it.
 
-Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field. Change the key from the popup's **About** tab.
+Press `Cmd+Shift+K`. Chrome uses `Ctrl+Shift+K` when it is not running on macOS. With nothing selected, the shortcut uses the whole focused field. Change the key from the popup's **More** tab.
 
 **Fix while I type** is on by default. When you stop typing for 3 seconds in a message field, LocalPolish runs a Fix in the background, and a small marker shows how many fixes it found. Click the marker to see the diff. If you switch to another tab before that check starts, LocalPolish waits. When you come back, it uses the text in the field you are typing in and keeps the time you already waited. A check that already started keeps going. Turn it off with the **Fix while I type** switch in the toolbar popup.
 
@@ -257,11 +281,11 @@ To hide LocalPolish on the site you are on, turn off the **Show on** switch for 
 
 Click the pen nib icon in the toolbar (pin it from the puzzle-piece menu). Rewrite provider and common settings are here, and changes save as you make them. A short **Saved** note shows in the header. The gear opens the full options page, which also has the selection-chat switch.
 
-- **Fix while I type**, its **Languages**, and **Show on** _this site_ sit above the tabs, so they are always one click away.
-- **Home** shows the provider, model and effort you use, with a status pill (Bridge ready, No bridge, Key saved, No API key or Local server). **Change** jumps to the Provider tab. **Test connection** sends a short sample and shows the answer and how long it took. The default mode is Fix, Rephrase or Shorter. **Usage** lists each provider and model you have used, with its request count and a total. The options page shows the same card.
-- **Provider** has the six providers in two groups, _Your subscription · via the bridge_ and _API_. CLI providers have Model and Thinking effort pickers (Antigravity shows effort only for models that have one), and the Bridge card with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
-- **Sites** lists the hidden sites, with remove buttons and an Add field. The current host is tagged _This tab_, and **Hide on** _host_ adds it in one click.
-- **About** shows the shortcut, **Change shortcut** (opens `chrome://extensions/shortcuts`), **All options**, a short How it works, and the version.
+- At the top, **New chat** and **New document** open the side panel. Under them, one line shows the provider, model and effort you use, with a colored dot and a status (Bridge ready, No bridge, Key saved, No API key or Local server). Hold the pointer on the line to see all of it. **Change** jumps to the Provider tab. **Test** sends a short sample and shows the answer and how long it took.
+- **Home** lists your three newest documents; click one to open it in the side panel. Below that, choose what the button and shortcut do: Fix, Rephrase or Shorter.
+- **Provider** has the six providers in two groups, _Your subscription, through the bridge_ and _API key_. Each found CLI shows its version. CLI providers have Model and Thinking effort pickers (Antigravity shows effort only for models that have one), and the bridge status with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. **Test connection** is at the bottom. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
+- **Sites** starts with **Show on** _this site_ and **Fix while I type** with its **Languages**. Below them is the list of hidden sites, with remove buttons and an Add field. The current host is tagged _This tab_.
+- **More** shows the shortcut, **Change shortcut** (opens `chrome://extensions/shortcuts`), **All options**, **Usage**, and the version. Usage lists each provider and model you have used, with its request count and a total. The options page shows the same table.
 
 Hold the pointer on a label, or focus it with the keyboard, for 2 seconds to see a line of help.
 
@@ -385,6 +409,7 @@ Match the message on screen, then do the fix that follows it.
 - Your text goes only to the provider you chose: the CLI on this computer, which sends it on to its own service under your subscription, or the API URL you set.
 - Fix while I type sends a field's text after you pause, only in message fields and never on a site in **Sites**. Turn it off with its switch.
 - Settings and API keys stay in `chrome.storage.local` on this browser. Chrome does not sync them. LocalPolish does not log them.
+- Documents stay in `chrome.storage.local` too, under `documents`, until you delete them. Their text goes to the provider you chose only when Fix runs on it or when you attach it to a chat.
 - Usage counts stay in `chrome.storage.local` too, under `usage`. Each row is a provider, a model name, and a number. When Grok uses its CLI default, new attempts use the model name reported by the CLI at startup. Older blank rows and attempts without model metadata show `Unknown (CLI default)`. Their model names cannot be recovered. No text, answers, keys, sites or dates are saved. A request is any started attempt: failed and cancelled ones and Test connection count, cached answers do not. Counting started with this update, so earlier use cannot be recovered.
 - The bridge runs the CLI in an empty temp folder that is deleted afterwards, with its tools off. Grok can still search X and keeps its session history in `~/.grok`.
 
@@ -392,11 +417,14 @@ The full policy is in [PRIVACY.md](PRIVACY.md). To report a security problem, se
 
 ### Permissions
 
-| Permission        | Why                                                                                                                         |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `storage`         | Keep your settings, API keys, site list and usage counts on this browser.                                                   |
-| `nativeMessaging` | Talk to the bridge, `com.localpolish.bridge`, which runs the CLI you picked.                                                |
-| `<all_urls>`      | Show the button and Fix while I type in text fields on any site, and reach the API base URL you set, which can be any host. |
+| Permission         | Why                                                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `storage`          | Keep your settings, API keys, site list, usage counts, chats and documents on this browser.                                  |
+| `unlimitedStorage` | Let documents, which are kept until you delete them, go past Chrome's 10 MB default. Chrome shows no install warning for it. |
+| `sidePanel`        | Show chat and documents beside the page.                                                                                     |
+| `contextMenus`     | Add **Ask LocalPolish about this** to the right-click menu.                                                                  |
+| `nativeMessaging`  | Talk to the bridge, `com.localpolish.bridge`, which runs the CLI you picked.                                                 |
+| `<all_urls>`       | Show the button and Fix while I type in text fields on any site, and reach the API base URL you set, which can be any host.  |
 
 ## Development
 

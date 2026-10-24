@@ -81,7 +81,7 @@ Use a made-up article and a local mock provider. These checks do not replace the
 - [ ] Select two or more words outside text fields. The chat sparkle appears. A short or collapsed selection, editable field, blocked page, or blocked ancestor frame has no chat sparkle. The existing Fix button still works inside fields.
 - [ ] Click the chat sparkle. The actual side panel opens and shows the selection, title, and full URL. No AI request starts until a quick ask or question is submitted. A second selection replaces the attachment in a new chat.
 - [ ] Select text and use **Ask LocalPolish about this** in the native context menu. Repeat with the real chat shortcut, including a selection in a frame. Check that each opens the panel with the right attachment.
-- [ ] Open the real toolbar popup and click **Open chat**. A plain chat opens, even if text remains selected. Repeat on a blocked site with the selection setting off.
+- [ ] Open the real toolbar popup and click **New chat**. A plain chat opens, even if text remains selected. Repeat on a blocked site with the selection setting off.
 - [ ] Turn off **Show chat button on selected page text** in options. The selection sparkle disappears immediately. Explicit chat entry points and manual Fix still work.
 - [ ] Select fake text in a password field after selecting normal text. The shortcut must attach neither the password nor the previous selection.
 - [ ] Ask two questions using the mock provider. Markdown, Copy, Stop and Retry work. Enter sends and Shift+Enter adds a line. The chat provider/model stay independent of Fix. Failed settings saves block requests.
@@ -93,6 +93,23 @@ Use a made-up article and a local mock provider. These checks do not replace the
 - [ ] Inspect the panel at narrow and wide widths in both color schemes. The attachment, error text and composer remain readable.
 
 Automated browser cases cover selection, password caches, insertion and refusal paths, and the combined selection-to-answer-to-Copy-and-Insert flow. These tests open the real extension panel page as a tab. The production context-menu, physical keyboard, and native panel insertion paths still need a manual pass; T23a proved the browser gesture routes in a disposable spike. Do not tick the manual checks based only on automated results.
+
+## Documents, 1.5.0
+
+Use made-up text. Idle Fix and Ask in chat may use a local mock provider; the owner checks a real provider before the 1.5.0 release. Never insert into a real draft that you then send.
+
+- [ ] Click **New document** in the real toolbar popup. The side panel opens on an empty document. Do the same with **+ Doc** in the panel.
+- [ ] Type a title and a few lines with mistakes, in English. **Saved** shows in the footer, and the word count updates. Repeat with an Arabic document: the title and text run right to left.
+- [ ] Pause for 3 seconds. One Fix runs and the marker shows. Click it, check the diff, and press **Accept**. The document has the fixed text. Press `Cmd+Z` (or `Ctrl+Z`) once. The text from before comes back.
+- [ ] Select part of the text. The round button appears and opens the rewrite popup. Press the Fix shortcut with nothing selected. The popup covers the whole document.
+- [ ] Turn **Fix while I type** off in the toolbar popup. Typing and pausing in the document sends nothing. Turn it back on. Add any site to **Sites**: Fix still works in documents.
+- [ ] Write `**bold**` and a `- list`. **Preview** shows them formatted. **Edit** shows the same text, and undo still works.
+- [ ] **Copy** copies the text without the title.
+- [ ] Focus a fixture textarea on a page, open the panel from that page (selection sparkle or chat shortcut), then press **+ Doc** and write something. **Insert** shows and replaces the field's text. Without a known field, **Insert** is hidden.
+- [ ] **Ask in chat** opens a chat with the document attached. Ask the mock provider a question. The document is unchanged in History.
+- [ ] Close and reopen the panel. History → Documents lists the document with a short time (`12:40`, `Yesterday`). Open it: title and text are back. The toolbar popup's Home lists it under Recent documents, and clicking it opens it in the panel.
+- [ ] Delete a document in History. It asks first. **Cancel** keeps it; **Delete** removes it. Empty a saved document completely and reopen it: it stays empty.
+- [ ] Check the panel at narrow and wide widths, and the popup, in both color schemes.
 
 ## Results
 

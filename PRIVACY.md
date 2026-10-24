@@ -1,6 +1,6 @@
 # Privacy policy — LocalPolish
 
-_Updated 23 October 2026 for LocalPolish 1.4.0, including assistant chat and local chat history._
+_Updated 24 October 2026 for LocalPolish 1.5.0, including local documents._
 
 LocalPolish is a browser extension for Chrome. It talks to no server of
 ours, has no account and no analytics. Your text goes to the AI provider you
@@ -21,9 +21,12 @@ browser, on your device:
   An attempt starts before saving its count, so cancellation during that save
   still counts even if the provider has not been called;
 - completed chats with their title, turns, attachment text, page title, URL, and creation and update times. Up to 50 chats are kept. They expire 30 days after their last update and are pruned on save and browser start. Each serialized chat is limited to 128 KiB. An oversized save fails without truncating or replacing the stored chat. The answer stays visible. Delete one or use **Delete all** in History.
+- documents you write in the side panel, with their title, text, and creation and update times. They are kept until you delete them in History; there is no count or age limit. Each document is limited to 128 KiB. A document is saved about a second after you stop typing, and when you close the panel or switch to something else. An empty new document is not saved.
 
 Chrome does not sync this storage to your other devices, and LocalPolish
-does not log it. Removing the extension deletes all of it.
+does not log it. Removing the extension deletes all of it. Because documents
+are kept until you delete them, LocalPolish asks for `unlimitedStorage`, so
+this storage can grow past Chrome's 10 MB default.
 
 Only trusted extension contexts, including the background, toolbar popup,
 options page, and side panel, can read this storage. Content scripts receive only the
@@ -67,6 +70,8 @@ and tone. Where it goes depends on the provider you chose:
 
 For chat, opening an entry point only attaches text to the panel. Nothing is sent to an AI until you submit a question or choose a quick ask. Each turn sends the conversation so far, the selected text, its page title and URL, and the chat system instruction to the selected chat provider. It does not send the whole page or your browsing history. The panel shows the attachment. Chat uses the same CLI lockdown and provider connection as Fix. Its provider, model, and CLI effort have separate settings; credentials remain shared. Older chat settings without effort values copy the normalized Fix efforts when read; the next successful settings save stores that copy independently. A failed chat-settings save blocks sending until the displayed choices can be stored.
 
+A document's text is sent only when Fix runs on it or when you attach it to a chat. Fix while I type sends the whole document text after you pause, if that switch is on and the language is on. The button and the shortcut send the selection, or the whole document when nothing is selected. **Ask in chat** attaches the document's title and text to a new chat, and it is sent with your first question, as described above. Writing, saving, Copy and Preview send nothing. **Insert** writes the text into the page field the panel was opened from, using the same checks as Insert into field in chat.
+
 **Test connection** sends a short fixed sample, not your text.
 
 Fix while I type reads textareas and rich editors. It skips
@@ -96,13 +101,14 @@ field only when you press **Accept**, accept a fix, or choose **Insert into fiel
 
 ## Permissions
 
-| Permission        | Used for                                                                                                                                  |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`         | Keeping settings, keys, site lists, request counts, local chat history, and session-only chat attachments and frame hints on your device. |
-| `sidePanel`       | Showing the assistant chat beside the page.                                                                                               |
-| `contextMenus`    | Adding the selected-text chat action to the right-click menu.                                                                             |
-| `nativeMessaging` | Talking to the bridge, `com.localpolish.bridge`, which runs the CLI you picked. Chrome lets only this extension's ID use it.              |
-| `<all_urls>`      | Showing selection buttons and Fix while I type on web pages, reading selected text for chat, and reaching your configured API base URL.   |
+| Permission         | Used for                                                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`          | Keeping settings, keys, site lists, request counts, local chat history, documents, and session-only chat attachments and frame hints on your device. |
+| `unlimitedStorage` | Letting documents, which are kept until you delete them, use more than Chrome's 10 MB default. Chrome shows no install warning for it.               |
+| `sidePanel`        | Showing the assistant chat beside the page.                                                                                                          |
+| `contextMenus`     | Adding the selected-text chat action to the right-click menu.                                                                                        |
+| `nativeMessaging`  | Talking to the bridge, `com.localpolish.bridge`, which runs the CLI you picked. Chrome lets only this extension's ID use it.                         |
+| `<all_urls>`       | Showing selection buttons and Fix while I type on web pages, reading selected text for chat, and reaching your configured API base URL.              |
 
 ## Changes and contact
 

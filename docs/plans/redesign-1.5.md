@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a–T26h done. Next: T26i.
+Status: T26a–T26i done. Next: T26j (release, needs the owner's hand checks).
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -83,7 +83,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 
 - [x] **T26h. Options page restyle.** `art` lane. Depends on: T26d. Same sections and order (`src/options/App.tsx`), in the new look. No behavior changes.
 
-- [ ] **T26i. Docs and checklist.** `feature` lane, or Claude if small. Depends on: T26f, T26g.
+- [x] **T26i. Docs and checklist.** `feature` lane, or Claude if small. Depends on: T26f, T26g.
   - README: the new popup, documents, where they are stored.
   - `PRIVACY.md`: documents stay in this browser's local storage until deleted, and their text goes to the chosen provider only when Fix runs or when attached to a chat.
   - `docs/manual-checklist.md`: a document section (write, idle Fix, Accept, undo, Insert, Ask in chat, delete).
@@ -95,12 +95,13 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 
 T26a and T26b and T26d can start at once. Then T26c, T26e, T26f, T26g, T26h, T26i, T26j.
 
-## Handoff (24 October 2026, 14:05 Cairo)
+## Handoff (24 October 2026, 14:10 Cairo)
 
-- Current commit: the T26h commit on `main`. Everything is pushed. No delegate, dev server or test browser is running.
+- Current commit: the T26i commit on `main`. Everything is pushed. No delegate, dev server or test browser is running.
 - Done: T26a–T26g. T26g rebuilt the toolbar popup (top area with New chat, New document, provider line with Change and Test; tabs Home, Provider, Sites, More; recent documents on Home), added `src/core/when.ts` (short times, also used by the panel history), fixed the old icons' stroke attributes, and retook `docs/screenshots/` (`about.png` is now `more.png`). The browser suite has 266 tests.
 - T26h restyled the options page (centered column, ruled sections, provider radio rows, switches and chips). Default mode there is still a dropdown. After T26g the owner asked for popup fixes, now committed: no "Effort:" word in the provider line, a hover title with the full line, bordered Change and Test, a more compact provider list, and only the version number per CLI.
-- Next: T26i (docs and checklist), `feature` lane or Claude. Then T26j (release, needs the owner's hand checks).
+- T26i (Claude) updated the README (popup, documents, permissions), `PRIVACY.md` (documents, `unlimitedStorage`), `docs/manual-checklist.md` (a "Documents, 1.5.0" section) and the `CHANGELOG.md` Unreleased entry.
+- Next: T26j. Follow `RELEASING.md`. The owner first hand-checks the popup in both themes, writing and fixing a real document in English and Arabic, Insert into a real field (without sending), Ask in chat, and the `polish` shortcut inside the side panel (risk 1).
 - Required checks per task: lint, typecheck, `npm test`, build, Prettier; the full browser suite for anything touching `src/content`, `src/chat`, the background, the popup or the options page. Delegates' sandboxes cannot start Chromium or bind port 5179, so the orchestrator runs `npm run test:e2e` itself.
 - Visual checks: `npm run shots` renders the popup tabs. Opus's helpers in `/tmp/t26e/`, `/tmp/t26f/` and `/tmp/t26g/` render the side panel and popup scenes with a stubbed `chrome` (not in the repo; they need `--single-process --disable-gpu` in the delegate sandbox). Each UI task rebuilt one; saving one as `scripts/shots-all.mjs` is still open.
 - Known gaps against the mockup: in the side panel the model panel floats over the quick-ask chips; the document toolbar wraps Insert to a second row at 320 px; the popup's Provider tab shows an empty band where the status line would be.

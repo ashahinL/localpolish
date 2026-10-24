@@ -6,6 +6,23 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+**New**
+
+- Documents: a drafting board in the side panel, next to chat. Write in Markdown, switch between Edit and Preview, and Fix the text with Fix while I type, the button and the shortcut, the same as in a web field. Accepted fixes undo with `Cmd+Z` / `Ctrl+Z`. **Copy**, **Insert** into the page field the panel came from, and **Ask in chat** with the document attached.
+- Documents save as you type and are kept in this browser until you delete them. Each can be up to 128 KiB. Deleting asks first. LocalPolish now asks for `unlimitedStorage` so kept documents can go past Chrome's 10 MB default; Chrome shows no install warning for it.
+- The toolbar popup starts with **New chat** and **New document**, then a line with the provider, **Change** and **Test**. Home lists the three newest documents. The tabs are Home, Provider, Sites and More: the quick switches moved to Sites, and usage moved to More.
+- The side panel header has History, **+ Chat** and **+ Doc**. History has two lists, Chats and Documents, with short times like `12:40` and `Yesterday`.
+
+**Changed**
+
+- A new look on the popup, side panel and options page: navy ink, a yellow highlighter for the active tab, and sections split by thin lines. The icon is yellow. The in-page Fix popup on web pages keeps its look.
+- Chat's provider, model and thinking pickers moved into a chip in the message box. Copy and Insert into field are smaller buttons under each answer.
+- The provider line in the popup leaves out the word "Effort" and shows the full line on hover. The provider list shows each CLI's version number.
+
+**Fixes**
+
+- Popup icons now draw at their intended line width.
+
 ## 1.4.0 — 2026-10-23
 
 **Bridge users:** run `git pull --rebase` in your LocalPolish repo to update the chat bridge. No bridge reinstall or new login is needed on an existing setup.
