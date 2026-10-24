@@ -41,6 +41,8 @@ function choiceLabel(choice: Choice): string {
 export interface PopupProps {
   state: PopupState;
   anchor: Rect;
+  /** The caret's line in a field, used when the field leaves no room around it. */
+  line?: Rect;
   isMac: boolean;
   onTab(tab: Tab): void;
   onChoice(choice: Choice): void;
@@ -52,7 +54,7 @@ export interface PopupProps {
 }
 
 export function Popup(props: PopupProps) {
-  const { state, anchor, isMac } = props;
+  const { state, anchor, line, isMac } = props;
   const ref = useRef<HTMLDivElement>(null);
   const [analysis] = useState(createPopupAnalysis);
 
@@ -66,6 +68,7 @@ export function Popup(props: PopupProps) {
         anchor,
         { width: el.offsetWidth, height: el.offsetHeight },
         { width: window.innerWidth, height: window.innerHeight },
+        line,
       );
       el.style.top = `${point.top}px`;
       el.style.left = `${point.left}px`;
@@ -74,7 +77,7 @@ export function Popup(props: PopupProps) {
     const observer = new ResizeObserver(place);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [anchor]);
+  }, [anchor, line]);
 
   useEffect(() => {
     ref.current?.focus({ preventScroll: true });

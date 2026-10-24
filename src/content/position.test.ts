@@ -23,6 +23,19 @@ describe('placePopup', () => {
     expect(placePopup(rect(100, 200, 300, 40), tall, viewport)).toEqual({ top: 92, left: 200 });
   });
 
+  it('opens below the caret line when the field leaves no room above or below', () => {
+    const field = rect(20, 16, 360, 760);
+    const line = rect(40, 30, 0, 20);
+    expect(placePopup(field, popup, viewport, line)).toEqual({ top: 66, left: 16 });
+  });
+
+  it('ignores the caret line when the popup fits outside the field', () => {
+    expect(placePopup(rect(100, 200, 300, 40), popup, viewport, rect(110, 250, 0, 20))).toEqual({
+      top: 146,
+      left: 200,
+    });
+  });
+
   it('clamps to the right and left edges with an 8 px margin', () => {
     expect(placePopup(rect(100, 800, 100, 20), popup, viewport).left).toBe(552);
     expect(placePopup(rect(100, -50, 100, 20), popup, viewport).left).toBe(8);

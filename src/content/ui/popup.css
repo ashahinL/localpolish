@@ -98,6 +98,20 @@ button:focus-visible {
   animation: lp-in 120ms ease-out;
 }
 
+/* In the side panel's documents the popup matches the panel's smaller type. */
+:host([data-compact]) .lp-popup {
+  width: min(400px, calc(100vw - 16px));
+  font-size: 13px;
+}
+
+:host([data-compact]) .lp-tab {
+  padding: 2px 8px;
+}
+
+:host([data-compact]) .lp-button {
+  padding: 3px 10px;
+}
+
 @keyframes lp-in {
   from {
     opacity: 0;

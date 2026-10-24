@@ -20,12 +20,22 @@ const MARGIN = 8;
 const POPUP_GAP = 6;
 const BUTTON_GAP = 4;
 
-export function placePopup(anchor: Rect, popup: Size, viewport: Size): Point {
-  const roomBelow = viewport.height - MARGIN - anchor.bottom - POPUP_GAP;
-  const roomAbove = anchor.top - POPUP_GAP - MARGIN;
-  const below = popup.height <= roomBelow || roomBelow >= roomAbove;
-  const top = below ? anchor.bottom + POPUP_GAP : anchor.top - POPUP_GAP - popup.height;
-  return clampToViewport({ top, left: anchor.left }, popup, viewport);
+export function placePopup(anchor: Rect, popup: Size, viewport: Size, line?: Rect): Point {
+  // A field too tall to leave room above or below would be covered, so open at the caret's line.
+  const fitsOutside =
+    popup.height <= roomBelow(anchor, viewport) || popup.height <= roomAbove(anchor);
+  const at = line && !fitsOutside ? { ...anchor, top: line.top, bottom: line.bottom } : anchor;
+  const below = popup.height <= roomBelow(at, viewport) || roomBelow(at, viewport) >= roomAbove(at);
+  const top = below ? at.bottom + POPUP_GAP : at.top - POPUP_GAP - popup.height;
+  return clampToViewport({ top, left: at.left }, popup, viewport);
+}
+
+function roomBelow(anchor: Rect, viewport: Size): number {
+  return viewport.height - MARGIN - anchor.bottom - POPUP_GAP;
+}
+
+function roomAbove(anchor: Rect): number {
+  return anchor.top - POPUP_GAP - MARGIN;
 }
 
 export function placeButton(caret: Rect, viewport: Size): Point {

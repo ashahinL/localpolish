@@ -1,5 +1,6 @@
 import type { PortLike } from '../content/controller';
 import { startFix } from '../content/fix';
+import { compactUi } from '../content/ui/root';
 import type { DetectFn } from '../content/language';
 import { REWRITE_PORT } from '../core/messages';
 import { pageSettings } from '../core/settings';
@@ -28,6 +29,7 @@ function extension(): DocumentChrome {
 
 export async function startDocumentFix(accepts: (el: HTMLElement) => boolean): Promise<() => void> {
   const ext = extension();
+  compactUi();
   let settings = await readSettings();
   const fix = startFix({
     connect: () => ext.runtime.connect({ name: REWRITE_PORT }),

@@ -1,6 +1,7 @@
 import { h, render } from 'preact';
 import { type RewriteEvent, type RewriteRequest } from '../core/messages';
 import { type DefaultMode, type Settings, type Tone } from '../core/settings';
+import { fieldFocusCaret } from './caret';
 import { copyText } from './clipboard';
 import { applyReplacement, type Target } from './editable';
 import { guarded, settle } from './guard';
@@ -47,6 +48,7 @@ export interface Controller {
 interface Session {
   target: Target;
   anchor: Rect;
+  line: Rect | undefined;
   state: PopupState;
   port: PortLike | null;
   waiting: Promise<Outcome> | undefined;
@@ -90,6 +92,7 @@ export function createController(deps: ControllerDeps): Controller {
     const s: Session = {
       target,
       anchor: anchorRect(target),
+      line: target.kind === 'field' ? (fieldFocusCaret(target.el) ?? undefined) : undefined,
       state: initialState(target.text, choice),
       port: null,
       waiting: undefined,
@@ -143,6 +146,7 @@ export function createController(deps: ControllerDeps): Controller {
       h(Popup, {
         state: s.state,
         anchor: s.anchor,
+        line: s.line,
         isMac: deps.isMac,
         onTab: guarded((tab: Tab) => {
           if (tab === 'rephrase') dispatch(s, { type: 'tab', tab });
