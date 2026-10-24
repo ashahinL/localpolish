@@ -28,7 +28,7 @@ const english: ChromeLanguageResult = {
   languages: [{ language: 'en', percentage: 100 }],
 };
 
-function harness() {
+function harness(accepts?: (el: HTMLElement) => boolean) {
   const listeners = new Map<string, (event: Event) => void>();
   vi.stubGlobal('Node', Object);
   const doc = {
@@ -62,6 +62,7 @@ function harness() {
     languages: () => state.languages,
     detect,
     openPopup,
+    ...(accepts ? { accepts } : {}),
   });
   return {
     idle,
@@ -248,6 +249,21 @@ describe('idle language switches', () => {
       mode: 'fix',
       tone: 'polite',
       text: field.text,
+    });
+  });
+
+  it('does not run idle Fix on a field the caller rejects', async () => {
+    const rejected = harness(() => false);
+    await rejected.input('the purple moon have wings');
+    expect(rejected.postMessage).not.toHaveBeenCalled();
+
+    const accepted = harness(() => true);
+    await accepted.input('the purple moon have wings');
+    expect(accepted.postMessage).toHaveBeenCalledExactlyOnceWith({
+      mode: 'fix',
+      tone: 'polite',
+      text: 'the purple moon have wings',
+      trigger: 'idle',
     });
   });
 });

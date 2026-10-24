@@ -46,6 +46,8 @@ async function startBackground() {
   });
   const query = vi.fn().mockResolvedValue([]);
   const sendMessage = vi.fn().mockResolvedValue(undefined);
+  const runtimeSendMessage = vi.fn().mockResolvedValue(undefined);
+  const onCommand = vi.fn();
   const nativePorts: Array<ReturnType<typeof nativePort>> = [];
   const connectNative = vi.fn(() => {
     const port = nativePort();
@@ -57,13 +59,14 @@ async function startBackground() {
     runtime: {
       id: 'localpolish',
       connectNative,
+      sendMessage: runtimeSendMessage,
       onInstalled: { addListener: onInstalled },
       onStartup: { addListener: onStartup },
       getURL: (path: string) => `chrome-extension://localpolish${path}`,
       onConnect: { addListener: onConnect },
       onMessage: { addListener: onRuntimeMessage },
     },
-    commands: { onCommand: { addListener: vi.fn() } },
+    commands: { onCommand: { addListener: onCommand } },
     storage: {
       local: { setAccessLevel, get, set, remove },
       session: { setAccessLevel: vi.fn().mockResolvedValue(undefined), get, set, remove },
@@ -94,6 +97,8 @@ async function startBackground() {
     get,
     query,
     sendMessage,
+    runtimeSendMessage,
+    onCommand,
     installed,
     create,
     connectNative,
@@ -105,7 +110,7 @@ async function startBackground() {
   };
 }
 
-async function connect(sender?: { tab?: { url?: string }; url?: string }) {
+async function connect(sender?: { id?: string; tab?: { url?: string }; url?: string }) {
   const { onConnect } = await startBackground();
   const onMessage = vi.fn();
   const postMessage = vi.fn();
@@ -122,6 +127,8 @@ async function connect(sender?: { tab?: { url?: string }; url?: string }) {
   if (!send) throw new Error('No rewrite message listener');
   return { send, postMessage };
 }
+
+const PANEL = { id: 'localpolish', url: 'chrome-extension://localpolish/sidepanel.html' };
 
 describe('background settings and rewrite ports', () => {
   beforeEach(() => {
@@ -301,6 +308,54 @@ describe('background settings and rewrite ports', () => {
       });
     });
     expect(runRewrite).not.toHaveBeenCalled();
+  });
+
+  it('runs an idle request from the side panel even when the blocklist names the extension', async () => {
+    vi.mocked(loadSettings).mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      blocklist: ['localpolish'],
+    });
+    const port = await connect(PANEL);
+    const request = { mode: 'fix', tone: 'polite', text: 'sample text', trigger: 'idle' };
+    port.send(request);
+    await vi.waitFor(() => expect(runRewrite).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(runRewrite).mock.calls[0]?.[0]).toEqual(request);
+  });
+
+  it('rejects an idle request from the side panel when idle Fix is off', async () => {
+    vi.mocked(loadSettings).mockResolvedValue({ ...DEFAULT_SETTINGS, idleFix: false });
+    const port = await connect(PANEL);
+    port.send({ mode: 'fix', tone: 'polite', text: 'sample text', trigger: 'idle' });
+    await vi.waitFor(() => {
+      expect(port.postMessage).toHaveBeenCalledWith({
+        type: 'error',
+        message: 'LocalPolish is off on this site.',
+      });
+    });
+    expect(runRewrite).not.toHaveBeenCalled();
+  });
+
+  it('sends the polish command to extension pages and the active tab', async () => {
+    const background = await startBackground();
+    let resolveQuery: (tabs: Array<{ id: number }>) => void = () => {};
+    background.query.mockReturnValue(
+      new Promise((resolve) => {
+        resolveQuery = resolve;
+      }),
+    );
+    background.runtimeSendMessage.mockRejectedValueOnce(
+      new Error('Could not establish connection.'),
+    );
+    const onCommand = background.onCommand.mock.calls[0]?.[0] as
+      ((command: string) => void) | undefined;
+    if (!onCommand) throw new Error('No command listener');
+    onCommand('polish');
+    expect(background.runtimeSendMessage).toHaveBeenCalledExactlyOnceWith({ type: 'open-popup' });
+    expect(background.sendMessage).not.toHaveBeenCalled();
+    resolveQuery([{ id: 4 }]);
+    await vi.waitFor(() =>
+      expect(background.sendMessage).toHaveBeenCalledExactlyOnceWith(4, { type: 'open-popup' }),
+    );
   });
 
   it.each(['about:blank', 'invalid URL'])('ignores sender URLs with no host: %s', async (url) => {
@@ -986,7 +1041,6 @@ describe('connection test owner ports', () => {
   });
 });
 
-const PANEL = { id: 'localpolish', url: 'chrome-extension://localpolish/sidepanel.html' };
 const CHAT = {
   turns: [
     { role: 'user', content: 'Summarize this.' },

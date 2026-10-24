@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a and T26b done. Next: T26c.
+Status: T26a, T26b and T26c done. Next: T26d.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -45,10 +45,10 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
   - Add `unlimitedStorage` to `permissions` in `wxt.config.ts`.
   - Unit tests like `chatHistory.test.ts`: save, update, list order, delete, size limit, bad stored data ignored, nothing expires.
 
-- [ ] **T26c. Shared Fix wiring and shortcut routing.** `feature` lane. Depends on: T26a.
+- [x] **T26c. Shared Fix wiring and shortcut routing.** `feature` lane. Depends on: T26a.
   - Move the Fix setup out of `start()` in `src/entrypoints/content.ts` into `src/content/fix.ts`, as one function that takes: how to connect, how to read settings, `isEnabled`, `isIdleEnabled`, and which elements Fix may attach to. `content.ts` calls it with today's behavior, unchanged.
   - The `polish` command handler in `src/entrypoints/background.ts` (about line 405) also sends `{ type: 'open-popup' }` through `runtime.sendMessage`, as decided above.
-  - The idle site check in the rewrite port (`src/entrypoints/background.ts`, about lines 343–357) skips the blocklist when the sender is the extension's own side panel (`isSidePanelSender`, about line 179), so a blocklist entry can never turn Fix off in documents. `idleFix` still applies.
+  - The idle site check in the rewrite port (`src/entrypoints/background.ts`, about lines 343–357) skips the blocklist when the sender is the extension's own side panel (`isPanelSender`, about line 179), so a blocklist entry can never turn Fix off in documents. `idleFix` still applies.
   - Settings in the side panel are loaded before `createIdleFix` is built, and reloaded on `onSettingsChanged` (the background sends `page-settings-changed` only to tabs).
   - The full browser suite must pass unchanged. This proves web pages still behave the same.
 

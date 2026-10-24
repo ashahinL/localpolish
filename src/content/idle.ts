@@ -25,6 +25,7 @@ export interface IdleDeps {
   isPopupOpen(): boolean;
   isFixDefault(): boolean;
   openPopup(target: Target, preset?: Preset): void;
+  accepts?(el: HTMLElement): boolean;
 }
 
 const IDLE_MS = 3000;
@@ -94,7 +95,7 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (!deps.isEnabled()) return;
     if (!(event.target instanceof Node)) return;
     const host = findEditable(event.target);
-    if (!host || !isIdleField(host)) return;
+    if (!host || !isIdleField(host) || deps.accepts?.(host) === false) return;
     const slot = slotOf(host);
     if (clearEmpty(host, slot)) {
       renderMarks();
@@ -175,7 +176,13 @@ export function createIdleFix(deps: IdleDeps): IdleFix {
     if (document.hidden) return;
     const slot = slotOf(el);
     if (deps.isPopupOpen()) return;
-    if (!deps.isEnabled() || focusedEditable() !== el || !el.isConnected || !isIdleField(el))
+    if (
+      !deps.isEnabled() ||
+      focusedEditable() !== el ||
+      !el.isConnected ||
+      !isIdleField(el) ||
+      deps.accepts?.(el) === false
+    )
       return;
     if (slot.running) {
       slot.pending = true;

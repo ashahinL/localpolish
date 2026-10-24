@@ -43,6 +43,7 @@ interface ExtensionChrome {
     onInstalled: { addListener(cb: (details: { reason: string }) => void): void };
     onStartup: { addListener(cb: () => void): void };
     getURL(path: string): string;
+    sendMessage(message: RuntimeMessage): Promise<unknown>;
     onConnect: { addListener(cb: (port: RewritePort) => void): void };
     onMessage: {
       addListener(
@@ -351,7 +352,11 @@ export default defineBackground(() => {
                 // Blank or opaque frames may not have a parseable sender URL.
               }
             }
-            if (!settings.idleFix || hosts.some((host) => isBlocked(host, settings.blocklist))) {
+            if (
+              !settings.idleFix ||
+              (!isPanelSender(port.sender) &&
+                hosts.some((host) => isBlocked(host, settings.blocklist)))
+            ) {
               post(port, { type: 'error', message: 'LocalPolish is off on this site.' });
               return;
             }
@@ -404,6 +409,11 @@ export default defineBackground(() => {
 
   extension().commands.onCommand.addListener((command) => {
     if (command !== 'polish') return;
+    void extension()
+      .runtime.sendMessage({ type: 'open-popup' })
+      .catch(() => {
+        // No extension page may be listening.
+      });
     void extension()
       .tabs.query({ active: true, currentWindow: true })
       .then((tabs) => {

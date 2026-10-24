@@ -11,6 +11,7 @@ export interface ButtonDeps {
   isEnabled(): boolean;
   isPopupOpen(): boolean;
   onActivate(): void;
+  accepts?(el: HTMLElement): boolean;
 }
 
 const DEBOUNCE_MS = 150;
@@ -22,7 +23,9 @@ export function createButton(deps: ButtonDeps): { refresh(): void } {
 
   function wantedField(): HTMLElement | null {
     if (!deps.isEnabled() || deps.isPopupOpen()) return null;
-    return selectedEditable();
+    const field = selectedEditable();
+    if (!field || deps.accepts?.(field) === false) return null;
+    return field;
   }
 
   function hide(): void {
