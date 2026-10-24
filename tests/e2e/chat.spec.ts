@@ -978,7 +978,7 @@ test('toolbar starts plain chat with selection disabled and the site blocked', a
       });
     });
     await popup.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
-    const button = popup.getByRole('button', { name: 'Open chat', exact: true });
+    const button = popup.getByRole('button', { name: 'New chat', exact: true });
     await expect(button).toBeEnabled();
     await button.click();
     await expect(page.getByRole('region', { name: 'Attached' })).toHaveCount(0);

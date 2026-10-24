@@ -2,16 +2,17 @@ import { useState } from 'preact/hooks';
 import { type Settings } from '../core/settings';
 import { useSettingsApi } from '../options/useSettings';
 import { CloseIcon } from './icons';
-import { addSite, hideSite, siteState } from './sites';
+import { QuickToggles } from './QuickToggles';
+import { addSite } from './sites';
 
 interface SitesTabProps {
   settings: Settings;
   host: string | null | undefined;
 }
 
-function siteLetter(host: string): string {
-  const bare = host.toLowerCase().startsWith('www.') ? host.slice(4) : host;
-  return bare.charAt(0).toUpperCase();
+function hiddenHeading(count: number): string {
+  if (count === 0) return 'No sites hidden';
+  return count === 1 ? 'Hidden on 1 site' : `Hidden on ${count} sites`;
 }
 
 export function SitesTab({ settings, host }: SitesTabProps) {
@@ -22,19 +23,22 @@ export function SitesTab({ settings, host }: SitesTabProps) {
   const count = blocklist.length;
   const current = typeof host === 'string' ? host : null;
 
+  const showHidden = () => {
+    document.getElementById('sites-h')?.scrollIntoView({ block: 'start' });
+    document.getElementById('add-site')?.focus({ preventScroll: true });
+  };
+
   return (
     <>
-      <section class="card stack" aria-labelledby="sites-h">
-        <div class="ctitle">
-          <h2 id="sites-h">LocalPolish hidden on</h2>
-          <span class="muted sites-count">{count === 1 ? '1 site' : `${count} sites`}</span>
-        </div>
+      <QuickToggles settings={settings} host={host} onOpenSites={showHidden} />
+      <section class="sec" aria-labelledby="sites-h">
+        <h2 id="sites-h">{hiddenHeading(count)}</h2>
         {count === 0 ? (
-          <p class="empty">
+          <p class="help">
             No sites yet. The button and Fix while I type are allowed on every site.
           </p>
         ) : (
-          <ul class="sites" aria-labelledby="sites-h">
+          <ul class="site-list" aria-labelledby="sites-h">
             {blocklist.map((entry, index) => (
               <li key={index}>
                 <span class="host">{entry}</span>
@@ -43,7 +47,7 @@ export function SitesTab({ settings, host }: SitesTabProps) {
                 )}
                 <button
                   type="button"
-                  class="x"
+                  class="icon-btn"
                   aria-label={`Remove ${entry}`}
                   onClick={() => change({ blocklist: blocklist.filter((_, i) => i !== index) })}
                 >
@@ -54,7 +58,7 @@ export function SitesTab({ settings, host }: SitesTabProps) {
           </ul>
         )}
         <form
-          class="inline"
+          class="add"
           onSubmit={(event) => {
             event.preventDefault();
             const result = addSite(draft, blocklist);
@@ -93,21 +97,6 @@ export function SitesTab({ settings, host }: SitesTabProps) {
           still works.
         </p>
       </section>
-      {current !== null && siteState(current, blocklist).kind === 'shown' && (
-        <button
-          type="button"
-          class="card site-cta"
-          onClick={() => change({ blocklist: hideSite(current, blocklist) })}
-        >
-          <span class="qicon site" aria-hidden="true">
-            {siteLetter(current)}
-          </span>
-          <span class="site-cta-copy">
-            <b>Hide on {current}</b>
-            <span class="help">Adds this tab's site to the list</span>
-          </span>
-        </button>
-      )}
     </>
   );
 }

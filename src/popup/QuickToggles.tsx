@@ -1,7 +1,6 @@
 import { type Settings } from '../core/settings';
 import { LANGUAGES } from '../options/sections';
 import { useSettingsApi } from '../options/useSettings';
-import { BoltIcon, CheckIcon } from './icons';
 import { hideSite, showSite, siteState, type SiteState } from './sites';
 import { Switch } from './Switch';
 import { Tooltip } from './Tooltip';
@@ -15,12 +14,10 @@ interface QuickTogglesProps {
 export function QuickToggles({ settings, host, onOpenSites }: QuickTogglesProps) {
   const { change } = useSettingsApi();
   return (
-    <section class="quick" aria-label="Quick switches">
-      <div class="qrow">
-        <span class="qicon" aria-hidden="true">
-          <BoltIcon />
-        </span>
-        <div class="qtxt">
+    <section class="sec" aria-label="Quick switches">
+      <SiteRow settings={settings} host={host} onOpenSites={onOpenSites} />
+      <div class="srow wrap">
+        <div class="t">
           <Tooltip
             id="idle-desc"
             text={
@@ -38,39 +35,27 @@ export function QuickToggles({ settings, host, onOpenSites }: QuickTogglesProps)
           descId="idle-desc"
           onToggle={() => change({ idleFix: !settings.idleFix })}
         />
-      </div>
-      {settings.idleFix && (
-        <div class="qlangs">
-          <span class="qlangs-label" aria-hidden="true">
-            Languages
-          </span>
-          <div class="lang-seg" role="group" aria-label="Languages to fix while I type">
+        {settings.idleFix && (
+          <div class="langs" role="group" aria-label="Languages to fix while I type">
             {LANGUAGES.map(({ id, name, short }) => (
               <button
                 key={id}
                 type="button"
-                class="lang"
+                class="chip"
                 aria-label={name}
                 aria-pressed={settings.languages[id]}
                 onClick={() =>
                   change((s) => ({ languages: { ...s.languages, [id]: !s.languages[id] } }))
                 }
               >
-                {settings.languages[id] && <CheckIcon />}
                 {short}
               </button>
             ))}
           </div>
-        </div>
-      )}
-      <SiteRow settings={settings} host={host} onOpenSites={onOpenSites} />
+        )}
+      </div>
     </section>
   );
-}
-
-function siteLetter(host: string): string {
-  const bare = host.toLowerCase().startsWith('www.') ? host.slice(4) : host;
-  return bare.charAt(0).toUpperCase();
 }
 
 function SiteRow({ settings, host, onOpenSites }: QuickTogglesProps) {
@@ -89,11 +74,8 @@ function SiteRow({ settings, host, onOpenSites }: QuickTogglesProps) {
   };
 
   return (
-    <div class={state?.kind === 'hidden' ? 'qrow hidden-here' : 'qrow'}>
-      <span class="qicon site" aria-hidden="true">
-        {typeof host === 'string' ? siteLetter(host) : ''}
-      </span>
-      <div class="qtxt">
+    <div class="srow">
+      <div class="t">
         {help === null ? (
           <b id="site-title">{title}</b>
         ) : (

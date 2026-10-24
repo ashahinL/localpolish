@@ -1,10 +1,10 @@
-export type TabId = 'home' | 'provider' | 'sites' | 'about';
+export type TabId = 'home' | 'provider' | 'sites' | 'more';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'home', label: 'Home' },
   { id: 'provider', label: 'Provider' },
   { id: 'sites', label: 'Sites' },
-  { id: 'about', label: 'About' },
+  { id: 'more', label: 'More' },
 ];
 
 interface TabsProps {

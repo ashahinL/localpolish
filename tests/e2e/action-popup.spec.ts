@@ -21,6 +21,7 @@ interface StubConfig {
   chatTargetDelayMs?: number;
   chatOpenError?: string;
   chatWriteError?: string;
+  documents?: unknown[];
 }
 
 const BRIDGE_OK = {
@@ -75,6 +76,7 @@ async function openPopup(
     const store: Record<string, unknown> = {};
     if (cfg.settings) store.settings = cfg.settings;
     if (cfg.usage !== undefined) store.usage = cfg.usage;
+    if (cfg.documents) store.documents = cfg.documents;
     const listeners: Array<(changes: unknown, area: string) => void> = [];
     const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
     const opened: string[] = [];
@@ -211,6 +213,14 @@ function opened(page: Page): Promise<string[]> {
   return page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
 }
 
+function chatOpens(page: Page): Promise<Array<Record<string, unknown>>> {
+  return page.evaluate(() =>
+    (window as unknown as { __runtimeSent: Array<{ type: string }> }).__runtimeSent.filter(
+      (message) => message.type === 'chat-open-plain',
+    ),
+  );
+}
+
 function bridgeCalls(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __bridgeCalls: number }).__bridgeCalls);
 }
@@ -257,6 +267,7 @@ test('Home shows the default provider and Change opens Provider', async ({ page 
 
 test('Fix while I type stores idleFix off', async ({ page }) => {
   await openPopup(page);
+  await page.getByRole('tab', { name: 'Sites' }).click();
   const toggle = page.getByRole('switch', { name: 'Fix while I type' });
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
 
@@ -267,6 +278,7 @@ test('Fix while I type stores idleFix off', async ({ page }) => {
 
 test('language chips show the stored values and toggle each language', async ({ page }) => {
   await openPopup(page, { settings: { languages: { ar: false } } });
+  await page.getByRole('tab', { name: 'Sites' }).click();
   const group = page.getByRole('group', { name: 'Languages to fix while I type' });
   const chips = [
     { name: 'English', text: 'EN', id: 'en', on: true },
@@ -289,6 +301,7 @@ test('language chips show the stored values and toggle each language', async ({ 
 
 test('language chips are hidden while Fix while I type is off', async ({ page }) => {
   await openPopup(page, { settings: { idleFix: false } });
+  await page.getByRole('tab', { name: 'Sites' }).click();
   const group = page.getByRole('group', { name: 'Languages to fix while I type' });
   await expect(group).toBeHidden();
 
@@ -299,6 +312,7 @@ test('language chips are hidden while Fix while I type is off', async ({ page })
 
 test('the site switch hides and shows mail.google.com', async ({ page }) => {
   await openPopup(page);
+  await page.getByRole('tab', { name: 'Sites' }).click();
   const toggle = page.getByRole('switch', { name: 'Show on mail.google.com' });
 
   await toggle.click();
@@ -314,16 +328,19 @@ test('the site switch hides and shows mail.google.com', async ({ page }) => {
 
 test('a broader blocklist disables the site switch', async ({ page }) => {
   await openPopup(page, { settings: { blocklist: ['google.com'] } });
+  await page.getByRole('tab', { name: 'Sites' }).click();
   const toggle = page.getByRole('switch', { name: 'Show on mail.google.com' });
   await expect(toggle).toBeDisabled();
   await expect(page.getByText('Hidden by google.com.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Edit in Sites' }).click();
   await expect(page.getByRole('tab', { name: 'Sites' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('Add a site')).toBeFocused();
 });
 
 test('a browser page disables the site switch', async ({ page }) => {
   await openPopup(page, { tabUrl: 'chrome://extensions/' });
+  await page.getByRole('tab', { name: 'Sites' }).click();
   const toggle = page.getByRole('switch', { name: 'This page' });
   await expect(toggle).toBeDisabled();
   await expect(toggle).toHaveAccessibleDescription('LocalPolish does not run on this page');
@@ -483,10 +500,10 @@ test('Sites tab adds a site, rejects a duplicate and removes it', async ({ page 
   await expect.poll(async () => (await stored(page))?.blocklist).toEqual([]);
 });
 
-test('Hide on this tab stores the host and tags the row', async ({ page }) => {
+test('Hiding this tab stores the host and tags the row', async ({ page }) => {
   await openPopup(page);
   await page.getByRole('tab', { name: 'Sites' }).click();
-  await page.getByRole('button', { name: 'Hide on mail.google.com' }).click();
+  await page.getByRole('switch', { name: 'Show on mail.google.com' }).click();
   await expect.poll(async () => (await stored(page))?.blocklist).toEqual(['mail.google.com']);
   await expect(page.getByText('This tab', { exact: true })).toBeVisible();
 });
@@ -497,13 +514,13 @@ test('Shorter becomes the default mode', async ({ page }) => {
   await expect.poll(async () => (await stored(page))?.defaultMode).toBe('shorter');
 });
 
-test('About shows the shortcut and opens the other pages', async ({ page }) => {
+test('More shows the shortcut and opens the other pages', async ({ page }) => {
   await openPopup(page);
-  await page.getByRole('tab', { name: 'About' }).click();
+  await page.getByRole('tab', { name: 'More' }).click();
   await expect(page.locator('kbd')).toHaveText(['⇧', '⌘', 'K']);
 
   await page.getByRole('button', { name: 'Change shortcut' }).click();
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'Open All options', exact: true }).click();
   await page.getByRole('button', { name: 'Open the full options page' }).click();
   await expect
     .poll(() => opened(page))
@@ -521,7 +538,7 @@ test('arrow keys move between tabs', async ({ page }) => {
   await expect(provider).toBeFocused();
 
   await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'About' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'More' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('the popup body is 400 px wide', async ({ page }) => {
@@ -533,6 +550,7 @@ test('hover help shows after 2 seconds', async ({ page }) => {
   await page.clock.install();
   try {
     await openPopup(page);
+    await page.getByRole('tab', { name: 'Sites' }).click();
     // Real time must not cross the rest of the delay while the assertion runs.
     await page.clock.pauseAt(Date.now() + 10_000);
 
@@ -617,6 +635,11 @@ const SEEDED_USAGE = [
   { provider: 'anthropic-api', model: 'claude-haiku-5-5', requests: 3 },
 ];
 
+async function openMore(page: Page, overrides: Partial<StubConfig> = {}): Promise<void> {
+  await openPopup(page, overrides);
+  await page.getByRole('tab', { name: 'More' }).click();
+}
+
 function usageRegion(page: Page) {
   return page.getByRole('region', { name: 'Usage' });
 }
@@ -632,7 +655,7 @@ function usageCells(page: Page): Promise<string[][]> {
 }
 
 test('Usage shows an empty state without numbers', async ({ page }) => {
-  await openPopup(page);
+  await openMore(page);
   const usage = usageRegion(page);
   await expect(usage.getByText('No requests recorded yet.')).toBeVisible();
   await expect(usage.getByText('Cached answers do not count.', { exact: false })).toBeVisible();
@@ -641,7 +664,7 @@ test('Usage shows an empty state without numbers', async ({ page }) => {
 });
 
 test('Usage lists each provider and model with a total', async ({ page }) => {
-  await openPopup(page, { usage: SEEDED_USAGE });
+  await openMore(page, { usage: SEEDED_USAGE });
   const usage = usageRegion(page);
   const table = usage.getByRole('table');
   await expect(table.getByRole('columnheader')).toHaveText(['Model', 'Provider', 'Requests']);
@@ -668,7 +691,7 @@ test('Usage lists each provider and model with a total', async ({ page }) => {
 });
 
 test('Usage updates live when the counts change in storage', async ({ page }) => {
-  await openPopup(page, { usage: [{ provider: 'claude-cli', model: 'haiku', requests: 1 }] });
+  await openMore(page, { usage: [{ provider: 'claude-cli', model: 'haiku', requests: 1 }] });
   await expect.poll(() => usageCells(page)).toEqual([['haiku', 'Claude Code', '1']]);
 
   await page.evaluate(() =>
@@ -693,7 +716,7 @@ test('Usage updates live when the counts change in storage', async ({ page }) =>
 });
 
 test('Usage shows a load failure instead of zero', async ({ page }) => {
-  await openPopup(page, { usage: SEEDED_USAGE, failUsageRead: true });
+  await openMore(page, { usage: SEEDED_USAGE, failUsageRead: true });
   const usage = usageRegion(page);
   await expect(usage.getByRole('alert')).toHaveText('Could not load usage: Usage read failed');
   await expect(usage.getByText('No requests recorded yet.')).toHaveCount(0);
@@ -765,30 +788,30 @@ for (const path of ['popup.html', 'setup.html'] as const) {
   });
 }
 
-test('Open chat waits for its target and shows target failures', async ({ page }) => {
+test('New chat waits for its target and shows target failures', async ({ page }) => {
   await openPopup(page, { chatTargetMissing: true });
-  await expect(page.getByRole('button', { name: 'Open chat', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'New chat', exact: true })).toBeDisabled();
   await expect(page.getByRole('alert')).toHaveText(
     'Could not find the active tab. Reopen the popup.',
   );
 });
 
-test('Open chat is disabled while target identifiers load', async ({ page }) => {
+test('New chat is disabled while target identifiers load', async ({ page }) => {
   await openPopup(page, { chatTargetDelayMs: 1500 });
-  const button = page.getByRole('button', { name: 'Open chat', exact: true });
+  const button = page.getByRole('button', { name: 'New chat', exact: true });
   await expect(button).toBeDisabled();
   await expect(button).toBeEnabled();
 });
 
 for (const failure of ['open', 'pending']) {
-  test(`Open chat shows a clear ${failure} failure and keeps the popup open`, async ({ page }) => {
+  test(`New chat shows a clear ${failure} failure and keeps the popup open`, async ({ page }) => {
     await openPopup(
       page,
       failure === 'open'
         ? { chatOpenError: 'Panel unavailable' }
         : { chatWriteError: 'Session unavailable' },
     );
-    const button = page.getByRole('button', { name: 'Open chat', exact: true });
+    const button = page.getByRole('button', { name: 'New chat', exact: true });
     await expect(button).toBeEnabled();
     await button.click();
     await expect(page.getByRole('alert')).toHaveText(
@@ -800,3 +823,74 @@ for (const failure of ['open', 'pending']) {
     );
   });
 }
+
+function savedDocument(id: string, title: string, day: number) {
+  const at = Date.parse(`2026-10-0${day}T10:00:00Z`);
+  return { id, title, body: 'Some text.', createdAt: at, updatedAt: at };
+}
+
+// The real window.close does nothing on a page the test opened, so record it instead.
+async function recordClose(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.close = () => {
+      (window as unknown as { __opened: string[] }).__opened.push('closed');
+    };
+  });
+}
+
+test('New document opens a new document in the panel and closes', async ({ page }) => {
+  await openPopup(page);
+  await recordClose(page);
+  const button = page.getByRole('button', { name: 'New document', exact: true });
+  await expect(button).toBeEnabled();
+  await button.click();
+  await expect.poll(() => opened(page)).toEqual(['chat-open:10', 'chat-pending', 'closed']);
+  const messages = await chatOpens(page);
+  expect(messages).toEqual([{ type: 'chat-open-plain', tabId: 7, windowId: 10, kind: 'document' }]);
+  expect(messages[0]).not.toHaveProperty('documentId');
+});
+
+test('Home lists the 3 newest documents and opens the one clicked', async ({ page }) => {
+  await openPopup(page, {
+    documents: [
+      savedDocument('oldest', 'Oldest draft', 1),
+      savedDocument('newest', 'Vendor reply', 4),
+      savedDocument('untitled', '', 3),
+      savedDocument('arabic', 'رد على العميل', 2),
+    ],
+  });
+  await recordClose(page);
+  const rows = page.getByRole('region', { name: 'Recent documents' }).getByRole('button');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText('Vendor reply');
+  await expect(rows.nth(1)).toContainText('Untitled');
+  await expect(rows.nth(2)).toContainText('رد على العميل');
+  await expect(page.getByText('Oldest draft')).toHaveCount(0);
+
+  await rows.nth(1).click();
+  await expect.poll(() => opened(page)).toEqual(['chat-open:10', 'chat-pending', 'closed']);
+  expect(await chatOpens(page)).toEqual([
+    { type: 'chat-open-plain', tabId: 7, windowId: 10, kind: 'document', documentId: 'untitled' },
+  ]);
+});
+
+test('Home says when there are no documents yet', async ({ page }) => {
+  await openPopup(page);
+  await expect(page.getByText('No documents yet. New document starts one.')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Recent documents' }).getByRole('button'),
+  ).toHaveCount(0);
+});
+
+test('the Test button in the hero runs a test and shows the result', async ({ page }) => {
+  await openPopup(page, { holdTest: true });
+  const run = page.getByRole('button', { name: 'Test connection', exact: true });
+  await expect(run).toHaveText('Test');
+  await run.click();
+  await expect.poll(() => testPorts(page).then((ports) => ports.length)).toBe(1);
+  await expect(page.getByText('Testing…')).toBeVisible();
+  await expect(run).toBeDisabled();
+  await replyToTest(page, 0, 'Hero sample.');
+  await expect(page.getByText('Works. Got “Hero sample.” in 0.1 s')).toBeVisible();
+  await expect(run).toBeEnabled();
+});

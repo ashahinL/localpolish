@@ -60,3 +60,31 @@ it.each(['open', 'write'])('reports %s failure and keeps the popup open', async 
   expect(close).not.toHaveBeenCalled();
   if (failure === 'open') expect(sendMessage).not.toHaveBeenCalled();
 });
+
+it.each([
+  [{ kind: 'document' } as const, { kind: 'document' }],
+  [{ kind: 'document', documentId: 'doc-1' } as const, { kind: 'document', documentId: 'doc-1' }],
+])('opens a document entry %o and closes', async (entry, keys) => {
+  const order: string[] = [];
+  const sendMessage = vi.fn(async () => {
+    order.push('pending');
+    return { ok: true };
+  });
+  vi.stubGlobal('chrome', {
+    sidePanel: {
+      open: async () => {
+        order.push('open');
+      },
+    },
+    runtime: { sendMessage },
+  });
+  vi.stubGlobal('window', { close: () => order.push('close') });
+  await openPlainChat({ tabId: 7, windowId: 10 }, entry);
+  expect(sendMessage).toHaveBeenCalledWith({
+    type: 'chat-open-plain',
+    tabId: 7,
+    windowId: 10,
+    ...keys,
+  });
+  expect(order).toEqual(['open', 'pending', 'close']);
+});

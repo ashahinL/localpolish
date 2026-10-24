@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { deleteAllChats, deleteChat, listChats, type SavedChat } from '../core/chatHistory';
 import { deleteDocument, listDocuments, type SavedDocument } from '../core/documents';
+import { shortWhen } from '../core/when';
 import { errorMessage } from '../options/chrome';
 import { CloseIcon } from '../popup/icons';
 
 type List = 'chats' | 'documents';
 
 const ZONE = 'Africa/Cairo';
-const WHEN = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: ZONE,
-});
 const DAY = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE });
 
 function byDay<T extends { updatedAt: number }>(items: T[]): Array<{ label: string; items: T[] }> {
@@ -63,7 +57,7 @@ function Row({
         <span class="history-title" dir="auto">
           {title}
         </span>
-        <span class="history-when">{WHEN.format(updatedAt)}</span>
+        <span class="history-when">{shortWhen(updatedAt)}</span>
       </button>
       <button
         type="button"

@@ -33,17 +33,31 @@ export function extensionVersion(): string {
   return extension().runtime.getManifest().version;
 }
 
-export async function chatTarget(): Promise<{ tabId: number; windowId: number }> {
+export interface ChatTarget {
+  tabId: number;
+  windowId: number;
+}
+
+export interface DocumentEntry {
+  kind: 'document';
+  documentId?: string;
+}
+
+export async function chatTarget(): Promise<ChatTarget> {
   const tab = (await extension().tabs.query({ active: true, currentWindow: true }))[0];
   if (tab?.id === undefined || tab.windowId === undefined)
     throw new Error('Could not find the active tab.');
   return { tabId: tab.id, windowId: tab.windowId };
 }
 
-export async function openPlainChat(target: { tabId: number; windowId: number }): Promise<void> {
+export async function openPlainChat(target: ChatTarget, entry?: DocumentEntry): Promise<void> {
   // This first call must stay before every await to retain the popup click gesture.
   await extension().sidePanel.open({ windowId: target.windowId });
-  const reply = await extension().runtime.sendMessage({ type: 'chat-open-plain', ...target });
+  const reply = await extension().runtime.sendMessage({
+    type: 'chat-open-plain',
+    ...target,
+    ...entry,
+  });
   if (!(reply as { ok?: boolean } | undefined)?.ok) {
     throw new Error(
       (reply as { message?: string } | undefined)?.message ?? 'Could not start chat.',

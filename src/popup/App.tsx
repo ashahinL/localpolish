@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'preact/hooks';
 import { isCli } from '../options/ProviderSection';
 import { SettingsContext, useSettings, useSettingsApi } from '../options/useSettings';
-import { AboutTab } from './AboutTab';
 import { activeTabUrl } from './chrome';
 import { Header } from './Header';
+import { Hero } from './Hero';
 import { HomeTab } from './HomeTab';
+import { MoreTab } from './MoreTab';
 import { ProviderTab } from './ProviderTab';
 import { hostOf } from './sites';
 import { SitesTab } from './SitesTab';
-import { QuickToggles } from './QuickToggles';
 import { Tabs, type TabId } from './Tabs';
 import { useBridge } from './useBridge';
+import { useChatTarget } from './useChat';
 import { useTest } from './useTest';
 
 export function App() {
@@ -26,6 +27,7 @@ function PopupApp() {
   const { settings, loadError } = useSettingsApi();
   const bridge = useBridge(settings?.provider);
   const test = useTest();
+  const chat = useChatTarget();
   const [tab, setTab] = useState<TabId>('home');
   const [host, setHost] = useState<string | null | undefined>(undefined);
 
@@ -49,7 +51,14 @@ function PopupApp() {
       <Header />
       {settings && (
         <>
-          <QuickToggles settings={settings} host={host} onOpenSites={() => setTab('sites')} />
+          <Hero
+            settings={settings}
+            bridge={bridge}
+            test={test}
+            chat={chat}
+            full={tab !== 'provider'}
+            onOpenProvider={() => setTab('provider')}
+          />
           <Tabs
             active={tab}
             onChange={setTab}
@@ -67,19 +76,12 @@ function PopupApp() {
       >
         {loadError && <p class="note note-error">Could not load settings: {loadError}</p>}
         {!settings && !loadError && <p class="muted">Loading…</p>}
-        {settings && tab === 'home' && (
-          <HomeTab
-            settings={settings}
-            bridge={bridge}
-            test={test}
-            onOpenProvider={() => setTab('provider')}
-          />
-        )}
+        {settings && tab === 'home' && <HomeTab settings={settings} target={chat.target} />}
         {settings && tab === 'provider' && (
           <ProviderTab settings={settings} bridge={bridge} test={test} />
         )}
         {settings && tab === 'sites' && <SitesTab settings={settings} host={host} />}
-        {settings && tab === 'about' && <AboutTab />}
+        {settings && tab === 'more' && <MoreTab />}
       </main>
     </div>
   );

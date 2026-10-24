@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a–T26f done. Next: T26g.
+Status: T26a–T26g done. Next: T26h.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -29,6 +29,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 - **Default (Claude): autosave** 800 ms after the last change, and again when the panel closes or switches item. A document with an empty title and empty text is not saved.
 - **Default (Claude): emptying a saved document saves it empty** (T26f). Only a new, never-saved document is skipped when empty. Otherwise the old text would come back on reopen.
 - **Default (Claude): + Doc and opening a document keep the page field the panel was opened from** (T26f), so Insert works from a document. Ask in chat also keeps it. If the save before Ask in chat fails, the panel stays on the document and shows the error.
+- **Default (Claude): on the Provider tab the popup's top area hides Change, Test and the status line** (T26g), because that tab shows its own Test connection and bridge status. The space stays, so the tabs do not move. The "Hide on this site" button left Sites, since the site switch now sits on the same tab.
 - **Default (Claude): two windows editing the same document** is not handled: the last save wins.
 - **Default (Claude): the popup's New chat and New document** reuse the existing `chat-open-plain` path, with a new `kind` field. So Insert works from a document exactly as it works from a plain chat today.
 - **Default (Claude): Retry stays in the Stopped and failed notices** (T26e). The mockup shows it under every answer, but that would be a new "regenerate answer" feature. The quick-ask chips also stay above the message box, because browser tests click them during and after answers.
@@ -73,7 +74,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
   - Autosave as decided above. Both text fields use `dir="auto"`.
   - Browser tests with the mock provider: idle Fix proposes a change and Accept applies it; Ctrl+Z undoes it; the document survives a panel reload; Ask in chat opens a chat with it attached; Fix while I type off means no idle request.
 
-- [ ] **T26g. Popup layout.** `art` lane. Depends on: T26d, T26e.
+- [x] **T26g. Popup layout.** `art` lane. Depends on: T26d, T26e.
   - Top: **New chat** and **New document** buttons, then the provider line with **Change** and **Test** (`src/popup/HomeTab.tsx`, `src/popup/App.tsx`).
   - Tabs: Home, Provider, Sites, More (`src/popup/Tabs.tsx`). `QuickToggles` moves into Sites, above the hidden-sites list. About becomes More, and Usage moves there.
   - Home: recent documents (the last 3, each opens that document in the panel) and the Fix / Rephrase / Shorter choice.
@@ -94,17 +95,15 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 
 T26a and T26b and T26d can start at once. Then T26c, T26e, T26f, T26g, T26h, T26i, T26j.
 
-## Handoff (24 October 2026, 13:30 Cairo)
+## Handoff (24 October 2026, 13:50 Cairo)
 
-- Current commit: the T26f commit on `main`. Everything is pushed. No delegate, dev server or test browser is running.
-- Done: T26a–T26f. T26f added `src/chat/DocumentView.tsx` (editor, autosave, one-time Fix start) and `tests/e2e/documents.spec.ts` (8 tests). The browser suite has 262 tests.
-- Earlier: T26e. T26e built the panel header (History, + Chat, + Doc), the model chip and panel in the message box, icon-and-text answer actions, the Chats / Documents history with delete confirm, and `kind` / `documentId` on pending entries.
-- Next: T26g (popup layout), `art` lane. The popup's New document sends `chat-open-plain` with `kind: 'document'`; recent documents send it with a `documentId` (both already accepted by the background since T26e). Write its brief from the T26g entry above and the mockup's popup frames.
-- Required checks per task: lint, typecheck, `npm test`, build, Prettier; the full browser suite for anything touching `src/content`, `src/chat`, the background or the popup. Delegates' sandboxes cannot start Chromium or bind port 5179, so the orchestrator runs `npm run test:e2e` itself.
-- Visual checks: Opus's helpers `/tmp/t26d/shots.cjs`, `/tmp/t26e/shots.mjs` and `/tmp/t26f/shots.mjs` (this one also fakes the Fix port) render the side panel with a stubbed `chrome` (they need `--single-process --disable-gpu` in the delegate sandbox). Not in the repo. Add one as `scripts/shots-all.mjs` in T26g, when the screenshots are retaken.
-- For T26g: the old icons in `src/popup/icons.tsx` use `strokeWidth` and similar camelCase SVG props. Preact without compat writes them as-is, so the browser ignores them and those icons draw with 1 px lines. Change them to `stroke-width` etc. when the popup is restyled. The T26e icons already do this.
-- At 320 px, the document toolbar wraps Insert to a second row.
-- For T26e's known gaps against the mockup: the model panel floats over the quick-ask chips instead of sitting between them and the box; history times use "Oct 24, 12:56 PM", not "12:40" / "Yesterday".
+- Current commit: the T26g commit on `main`. Everything is pushed. No delegate, dev server or test browser is running.
+- Done: T26a–T26g. T26g rebuilt the toolbar popup (top area with New chat, New document, provider line with Change and Test; tabs Home, Provider, Sites, More; recent documents on Home), added `src/core/when.ts` (short times, also used by the panel history), fixed the old icons' stroke attributes, and retook `docs/screenshots/` (`about.png` is now `more.png`). The browser suite has 266 tests.
+- Next: T26h (options page restyle), `art` lane. Same sections and order in `src/options/App.tsx`, the new look, no behavior changes. Note that `src/setup/setup.css` now holds the card and row styles the setup page used to take from `popup.css`.
+- Then T26i (docs and checklist), then T26j (release, needs the owner's hand checks).
+- Required checks per task: lint, typecheck, `npm test`, build, Prettier; the full browser suite for anything touching `src/content`, `src/chat`, the background, the popup or the options page. Delegates' sandboxes cannot start Chromium or bind port 5179, so the orchestrator runs `npm run test:e2e` itself.
+- Visual checks: `npm run shots` renders the popup tabs. Opus's helpers in `/tmp/t26e/`, `/tmp/t26f/` and `/tmp/t26g/` render the side panel and popup scenes with a stubbed `chrome` (not in the repo; they need `--single-process --disable-gpu` in the delegate sandbox). Each UI task rebuilt one; saving one as `scripts/shots-all.mjs` is still open.
+- Known gaps against the mockup: in the side panel the model panel floats over the quick-ask chips; the document toolbar wraps Insert to a second row at 320 px; the popup's Provider tab shows an empty band where the status line would be.
 - Decided by the owner on 24 October 2026: the in-page Fix popup and floating button on web pages (`src/content/ui/popup.css`, `--lp-accent`) keep their current blue look in 1.5.0. The icon is yellow everywhere.
 - Grok fast mode (`--model grok-4.7-build-fast`) was allowed for the 24 October session only. Use the normal `feature` lane unless the owner says otherwise.
 

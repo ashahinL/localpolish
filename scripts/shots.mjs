@@ -17,11 +17,24 @@ const OUT = path.join(ROOT, 'docs', 'screenshots');
 // The built page loads /chunks/... by absolute path, which file:// cannot resolve.
 const ORIGIN = 'https://localpolish.test';
 const version = JSON.parse(fs.readFileSync(path.join(DIST, 'manifest.json'), 'utf8')).version;
+const HOUR = 60 * 60 * 1000;
+const now = Date.now();
 
 const STATE = {
   version,
   tabUrl: 'https://mail.google.com/mail/u/0/',
   settings: { blocklist: ['bank.example.com', 'docs.google.com'], languages: { other: false } },
+  documents: [
+    ['Reply to the vendor about the delay', 1],
+    ['رد على إيميل العميل', 26],
+    ['Release notes 1.5 draft', 100],
+  ].map(([title, hoursAgo], index) => ({
+    id: `doc-${index}`,
+    title,
+    body: '',
+    createdAt: now - (hoursAgo + 1) * HOUR,
+    updatedAt: now - hoursAgo * HOUR,
+  })),
   bridge: {
     ok: true,
     clis: {
@@ -37,12 +50,12 @@ const SHOTS = [
   { file: 'home.png', tab: 'Home', scheme: 'light' },
   { file: 'provider.png', tab: 'Provider', scheme: 'light' },
   { file: 'sites.png', tab: 'Sites', scheme: 'light' },
-  { file: 'about.png', tab: 'About', scheme: 'light' },
+  { file: 'more.png', tab: 'More', scheme: 'light' },
   { file: 'home-dark.png', tab: 'Home', scheme: 'dark' },
 ];
 
 function stubChrome(state) {
-  const store = { settings: state.settings };
+  const store = { settings: state.settings, documents: state.documents };
   const copy = (value) => JSON.parse(JSON.stringify(value));
   window.chrome = {
     storage: {
@@ -57,6 +70,7 @@ function stubChrome(state) {
       openOptionsPage: async () => {},
       getManifest: () => ({ version: state.version }),
     },
+    sidePanel: { open: async () => {} },
     commands: { getAll: async () => [{ name: 'polish', shortcut: '⇧⌘K' }] },
     tabs: {
       query: async () => [{ id: 1, windowId: 1, url: state.tabUrl }],

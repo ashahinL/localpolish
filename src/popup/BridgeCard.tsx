@@ -6,10 +6,10 @@ export function BridgeCard({ bridge }: { bridge: BridgeState }) {
   const { status, checking, check } = bridge;
 
   return (
-    <section class="card stack" aria-labelledby="br-h" aria-busy={checking}>
-      <div class="ctitle">
+    <section class="sec" aria-labelledby="br-h" aria-busy={checking}>
+      <div class="sec-head">
         <h2 id="br-h">Bridge</h2>
-        <button type="button" class="link" disabled={checking} onClick={check}>
+        <button type="button" class="text-btn" disabled={checking} onClick={check}>
           Check again
         </button>
       </div>
@@ -21,7 +21,7 @@ export function BridgeCard({ bridge }: { bridge: BridgeState }) {
             const cli = status.clis[key];
             return (
               <li key={key}>
-                <span class={cli ? 'dot on' : 'dot off'} aria-hidden="true" />
+                <span class={cli ? 'dot ok' : 'dot neutral'} aria-hidden="true" />
                 <span class="n">{name}</span>
                 <span class="muted">{cli ? cli.version : 'not found'}</span>
               </li>

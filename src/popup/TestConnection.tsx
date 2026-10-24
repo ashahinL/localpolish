@@ -4,7 +4,7 @@ import { AlertIcon } from './icons';
 import { type TestState } from './useTest';
 
 export function TestConnection({ test, wide }: { test: TestState; wide?: boolean }) {
-  const { running, result, run } = test;
+  const { running, run } = test;
   return (
     <>
       <div class="test-row">
@@ -17,27 +17,50 @@ export function TestConnection({ test, wide }: { test: TestState; wide?: boolean
         >
           Test connection
         </button>
-        {running && (
-          <span class="testing" role="status">
-            <span class="spinner" aria-hidden="true" />
-            Testing…
-          </span>
-        )}
+        {running && <Testing />}
       </div>
-      {result?.ok === true && (
-        <Note tone="ok">
-          Works. Got “{result.sample}” in {formatSeconds(result.ms)} s
-        </Note>
-      )}
-      {result?.ok === false && (
-        <Note tone="error">
-          <p class="nhead">
-            <AlertIcon />
-            <span>Test failed</span>
-          </p>
-          <p>{result.message}</p>
-        </Note>
-      )}
+      <TestResult test={test} />
     </>
   );
+}
+
+/** The hero's compact output: the spinner while running, then the result. */
+export function TestStatus({ test }: { test: TestState }) {
+  return (
+    <>
+      {test.running && <Testing />}
+      <TestResult test={test} />
+    </>
+  );
+}
+
+function Testing() {
+  return (
+    <span class="testing" role="status">
+      <span class="spinner" aria-hidden="true" />
+      Testing…
+    </span>
+  );
+}
+
+function TestResult({ test: { result } }: { test: TestState }) {
+  if (result?.ok === true) {
+    return (
+      <Note tone="ok">
+        Works. Got “{result.sample}” in {formatSeconds(result.ms)} s
+      </Note>
+    );
+  }
+  if (result?.ok === false) {
+    return (
+      <Note tone="error">
+        <p class="nhead">
+          <AlertIcon />
+          <span>Test failed</span>
+        </p>
+        <p>{result.message}</p>
+      </Note>
+    );
+  }
+  return null;
 }

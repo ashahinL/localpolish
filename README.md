@@ -23,7 +23,7 @@
     <td align="center"><img src="docs/screenshots/sites.png" width="220" alt="Sites tab" /><br /><sub>Sites</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/about.png" width="220" alt="About tab" /><br /><sub>About</sub></td>
+    <td align="center"><img src="docs/screenshots/more.png" width="220" alt="More tab" /><br /><sub>More</sub></td>
     <td align="center"><img src="docs/screenshots/home-dark.png" width="220" alt="Home tab in dark mode" /><br /><sub>Dark mode</sub></td>
     <td></td>
   </tr>

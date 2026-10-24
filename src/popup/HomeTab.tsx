@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
-import { chatTarget, openPlainChat } from './chrome';
+import { listDocuments, type SavedDocument } from '../core/documents';
 import { type DefaultMode, type Settings } from '../core/settings';
-import { isCli } from '../options/ProviderSection';
+import { shortWhen } from '../core/when';
 import { useSettingsApi } from '../options/useSettings';
-import { UsageSection } from '../usage/UsageSection';
-import { BridgeErrorNote } from './BridgeErrorNote';
-import { connection, providerSummary, type Connection } from './summary';
-import { TestConnection } from './TestConnection';
-import { type BridgeState } from './useBridge';
-import { type TestState } from './useTest';
+import { type ChatTarget } from './chrome';
+import { useOpenChat } from './useChat';
+
+const RECENT = 3;
 
 const MODES: { value: DefaultMode; label: string; title?: string }[] = [
   { value: 'fix', label: 'Fix' },
@@ -24,54 +22,17 @@ const MODE_HELP: Record<DefaultMode, string> = {
 
 interface HomeTabProps {
   settings: Settings;
-  bridge: BridgeState;
-  test: TestState;
-  onOpenProvider(): void;
+  target: ChatTarget | undefined;
 }
 
-function pillClass(tone: Connection['tone']): string {
-  if (tone === 'ok') return 'pill ok';
-  if (tone === 'error') return 'pill err';
-  return 'pill';
-}
-
-export function HomeTab({ settings, bridge, test, onOpenProvider }: HomeTabProps) {
+export function HomeTab({ settings, target }: HomeTabProps) {
   const { change } = useSettingsApi();
-  const summary = providerSummary(settings);
-  const link = connection(settings, bridge.status);
-  const status = bridge.status;
 
   return (
     <>
-      <section class="card stack" aria-labelledby="status-h">
-        <div class="ctitle">
-          <h2 id="status-h">Using</h2>
-          <span class={pillClass(link.tone)}>
-            <span class="dot" aria-hidden="true" />
-            {link.label}
-          </span>
-        </div>
-        <div class="prov-line">
-          <span class="pmark" aria-hidden="true">
-            {summary.mark}
-          </span>
-          <div class="t">
-            <b>{summary.title}</b>
-            <span>{summary.detail}</span>
-          </div>
-          <button type="button" class="link" onClick={onOpenProvider}>
-            Change
-          </button>
-        </div>
-        {isCli(settings.provider) && status?.ok === false && (
-          <BridgeErrorNote message={status.message} />
-        )}
-        <TestConnection test={test} />
-      </section>
-      <section class="card stack" aria-labelledby="mode-h">
-        <div class="ctitle">
-          <h2 id="mode-h">Default mode</h2>
-        </div>
+      <RecentDocuments target={target} />
+      <section class="sec" aria-labelledby="mode-h">
+        <h2 id="mode-h">Button and shortcut do</h2>
         <div class="seg" role="radiogroup" aria-labelledby="mode-h">
           {MODES.map((mode) => {
             const on = settings.defaultMode === mode.value;
@@ -91,53 +52,57 @@ export function HomeTab({ settings, bridge, test, onOpenProvider }: HomeTabProps
         </div>
         <p class="help">{MODE_HELP[settings.defaultMode]}</p>
       </section>
-      <OpenChat />
-      <UsageSection />
     </>
   );
 }
 
-function OpenChat() {
-  const [target, setTarget] = useState<{ tabId: number; windowId: number }>();
-  const [error, setError] = useState('');
-  const [opening, setOpening] = useState(false);
+function RecentDocuments({ target }: { target: ChatTarget | undefined }) {
+  const [documents, setDocuments] = useState<SavedDocument[] | 'error'>();
+  const { opening, error, open } = useOpenChat(target);
+
   useEffect(() => {
     let alive = true;
-    void chatTarget().then(
-      (value) => {
-        if (alive) setTarget(value);
+    void listDocuments().then(
+      (list) => {
+        if (alive) setDocuments(list.slice(0, RECENT));
       },
       () => {
-        if (alive) setError('Could not find the active tab. Reopen the popup.');
+        if (alive) setDocuments('error');
       },
     );
     return () => {
       alive = false;
     };
   }, []);
+
   return (
-    <div>
-      <button
-        type="button"
-        class="sm"
-        disabled={!target || opening}
-        onClick={() => {
-          if (!target) return;
-          setOpening(true);
-          setError('');
-          void openPlainChat(target).catch((error: unknown) => {
-            setOpening(false);
-            setError(error instanceof Error ? error.message : 'Could not open chat.');
-          });
-        }}
-      >
-        Open chat
-      </button>
+    <section class="sec" aria-labelledby="recent-h">
+      <h2 id="recent-h">Recent documents</h2>
+      {documents === 'error' && <p class="help">Could not load documents.</p>}
+      {documents?.length === 0 && <p class="help">No documents yet. New document starts one.</p>}
+      {Array.isArray(documents) && documents.length > 0 && (
+        <ul class="recent" aria-labelledby="recent-h">
+          {documents.map(({ id, title, updatedAt }) => (
+            <li key={id}>
+              <button
+                type="button"
+                disabled={!target || opening}
+                onClick={() => open({ kind: 'document', documentId: id })}
+              >
+                <span class="t" dir="auto">
+                  {title || 'Untitled'}
+                </span>
+                <span class="when">{shortWhen(updatedAt)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {error && (
         <p class="note note-error" role="alert">
           {error}
         </p>
       )}
-    </div>
+    </section>
   );
 }
