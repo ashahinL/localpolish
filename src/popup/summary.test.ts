@@ -34,7 +34,7 @@ describe('providerSummary', () => {
     expect(providerSummary(settings({ provider: 'antigravity-cli' }))).toEqual({
       title: 'Antigravity CLI',
       mark: 'Ag',
-      detail: 'Gemini 3.8 Flash · Effort: Low',
+      detail: 'Gemini 3.8 Flash · Low',
     });
   });
   it('shows Antigravity Sonnet without an effort part', () => {
@@ -53,7 +53,7 @@ describe('providerSummary', () => {
     expect(providerSummary(DEFAULT_SETTINGS)).toEqual({
       title: 'Codex',
       mark: 'Cx',
-      detail: 'GPT-6 Luna · Effort: None',
+      detail: 'GPT-6 Luna · None',
     });
   });
 
@@ -61,7 +61,7 @@ describe('providerSummary', () => {
     expect(providerSummary(settings({ provider: 'grok-cli' }))).toEqual({
       title: 'Grok CLI',
       mark: 'Gk',
-      detail: 'CLI default (grok-4.7) · Effort: Low',
+      detail: 'CLI default (grok-4.7) · Low',
     });
   });
 
@@ -77,7 +77,7 @@ describe('providerSummary', () => {
     ).toEqual({
       title: 'Claude Code',
       mark: 'CC',
-      detail: 'Sonnet · Effort: Extra high',
+      detail: 'Sonnet · Extra high',
     });
   });
 
@@ -93,7 +93,7 @@ describe('providerSummary', () => {
     ).toEqual({
       title: 'Claude Code',
       mark: 'CC',
-      detail: 'my-model · Effort: ultra',
+      detail: 'my-model · ultra',
     });
   });
 

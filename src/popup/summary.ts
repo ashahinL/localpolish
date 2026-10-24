@@ -62,7 +62,7 @@ function detail(settings: Settings): string {
     const options = cliEfforts(provider, settings.models[provider]);
     if (options.length === 0) return model;
     const effort = labelOf(options, settings.efforts[provider]);
-    return `${model} · Effort: ${effort}`;
+    return `${model} · ${effort}`;
   }
   if (provider === 'openai-compatible') {
     const model = settings.models[provider] || 'No model set';

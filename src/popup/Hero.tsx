@@ -56,7 +56,7 @@ export function Hero({ settings, bridge, test, chat, full, onOpenProvider }: Her
       )}
       <div class="using">
         <span class={`dot ${link.tone}`} aria-hidden="true" />
-        <span class="grow">
+        <span class="grow" title={`${summary.title} ${summary.detail}`}>
           <b>{summary.title}</b> <span class="muted">{summary.detail}</span>
         </span>
         <button type="button" class="text-btn" onClick={onOpenProvider}>

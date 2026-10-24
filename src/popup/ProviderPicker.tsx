@@ -11,7 +11,8 @@ function rowTitle(title: string): string {
 /** The found CLI's version number, or nothing while the bridge has not listed it. */
 function foundVersion(id: ProviderId, status: BridgeStatus | null | undefined): string | undefined {
   if (!isCli(id) || status?.ok !== true) return undefined;
-  return status.clis[CLI_KEY[id]]?.version.split(' ')[0];
+  // Version lines differ per CLI ("codex-cli 0.98.0", "2.1.310 (Claude Code)").
+  return status.clis[CLI_KEY[id]]?.version.match(/\d+(?:\.\d+)+/)?.[0];
 }
 
 function Row({

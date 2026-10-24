@@ -255,7 +255,7 @@ function radioLabel(page: Page, name: string) {
 test('Home shows the default provider and Change opens Provider', async ({ page }) => {
   await openPopup(page);
   await expect(page.getByText('Codex', { exact: true })).toBeVisible();
-  await expect(page.getByText('GPT-6 Luna · Effort: None')).toBeVisible();
+  await expect(page.getByText('GPT-6 Luna · None')).toBeVisible();
   await expect(page.getByText('Bridge ready')).toBeVisible();
 
   await page.getByRole('button', { name: 'Change' }).click();
