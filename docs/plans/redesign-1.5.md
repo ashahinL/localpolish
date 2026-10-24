@@ -99,7 +99,7 @@ T26a and T26b and T26d can start at once. Then T26c, T26e, T26f, T26g, T26h, T26
 - Required checks per task: lint, typecheck, `npm test`, build, Prettier; the full browser suite for anything touching `src/content`, `src/chat`, the background or the popup. Delegates' sandboxes cannot start Chromium or bind port 5179, so the orchestrator runs `npm run test:e2e` itself.
 - Visual checks: Opus wrote a helper at `/tmp/t26d/shots.cjs` that renders the side panel, options and setup pages with a stubbed `chrome` in both themes. It is not in the repo. It is worth adding as `scripts/shots-all.mjs` in T26g, when the screenshots are retaken.
 - Icon: the owner asked on 24 October 2026 for the yellow icon everywhere. The icon SVGs, `public/icon/*.png` and the header `LogoIcon` are now a `#FFE45C` tile with a `#18213A` nib.
-- Open, needs the owner: the in-page Fix popup and floating button on web pages (`src/content/ui/popup.css`, `--lp-accent`) are still blue. The plan left them out of 1.5.0. Ask whether to restyle them in this release.
+- Decided by the owner on 24 October 2026: the in-page Fix popup and floating button on web pages (`src/content/ui/popup.css`, `--lp-accent`) keep their current blue look in 1.5.0.
 - Grok fast mode (`--model grok-4.7-build-fast`) was allowed for the 24 October session only. Use the normal `feature` lane in a new session unless the owner says otherwise.
 
 ## Spike result
