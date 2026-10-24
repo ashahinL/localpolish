@@ -34,7 +34,7 @@ export function BridgeSection() {
   const cli = provider !== undefined && isCli(provider);
 
   return (
-    <section class="card" aria-busy={checking}>
+    <section class="card bridge" aria-busy={checking}>
       <div class="card-head">
         <h2>Bridge</h2>
         <button type="button" class="secondary" disabled={checking} onClick={check}>
@@ -107,7 +107,7 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
     <section class="card">
       <h2>Defaults</h2>
       <div class="field">
-        <label class="check-option" for="selection-chat">
+        <label class="check-option toggle" for="selection-chat">
           <input
             id="selection-chat"
             type="checkbox"
@@ -136,7 +136,7 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
           </select>
         </Field>
         <div class="field">
-          <label class="check-option" for="idle-fix">
+          <label class="check-option toggle" for="idle-fix">
             <input
               id="idle-fix"
               type="checkbox"
@@ -153,7 +153,7 @@ export function DefaultsSection({ settings }: { settings: Settings }) {
             <legend>Languages to fix while I type</legend>
             <div class="lang-grid">
               {LANGUAGES.map(({ id, name }) => (
-                <label key={id} class="check-option" for={`lang-${id}`}>
+                <label key={id} class="check-option chip" for={`lang-${id}`}>
                   <input
                     id={`lang-${id}`}
                     type="checkbox"

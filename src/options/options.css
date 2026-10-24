@@ -12,29 +12,12 @@ body {
 }
 
 .page {
-  max-width: 720px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 40px 20px 64px;
+  padding: 32px 24px 64px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.page-head h1 {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.25;
-}
-
-.page-head p {
-  margin: 4px 0 8px;
-}
-
-h2 {
-  margin: 0 0 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
 }
 
 p {
@@ -48,14 +31,111 @@ p {
 
 .help {
   font-size: 13px;
-  margin-top: 4px;
+  line-height: 1.45;
 }
 
-.card {
+/* Page head: logo, wordmark and the save status */
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 0 4px;
+}
+
+.logo {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.logo svg {
+  width: 36px;
+  height: 36px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .logo svg :is(rect, circle) {
+    fill: var(--mark);
+  }
+
+  .logo svg path {
+    fill: var(--mark-ink);
+  }
+}
+
+.brand {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.page-head .brand p {
+  font-size: 13.5px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--ok);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.status.visible {
+  opacity: 1;
+}
+
+.status-error {
+  display: block;
+  flex: 1 1 260px;
+  margin-left: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  background: var(--error-soft);
+  color: var(--error);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+}
+
+/* The settings column: one surface, sections split by thin rules */
+
+.sheet {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 20px;
+}
+
+.card {
+  padding: 22px 24px;
+  border-top: 1px solid var(--border);
+}
+
+.card:first-child {
+  border-top: 0;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .card-head {
@@ -74,52 +154,21 @@ p {
   margin: 0 0 12px;
 }
 
-/* Status badge */
-
-.status {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  padding: 4px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--ok-border);
-  background: var(--ok-soft);
-  color: var(--ok);
-  font-size: 13px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.status.visible {
-  opacity: 1;
-}
-
-.status-error {
-  border-color: var(--error-border);
-  background: var(--error-soft);
-  color: var(--error);
-  max-width: 360px;
-  pointer-events: auto;
-}
-
-/* Provider cards */
+/* Provider list */
 
 .providers {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
 }
 
 .provider {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
+  align-items: center;
+  gap: 12px;
+  margin: 0 -8px;
+  padding: 9px 8px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
@@ -129,22 +178,59 @@ p {
 
 .provider input {
   position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }
 
-.provider.selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
 .provider:has(input:focus-visible) {
   outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
+}
+
+.radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--faint);
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.provider.selected .radio {
+  border-color: var(--text);
+}
+
+.provider.selected .radio::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .provider.selected .radio {
+    border-color: var(--mark);
+  }
+
+  .provider.selected .radio::after {
+    background: var(--mark);
+  }
+}
+
+.provider-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
 }
 
 .provider-title {
-  font-weight: 600;
+  font-weight: 550;
 }
 
 .provider-subtitle {
@@ -156,7 +242,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-top: 18px;
+  margin-top: 14px;
   padding-top: 18px;
   border-top: 1px solid var(--border);
 }
@@ -174,55 +260,21 @@ p {
   min-width: 0;
 }
 
-.field label {
-  font-weight: 500;
-}
-
-.check-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-}
-
-.check-option input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  flex: none;
-  accent-color: var(--accent);
-}
-
-.langs {
-  margin: 8px 0 0;
-  padding: 0;
-  border: none;
-  min-width: 0;
-}
-
-.langs legend {
-  padding: 0;
-  font-weight: 500;
-}
-
-.langs:disabled {
-  opacity: 0.55;
-}
-
-.lang-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 12px;
-}
-
-.lang-grid .check-option {
-  min-height: 30px;
+.field > label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 550;
 }
 
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
+  gap: 14px 18px;
+  align-items: start;
+}
+
+.field + .row {
+  margin-top: 16px;
 }
 
 .inline {
@@ -234,6 +286,22 @@ p {
 .inline > input {
   flex: 1 1 0;
   min-width: 0;
+}
+
+.inline > button {
+  flex: none;
+}
+
+/* A custom value goes under its preset list. */
+.inline:has(> select + input) {
+  flex-direction: column;
+}
+
+/* flex-basis 0 is the height in a column, so the controls would collapse. */
+.inline:has(> select + input) > select,
+.inline:has(> select + input) > input {
+  flex: none;
+  width: 100%;
 }
 
 input,
@@ -248,10 +316,19 @@ input:not([type='checkbox']),
 select,
 textarea {
   width: 100%;
-  padding: 7px 10px;
+  padding: 6px 10px;
   border: 1px solid var(--control-border);
   border-radius: 8px;
   background: var(--control);
+}
+
+input:not([type='checkbox']),
+select {
+  height: 34px;
+}
+
+select {
+  padding-right: 6px;
 }
 
 textarea {
@@ -267,7 +344,8 @@ textarea::placeholder {
 }
 
 button {
-  padding: 7px 14px;
+  height: 34px;
+  padding: 0 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--card);
@@ -319,6 +397,167 @@ textarea:focus-visible {
   border-color: var(--focus);
 }
 
+/* Switches: a checkbox with its label on the left */
+
+.check-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.field > .toggle {
+  min-height: 34px;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.toggle > span {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.toggle input {
+  order: 1;
+  position: relative;
+  appearance: none;
+  width: 38px;
+  height: 22px;
+  margin: 0;
+  flex: none;
+  border-radius: 999px;
+  background: var(--border);
+  cursor: pointer;
+}
+
+.toggle input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+
+.toggle input:checked {
+  background: var(--ok);
+}
+
+.toggle input:checked::after {
+  transform: translateX(16px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toggle input {
+    transition: background 0.15s;
+  }
+
+  .toggle input::after {
+    transition: transform 0.15s;
+  }
+}
+
+/* Language chips: the checkbox covers the chip, so a click lands on it. */
+
+.langs {
+  margin: 10px 0 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.langs legend {
+  padding: 0;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.langs:disabled {
+  opacity: 0.55;
+}
+
+.lang-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  position: relative;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.chip input {
+  position: absolute;
+  inset: 0;
+  appearance: none;
+  margin: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.chip:hover {
+  color: var(--text);
+}
+
+.chip:has(input:checked) {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .chip:has(input:checked) {
+    background: var(--mark);
+    border-color: var(--mark);
+    color: var(--mark-ink);
+  }
+}
+
+.chip:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.chip input:focus-visible {
+  outline: none;
+}
+
+.langs:disabled .chip,
+.langs:disabled .chip input {
+  cursor: default;
+}
+
+.langs:disabled .chip:hover {
+  color: var(--muted);
+}
+
+.langs:disabled .chip:has(input:checked) {
+  color: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .langs:disabled .chip:has(input:checked) {
+    color: var(--mark-ink);
+  }
+}
+
+.langs .help {
+  margin-top: 8px;
+}
+
 /* Notes and code */
 
 .note {
@@ -326,9 +565,10 @@ textarea:focus-visible {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--info-soft);
+  font-size: 13.5px;
   overflow-wrap: anywhere;
 }
 
@@ -352,7 +592,7 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 6px 6px 10px;
+  padding: 4px 4px 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--code);
@@ -368,12 +608,38 @@ textarea:focus-visible {
 }
 
 button.copy {
-  padding: 3px 10px;
+  flex: none;
+  height: 26px;
+  min-width: 64px;
+  padding: 0 10px;
   font-size: 12.5px;
-  min-width: 68px;
 }
 
 /* Bridge */
+
+/* The missing-bridge message reads as a status line, not a tinted box. */
+.bridge .note-error {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.bridge .note-error > p:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.bridge .note-error > p:first-child::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--error);
+  transform: translateY(-1px);
+}
 
 .clis {
   list-style: none;
@@ -396,8 +662,8 @@ button.copy {
 }
 
 .cli-name {
-  min-width: 110px;
-  font-weight: 500;
+  min-width: 120px;
+  font-weight: 550;
 }
 
 .dot {
@@ -449,6 +715,12 @@ button.copy {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+
 /* Shortcut */
 
 .shortcut-row {
@@ -464,13 +736,24 @@ button.copy {
 }
 
 kbd {
-  min-width: 28px;
-  padding: 2px 8px;
-  border: 1px solid var(--control-border);
+  min-width: 24px;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
   border-bottom-width: 2px;
   border-radius: 6px;
-  background: var(--control);
+  background: var(--card);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 600;
   text-align: center;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 24px 16px 48px;
+  }
+
+  .card {
+    padding: 20px 16px;
+  }
 }

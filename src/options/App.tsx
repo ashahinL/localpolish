@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { CheckIcon, LogoIcon } from '../popup/icons';
 import { ProviderSection } from './ProviderSection';
 import {
   BridgeSection,
@@ -19,14 +20,19 @@ export function App() {
     <SettingsContext.Provider value={api}>
       <main class="page">
         <header class="page-head">
-          <h1>LocalPolish</h1>
-          <p class="muted">Fix and rewrite text in any field, with the AI you already pay for.</p>
+          <div class="logo" aria-hidden="true">
+            <LogoIcon />
+          </div>
+          <div class="brand">
+            <h1>LocalPolish</h1>
+            <p class="muted">Fix and rewrite text in any field, with the AI you already pay for.</p>
+          </div>
+          <StatusBadge status={status} />
         </header>
-        <StatusBadge status={status} />
         {loadError && <p class="note note-error">Could not load settings: {loadError}</p>}
         {!settings && !loadError && <p class="muted">Loading…</p>}
         {settings && (
-          <>
+          <div class="sheet">
             <ProviderSection settings={settings} />
             <BridgeSection />
             <TestSection />
@@ -34,7 +40,7 @@ export function App() {
             <UsageSection />
             <SitesSection settings={settings} />
             <ShortcutSection />
-          </>
+          </div>
         )}
       </main>
     </SettingsContext.Provider>
@@ -60,6 +66,7 @@ function StatusBadge({ status }: { status: SaveStatus }) {
   }
   return (
     <div class={`status${savedVisible ? ' visible' : ''}`} role="status">
+      <CheckIcon />
       Saved
     </div>
   );

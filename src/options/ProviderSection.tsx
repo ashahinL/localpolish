@@ -66,8 +66,11 @@ export function ProviderSection({ settings }: { settings: Settings }) {
               checked={item.id === provider}
               onChange={() => change({ provider: item.id })}
             />
-            <span class="provider-title">{item.title}</span>
-            <span class="provider-subtitle">{item.subtitle}</span>
+            <span class="radio" aria-hidden="true" />
+            <span class="provider-text">
+              <span class="provider-title">{item.title}</span>
+              <span class="provider-subtitle">{item.subtitle}</span>
+            </span>
           </label>
         ))}
       </div>
