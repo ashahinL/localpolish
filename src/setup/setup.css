@@ -55,8 +55,8 @@ body {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--hover);
+  color: var(--text);
   font-size: 12px;
   font-weight: 700;
   flex: none;

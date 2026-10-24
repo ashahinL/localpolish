@@ -1,19 +1,16 @@
 :root {
   --warn: #b45309;
-  --warn-soft: #fffbeb;
-  --warn-border: #fde68a;
-  --seg: #eef0f3;
-  --seg-on: #fff;
+  --warn-soft: color-mix(in srgb, var(--warn) 10%, var(--card));
+  --warn-border: color-mix(in srgb, var(--warn) 35%, var(--card));
+  --seg: var(--hover);
+  --seg-on: var(--card);
   --shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --warn: #fbbf24;
-    --warn-soft: rgba(251, 191, 36, 0.1);
-    --warn-border: rgba(251, 191, 36, 0.35);
-    --seg: #0f1115;
-    --seg-on: #262b34;
+    --seg-on: var(--mark);
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   }
 }
@@ -76,7 +73,7 @@ select {
   height: 32px;
   padding: 5px 9px;
   border: 1px solid var(--control-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--control);
 }
 
@@ -92,15 +89,17 @@ input::placeholder {
 button {
   height: 32px;
   padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid var(--control-border);
-  background: var(--control);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-weight: 550;
   cursor: pointer;
   white-space: nowrap;
 }
 
-button:hover:not(:disabled) {
-  border-color: var(--muted);
+/* :where keeps this below every class rule, so buttons with their own fill keep it. */
+button:where(:hover:not(:disabled)) {
+  background: var(--hover);
 }
 
 button:disabled {
@@ -110,28 +109,37 @@ button:disabled {
 
 button.primary {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
+  border-radius: 10px;
   color: var(--accent-text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 button.primary:hover:not(:disabled) {
-  filter: brightness(1.08);
-  border-color: var(--accent);
+  background: var(--accent);
+  filter: brightness(1.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  button.primary:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
 }
 
 button.link {
   height: auto;
   border: none;
+  border-radius: 6px;
   background: none;
-  color: var(--accent);
-  padding: 2px 4px;
+  color: var(--muted);
+  padding: 2px 6px;
   font-size: 13px;
   font-weight: 500;
 }
 
-button.link:hover {
-  text-decoration: underline;
+button.link:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
 }
 
 button.sm {
@@ -141,13 +149,13 @@ button.sm {
 }
 
 :is(input, select, button, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 input:focus-visible,
 select:focus-visible {
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 
 .muted {
@@ -188,6 +196,16 @@ select:focus-visible {
   flex: none;
 }
 
+@media (prefers-color-scheme: dark) {
+  .logo svg :is(rect, circle) {
+    fill: var(--mark);
+  }
+
+  .logo svg path {
+    fill: var(--mark-ink);
+  }
+}
+
 .brand {
   flex: 1;
   min-width: 0;
@@ -226,7 +244,7 @@ select:focus-visible {
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: var(--code);
+  background: var(--hover);
   border-color: transparent;
   color: var(--text);
 }
@@ -280,10 +298,9 @@ select:focus-visible {
   flex: 1;
   display: flex;
   gap: 2px;
-  padding: 2px;
+  padding: 3px;
   background: var(--seg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 button.lang {
@@ -292,11 +309,11 @@ button.lang {
   height: 24px;
   padding: 0 4px;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   background: none;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 550;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -310,16 +327,14 @@ button.lang:hover:not(:disabled) {
 
 button.lang[aria-pressed='true'],
 button.lang[aria-pressed='true']:hover:not(:disabled) {
-  background: var(--seg-on);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
-  box-shadow: var(--shadow);
 }
 
 button.lang svg {
   width: 12px;
   height: 12px;
-  color: var(--accent);
 }
 
 .qicon {
@@ -328,8 +343,8 @@ button.lang svg {
   border-radius: 6px;
   display: grid;
   place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--hover);
+  color: var(--text);
   flex: none;
 }
 
@@ -419,7 +434,7 @@ span.tip.on {
   padding: 0;
   border-radius: 999px;
   border: none;
-  background: var(--off);
+  background: var(--border);
   flex: none;
   transition: background 0.15s;
 }
@@ -433,20 +448,16 @@ span.tip.on {
   height: 16px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
   transition: left 0.15s;
 }
 
 .switch[aria-checked='true'] {
-  background: var(--accent);
+  background: var(--ok);
 }
 
 .switch[aria-checked='true']::after {
   left: 18px;
-}
-
-.switch:focus-visible {
-  outline-offset: 2px;
 }
 
 /* Tabs */
@@ -465,9 +476,8 @@ span.tip.on {
   border-radius: 0;
   background: none;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 550;
   font-size: 13px;
-  border-bottom: 2px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -475,25 +485,26 @@ span.tip.on {
   padding: 0 4px;
 }
 
-.tab:hover:not(:disabled) {
-  color: var(--text);
-  border-color: transparent;
-  border-bottom-color: transparent;
-}
-
+.tab:hover:not(:disabled),
 .tab[aria-selected='true'] {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--text);
 }
 
-.tab[aria-selected='true']:hover:not(:disabled) {
-  color: var(--accent);
-  border-color: transparent;
-  border-bottom-color: var(--accent);
+.tab-label {
+  padding: 0 2px;
 }
 
-.tab:focus-visible {
-  outline-offset: -4px;
+/* A highlighter stroke across the lower half of the label. */
+.tab[aria-selected='true'] .tab-label {
+  background: linear-gradient(transparent 52%, var(--mark) 52%, var(--mark) 92%, transparent 92%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tab[aria-selected='true'] .tab-label {
+    background: none;
+    color: var(--mark);
+    box-shadow: inset 0 -2px 0 var(--mark);
+  }
 }
 
 .tab .bad {
@@ -527,7 +538,7 @@ span.tip.on {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 12px 14px;
 }
 
@@ -546,10 +557,8 @@ span.tip.on {
 }
 
 .ctitle h2 {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
@@ -570,8 +579,8 @@ span.tip.on {
   font-size: 12px;
   font-weight: 700;
   flex: none;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--hover);
+  color: var(--text);
 }
 
 .prov-line .t {
@@ -599,31 +608,27 @@ span.tip.on {
   align-items: center;
   gap: 6px;
   height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  border: 1px solid var(--border);
-  background: var(--info-soft);
   color: var(--muted);
   white-space: nowrap;
 }
 
-.pill.ok {
-  border-color: var(--ok-border);
-  background: var(--ok-soft);
+.pill .dot {
+  color: var(--off);
+}
+
+.pill.ok .dot {
   color: var(--ok);
 }
 
-.pill.err {
-  border-color: var(--error-border);
-  background: var(--error-soft);
+.pill.err .dot {
   color: var(--error);
 }
 
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex: none;
   background: currentColor;
@@ -647,7 +652,7 @@ span.tip.on {
   width: 14px;
   height: 14px;
   border: 2px solid var(--border);
-  border-top-color: var(--accent);
+  border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -743,9 +748,8 @@ button.copy {
   display: flex;
   padding: 3px;
   background: var(--seg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  gap: 2px;
+  border-radius: 10px;
+  gap: 3px;
 }
 
 .seg label {
@@ -753,10 +757,11 @@ button.copy {
   flex: 1;
   height: 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   background: none;
   color: var(--muted);
   font-size: 13px;
+  font-weight: 550;
   padding: 0 6px;
   display: flex;
   align-items: center;
@@ -764,11 +769,21 @@ button.copy {
   cursor: pointer;
 }
 
+.seg label:hover {
+  color: var(--text);
+}
+
 .seg label.on {
   background: var(--seg-on);
   color: var(--text);
-  font-weight: 600;
   box-shadow: var(--shadow);
+}
+
+@media (prefers-color-scheme: dark) {
+  .seg label.on {
+    color: var(--mark-ink);
+    box-shadow: none;
+  }
 }
 
 .seg input {
@@ -778,18 +793,16 @@ button.copy {
 }
 
 .seg label:has(input:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 /* Provider picker */
 
 .pgroup-label {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   margin: 0 0 5px;
 }
 
@@ -813,7 +826,7 @@ button.copy {
   border: 1px solid var(--border);
   background: var(--card);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 550;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -821,10 +834,14 @@ button.copy {
   cursor: pointer;
 }
 
+.chip:hover {
+  background: var(--hover);
+}
+
 .chip.selected {
   border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -844,8 +861,8 @@ button.copy {
 }
 
 .chip:has(input:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .psub {
@@ -1024,6 +1041,11 @@ button.copy {
   align-items: center;
   height: auto;
   width: 100%;
+  font-weight: 400;
+}
+
+.site-cta:hover:not(:disabled) {
+  background: var(--hover);
 }
 
 .site-cta-copy {

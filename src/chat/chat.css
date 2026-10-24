@@ -1,16 +1,14 @@
 :root {
   --warn: #b45309;
-  --warn-soft: #fffbeb;
-  --warn-border: #fde68a;
-  --user: #eef2f7;
+  --warn-soft: color-mix(in srgb, var(--warn) 10%, var(--card));
+  --warn-border: color-mix(in srgb, var(--warn) 35%, var(--card));
+  --user: #e9ecf4;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --warn: #fbbf24;
-    --warn-soft: rgba(251, 191, 36, 0.1);
-    --warn-border: rgba(251, 191, 36, 0.35);
-    --user: #20252e;
+    --user: #242b3a;
   }
 }
 
@@ -63,7 +61,7 @@ textarea {
   height: 32px;
   padding: 5px 9px;
   border: 1px solid var(--control-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--control);
 }
 
@@ -76,15 +74,17 @@ textarea::placeholder {
 button {
   height: 32px;
   padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid var(--control-border);
-  background: var(--control);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-weight: 550;
   cursor: pointer;
   white-space: nowrap;
 }
 
-button:hover:not(:disabled) {
-  border-color: var(--muted);
+/* :where keeps this below every class rule, so buttons with their own fill keep it. */
+button:where(:hover:not(:disabled)) {
+  background: var(--hover);
 }
 
 button:disabled,
@@ -96,14 +96,21 @@ select:disabled {
 
 button.primary {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
+  border-radius: 10px;
   color: var(--accent-text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 button.primary:hover:not(:disabled) {
-  filter: brightness(1.08);
-  border-color: var(--accent);
+  background: var(--accent);
+  filter: brightness(1.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  button.primary:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
 }
 
 button.sm {
@@ -115,18 +122,21 @@ button.sm {
 button.link {
   height: auto;
   border: none;
+  border-radius: 6px;
   background: none;
-  color: var(--accent);
-  padding: 2px 4px;
+  color: var(--muted);
+  padding: 2px 6px;
   font-size: 12px;
   font-weight: 500;
 }
 
 button.link:hover:not(:disabled) {
-  text-decoration: underline;
+  color: var(--text);
+  background: var(--hover);
 }
 
-button.link.danger {
+button.link.danger,
+button.link.danger:hover:not(:disabled) {
   color: var(--error);
 }
 
@@ -137,9 +147,8 @@ button.danger-fill {
 }
 
 button[aria-pressed='true'] {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--hover);
+  color: var(--text);
 }
 
 .icon-btn {
@@ -156,18 +165,18 @@ button[aria-pressed='true'] {
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: var(--code);
+  background: var(--hover);
   border-color: transparent;
   color: var(--text);
 }
 
 :is(input, select, textarea, button, a):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 :is(input, select, textarea):focus-visible {
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 
 .muted {
@@ -210,6 +219,16 @@ button[aria-pressed='true'] {
 .logo svg {
   width: 20px;
   height: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .logo svg :is(rect, circle) {
+    fill: var(--mark);
+  }
+
+  .logo svg path {
+    fill: var(--mark-ink);
+  }
 }
 
 .head button {
@@ -422,7 +441,7 @@ button[aria-pressed='true'] {
 }
 
 .md a {
-  color: var(--accent);
+  color: var(--text);
 }
 
 /* Notices */
@@ -516,7 +535,7 @@ button[aria-pressed='true'] {
 }
 
 .history-list li:hover {
-  background: var(--card);
+  background: var(--hover);
 }
 
 button.history-open {
@@ -526,6 +545,7 @@ button.history-open {
   padding: 6px 8px;
   border: none;
   background: none;
+  font-weight: 400;
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -563,17 +583,15 @@ button.history-open {
 }
 
 button.chip {
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--muted);
-  background: transparent;
+  background: var(--card);
   border-color: var(--border);
-  font-weight: 400;
 }
 
 button.chip:hover:not(:disabled) {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: var(--accent);
+  color: var(--text);
+  background: var(--hover);
 }
 
 .compose-row {

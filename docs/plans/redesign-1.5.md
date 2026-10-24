@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a, T26b and T26c done. Next: T26d.
+Status: T26a–T26d done. Next: T26e.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -52,7 +52,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
   - Settings in the side panel are loaded before `createIdleFix` is built, and reloaded on `onSettingsChanged` (the background sends `page-settings-changed` only to tabs).
   - The full browser suite must pass unchanged. This proves web pages still behave the same.
 
-- [ ] **T26d. New look: tokens and shared styles.** `art` lane. Depends on: nothing.
+- [x] **T26d. New look: tokens and shared styles.** `art` lane. Depends on: nothing.
   - Rewrite `src/options/tokens.css` with the mockup's tokens: ink `#18213a`, highlighter `#ffe45c`, surfaces, rules, ok and error, focus, and the dark set. Keep the existing token names where a meaning stays the same, so `popup.css`, `chat.css` and `options.css` keep working.
   - Shared pieces used by all three pages: buttons (filled ink, light, text), the segmented control, switches, chips, list rows, section headings in sentence case, and the highlighter tab mark.
   - The in-page Fix popup (`src/content/ui/popup.css`) is not changed in this release.
@@ -90,6 +90,17 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 ## Order
 
 T26a and T26b and T26d can start at once. Then T26c, T26e, T26f, T26g, T26h, T26i, T26j.
+
+## Handoff (24 October 2026, 12:20 Cairo)
+
+- Current commit: the T26d commit on `main` (after `4eb9d32`). Everything is pushed. No delegate, dev server or test browser is running.
+- Done: T26a (spike), T26b (document storage), T26c (shared Fix wiring and shortcut routing), T26d (new tokens and shared styles, plus the icon recolor below).
+- Next: T26e (side panel header, chat restyle, two-list history), `art` lane. Write its brief from the T26e entry above and the mockup's chat frame.
+- Required checks per task: lint, typecheck, `npm test`, build, Prettier; the full browser suite for anything touching `src/content`, `src/chat`, the background or the popup. Delegates' sandboxes cannot start Chromium or bind port 5179, so the orchestrator runs `npm run test:e2e` itself.
+- Visual checks: Opus wrote a helper at `/tmp/t26d/shots.cjs` that renders the side panel, options and setup pages with a stubbed `chrome` in both themes. It is not in the repo. It is worth adding as `scripts/shots-all.mjs` in T26g, when the screenshots are retaken.
+- Icon: the owner asked on 24 October 2026 for the yellow icon everywhere. The icon SVGs, `public/icon/*.png` and the header `LogoIcon` are now a `#FFE45C` tile with a `#18213A` nib.
+- Open, needs the owner: the in-page Fix popup and floating button on web pages (`src/content/ui/popup.css`, `--lp-accent`) are still blue. The plan left them out of 1.5.0. Ask whether to restyle them in this release.
+- Grok fast mode (`--model grok-4.7-build-fast`) was allowed for the 24 October session only. Use the normal `feature` lane in a new session unless the owner says otherwise.
 
 ## Spike result
 

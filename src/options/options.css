@@ -32,7 +32,9 @@ body {
 
 h2 {
   margin: 0 0 12px;
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 p {
@@ -52,7 +54,7 @@ p {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 20px;
 }
 
@@ -122,7 +124,7 @@ p {
 }
 
 .provider:hover {
-  border-color: var(--control-border);
+  background: var(--hover);
 }
 
 .provider input {
@@ -137,7 +139,7 @@ p {
 }
 
 .provider:has(input:focus-visible) {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -248,7 +250,7 @@ textarea {
   width: 100%;
   padding: 7px 10px;
   border: 1px solid var(--control-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--control);
 }
 
@@ -266,15 +268,17 @@ textarea::placeholder {
 
 button {
   padding: 7px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--control-border);
-  background: var(--control);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-weight: 550;
   cursor: pointer;
   white-space: nowrap;
 }
 
-button:hover:not(:disabled) {
-  border-color: var(--muted);
+/* :where keeps this below every class rule, so buttons with their own fill keep it. */
+button:where(:hover:not(:disabled)) {
+  background: var(--hover);
 }
 
 button:disabled {
@@ -284,23 +288,35 @@ button:disabled {
 
 button.primary {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
+  border-radius: 10px;
   color: var(--accent-text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 button.primary:hover:not(:disabled) {
-  border-color: var(--accent);
-  filter: brightness(1.08);
+  background: var(--accent);
+  filter: brightness(1.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  button.primary:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
 }
 
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  border-color: var(--accent);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--focus);
 }
 
 /* Notes and code */
@@ -422,7 +438,7 @@ button.copy {
   width: 14px;
   height: 14px;
   border: 2px solid var(--border);
-  border-top-color: var(--accent);
+  border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

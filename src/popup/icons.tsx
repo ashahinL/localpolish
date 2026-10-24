@@ -1,13 +1,13 @@
 export function LogoIcon() {
   return (
     <svg viewBox="0 0 128 128" width="28" height="28" aria-hidden="true">
-      <rect x="2" y="2" width="124" height="124" rx="28" fill="#2563EB" />
+      <rect x="2" y="2" width="124" height="124" rx="28" fill="#FFE45C" />
       <path
-        fill="#fff"
+        fill="#18213A"
         d="M42 16Q64 11 86 16L80 36Q93 51 97 68Q83 92 64 118Q45 92 31 68Q35 51 48 36Z"
       />
-      <rect x="59" y="42" width="10" height="70" rx="4" fill="#2563EB" />
-      <circle cx="64" cy="66" r="10" fill="#2563EB" />
+      <rect x="59" y="42" width="10" height="70" rx="4" fill="#FFE45C" />
+      <circle cx="64" cy="66" r="10" fill="#FFE45C" />
     </svg>
   );
 }

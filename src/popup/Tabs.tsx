@@ -42,7 +42,7 @@ export function Tabs({ active, onChange, alert }: TabsProps) {
           tabIndex={active === tab.id ? 0 : -1}
           onClick={() => onChange(tab.id)}
         >
-          {tab.label}
+          <span class="tab-label">{tab.label}</span>
           {alert === tab.id && (
             <>
               <span class="bad" aria-hidden="true" />
