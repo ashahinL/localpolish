@@ -22,6 +22,7 @@ finished but not released yet waits under Unreleased. How a version ships:
 **Fixes**
 
 - Popup icons now draw at their intended line width.
+- After the extension reloads, a tab that was already open no longer logs "Extension context invalidated" each time you focus a field in it.
 - The Fix popup no longer covers a tall field. When there is no room above or below the field, it opens under the line with the caret. In documents it uses the side panel's smaller text and buttons.
 
 ## 1.4.0 — 2026-10-23

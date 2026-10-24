@@ -34,6 +34,8 @@ export function createChatInsert(ext: InsertChrome): void {
     if (!el) return;
     if (last?.el === el) return;
     last = { el, fieldId: crypto.getRandomValues(new Uint32Array(4)).join('-') };
+    // runtime.id disappears once the extension reloads; sendMessage would then throw.
+    if (!ext.runtime.id) return;
     void ext.runtime
       .sendMessage({ type: 'chat-editable-focus', fieldId: last.fieldId })
       .catch(() => {});
