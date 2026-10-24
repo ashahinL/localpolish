@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: planned on 24 October 2026. No task started.
+Status: T26a done on 24 October 2026 (all checks pass). Next: T26b.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -14,7 +14,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 
 ## How to run this plan
 
-- Orchestrator: Claude. Implementers by the fleet rules in the owner's `CLAUDE.md`. Logic tasks go to the `feature` lane. UI tasks go to the `art` lane (Claude Opus). Small tasks (under about 50 lines) Claude does directly.
+- Orchestrator: Claude. Implementers by the fleet rules in the owner's `CLAUDE.md`. Logic tasks go to the `feature` lane. For the 24 October 2026 session only, the owner allowed Grok's fast model: `--lane feature --model grok-4.7-build-fast`. UI tasks go to the `art` lane (Claude Opus). Small tasks (under about 50 lines) Claude does directly.
 - Each delegated task gets a brief in `docs/briefs/` just before dispatch, so line numbers are current. Implementers follow `implement-plan` in its light form: build, test, keep this file current, report. Skip the guard skills and the final review pass.
 - One commit per task. Tick the task's box here in the same commit. `git pull --rebase`, then push, after each task.
 - Tests use fake CLIs and the mock OpenAI server only. Never real drafts, never Send or Post.
@@ -29,16 +29,16 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 - **Default (Claude): autosave** 800 ms after the last change, and again when the panel closes or switches item. A document with an empty title and empty text is not saved.
 - **Default (Claude): two windows editing the same document** is not handled: the last save wins.
 - **Default (Claude): the popup's New chat and New document** reuse the existing `chat-open-plain` path, with a new `kind` field. So Insert works from a document exactly as it works from a plain chat today.
-- **Default (Claude): shortcut routing.** The `polish` command keeps sending `open-popup` to the active tab. It also sends one runtime message to extension pages. The side panel acts on it only while it has focus, the same rule the content script uses (`document.hasFocus()`). The spike (T26a) proves this first.
+- **Default (Claude): shortcut routing, both ways.** Headless Chromium cannot press extension shortcuts, so no automated test can show whether Chrome delivers the `polish` shortcut to the side panel. So the panel handles both cases, and only one can fire: (1) the background's `polish` handler also sends `{ type: 'open-popup' }` with `runtime.sendMessage`, and the document page acts on it only while `document.hasFocus()`; (2) the document page also listens for the same keys itself (shortcut read from `chrome.commands.getAll()`), for the case where Chrome passes the keys to the page instead. The owner checks it by hand in T26j.
 
-## Risks to check first
+## Risks
 
-1. **Does the `polish` shortcut fire while the side panel has focus?** If Chrome swallows it, the document page listens for the same keys itself, reading the shortcut from `chrome.commands.getAll()`.
-2. **Do the in-page Fix pieces work inside an extension page?** `createController`, `createIdleFix` and `createButton` take their dependencies as arguments (see `src/entrypoints/content.ts`, `start()`), so they should. Unknowns: the Shadow DOM layer in `src/content/ui/root.ts`, positioning inside a narrow panel, and whether Accept keeps the textarea's undo history (`execCommand('insertText')` should).
+1. **The `polish` shortcut in the side panel.** Handled both ways (see above). Checked by hand only.
+2. **In-page Fix inside an extension page.** Resolved by T26a: it works unchanged. See "Spike result".
 
 ## Tasks
 
-- [ ] **T26a. Spike: Fix in the side panel.** Claude, on a throwaway branch. Mount the controller, idle Fix and button on a plain textarea in the side panel, using the real rewrite port and the mock OpenAI server. Answer the two risks above, plus: does Ctrl+Z / ⌘Z undo an Accept? Output: a short "Spike result" section in this file, with pass or fail for each question and the fallback chosen. Depends on: nothing.
+- [x] **T26a. Spike: Fix in the side panel.** Grok (`feature` lane), in a throwaway worktree. Brief: [T26a-spike.md](../briefs/T26a-spike.md). Mount the controller, idle Fix and button on a plain textarea in the side panel, using the real rewrite port and the mock OpenAI server. Answer the two risks above, plus: does Ctrl+Z / ⌘Z undo an Accept? Output: a short "Spike result" section in this file, with pass or fail for each question and the fallback chosen. Depends on: nothing.
 
 - [ ] **T26b. Document storage.** `feature` lane. Depends on: nothing.
   - New `src/core/documents.ts`, modelled on `src/core/chatHistory.ts`: `SavedDocument { id, title, body, createdAt, updatedAt }`, with `listDocuments()`, `loadDocument(id)`, `saveDocument(input)`, `deleteDocument(id)`. Storage key `documents`. Its own lock name. Rejects a record over 128 KB with a clear message. No count limit and no age limit. Sorted by `updatedAt`, newest first.
@@ -47,7 +47,9 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 
 - [ ] **T26c. Shared Fix wiring and shortcut routing.** `feature` lane. Depends on: T26a.
   - Move the Fix setup out of `start()` in `src/entrypoints/content.ts` into `src/content/fix.ts`, as one function that takes: how to connect, how to read settings, `isEnabled`, `isIdleEnabled`, and which elements Fix may attach to. `content.ts` calls it with today's behavior, unchanged.
-  - The `polish` command handler in `src/entrypoints/background.ts` also sends `{ type: 'open-popup' }` through `runtime.sendMessage` (or the fallback from T26a).
+  - The `polish` command handler in `src/entrypoints/background.ts` (about line 405) also sends `{ type: 'open-popup' }` through `runtime.sendMessage`, as decided above.
+  - The idle site check in the rewrite port (`src/entrypoints/background.ts`, about lines 343–357) skips the blocklist when the sender is the extension's own side panel (`isSidePanelSender`, about line 179), so a blocklist entry can never turn Fix off in documents. `idleFix` still applies.
+  - Settings in the side panel are loaded before `createIdleFix` is built, and reloaded on `onSettingsChanged` (the background sends `page-settings-changed` only to tabs).
   - The full browser suite must pass unchanged. This proves web pages still behave the same.
 
 - [ ] **T26d. New look: tokens and shared styles.** `art` lane. Depends on: nothing.
@@ -91,4 +93,20 @@ T26a and T26b and T26d can start at once. Then T26c, T26e, T26f, T26g, T26h, T26
 
 ## Spike result
 
-Not run yet.
+T26a ran on 24 October 2026 (Grok 4.7, 25 minutes). The orchestrator re-ran both spike tests and they passed. The spike wired `createController`, `createIdleFix` and `createButton` to a textarea on `sidepanel.html#spike`, with the real rewrite port and the mock OpenAI server, at 360 × 700.
+
+| Check | Result |
+| --- | --- |
+| Idle Fix: one request after the pause, `.lp-mark` shows, diff popup opens, Accept applies | Pass |
+| ⌘Z / Ctrl+Z once after Accept restores the text from before | Pass (`execCommand('insertText')` keeps the undo stack) |
+| Floating button on a selection opens the diff, Accept applies | Pass |
+| Mark, button and popup fully visible next to the field at 360 px | Pass |
+| Changes needed in `src/content/**` | None |
+
+What the real editor must do differently from `start()` in `src/entrypoints/content.ts`:
+
+- Load settings with `pageSettings((await chrome.storage.local.get('settings')).settings)` before building `createIdleFix`, and reload them in `onSettingsChanged`, then call `idle.refresh()` and `button.refresh()`.
+- `isEnabled = () => true`; idle uses `settings.idleFix` only.
+- Leave out `createChatInsert`, `createSelectionChat` and the `runtime.onMessage` `page-settings-changed` listener.
+- `src/chat/chat.css` sets every `textarea` to 32 px. The document field needs its own class and size.
+- Headless e2e may need `--single-process` in some sandboxes; `launchExtension()` stays as it is.
