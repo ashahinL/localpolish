@@ -1,4 +1,5 @@
 import type { ChatAttachment, ChatTurn } from './prompts';
+import { createStorageLock } from './storageLock';
 
 export interface SavedChat {
   id: string;
@@ -32,19 +33,7 @@ function storageLocal(): ChromeStorageLocal {
     .storage.local;
 }
 
-let historyQueue: Promise<void> = Promise.resolve();
-
-function withHistoryLock<T>(work: () => Promise<T>): Promise<T> {
-  if (globalThis.navigator?.locks) {
-    return navigator.locks.request('localpolish-chat-history', work);
-  }
-  const result = historyQueue.then(work);
-  historyQueue = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
-}
+const withHistoryLock = createStorageLock('localpolish-chat-history');
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a done on 24 October 2026 (all checks pass). Next: T26b.
+Status: T26a and T26b done. Next: T26c.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -40,7 +40,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 
 - [x] **T26a. Spike: Fix in the side panel.** Grok (`feature` lane), in a throwaway worktree. Brief: [T26a-spike.md](../briefs/T26a-spike.md). Mount the controller, idle Fix and button on a plain textarea in the side panel, using the real rewrite port and the mock OpenAI server. Answer the two risks above, plus: does Ctrl+Z / ⌘Z undo an Accept? Output: a short "Spike result" section in this file, with pass or fail for each question and the fallback chosen. Depends on: nothing.
 
-- [ ] **T26b. Document storage.** `feature` lane. Depends on: nothing.
+- [x] **T26b. Document storage.** `feature` lane. Depends on: nothing.
   - New `src/core/documents.ts`, modelled on `src/core/chatHistory.ts`: `SavedDocument { id, title, body, createdAt, updatedAt }`, with `listDocuments()`, `loadDocument(id)`, `saveDocument(input)`, `deleteDocument(id)`. Storage key `documents`. Its own lock name. Rejects a record over 128 KB with a clear message. No count limit and no age limit. Sorted by `updatedAt`, newest first.
   - Add `unlimitedStorage` to `permissions` in `wxt.config.ts`.
   - Unit tests like `chatHistory.test.ts`: save, update, list order, delete, size limit, bad stored data ignored, nothing expires.
