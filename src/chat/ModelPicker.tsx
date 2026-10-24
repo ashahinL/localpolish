@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'preact/hooks';
-import { type ProviderId } from '../core/settings';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { type ProviderId, type Settings } from '../core/settings';
 import {
   ANTHROPIC_MODELS,
   baseUrlPreset,
@@ -10,6 +10,7 @@ import {
   type Preset,
 } from '../options/presets';
 import { isCli, PROVIDERS } from '../options/ProviderSection';
+import { ChevronUpIcon } from '../popup/icons';
 import { type ChatSettingsApi } from './useChatSettings';
 
 function suggestions(provider: ProviderId): Preset[] {
@@ -77,7 +78,10 @@ function PresetChoice({
           onInput={(event) => setDraft(event.currentTarget.value)}
           onChange={commit}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') commit();
+            if (event.key !== 'Enter') return;
+            // The picker sits inside the composer form; Enter must not send the draft.
+            event.preventDefault();
+            commit();
           }}
         />
       )}
@@ -85,16 +89,42 @@ function PresetChoice({
   );
 }
 
-export function ModelPicker({ api, disabled }: { api: ChatSettingsApi; disabled: boolean }) {
-  const { settings, error } = api;
-  const provider = settings?.chat.provider;
-  if (!settings || !provider) {
-    return error ? (
-      <p class="notice error bar" role="alert">
-        {error}
-      </p>
-    ) : null;
+function chipLabel(settings: Settings, provider: ProviderId, efforts: Preset[]): string {
+  const title = PROVIDERS.find((item) => item.id === provider)?.title ?? provider;
+  const model = settings.chat.models[provider] ?? '';
+  const modelLabel =
+    suggestions(provider).find((preset) => preset.value === model)?.label ||
+    model ||
+    (isCli(provider) ? 'CLI default' : 'No model');
+  const parts = [title, modelLabel];
+  if (isCli(provider) && efforts.length > 0) {
+    const effort = settings.chat.efforts[provider];
+    if (effort) parts.push(efforts.find((preset) => preset.value === effort)?.label ?? effort);
   }
+  return parts.join(', ');
+}
+
+export function ModelPicker({ api, disabled }: { api: ChatSettingsApi; disabled: boolean }) {
+  const { settings } = api;
+  const provider = settings?.chat.provider;
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const chip = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', outside);
+    return () => document.removeEventListener('pointerdown', outside);
+  }, [open]);
+
+  if (!settings || !provider) return null;
   const model = settings.chat.models[provider] ?? '';
   const placeholder =
     provider === 'grok-cli'
@@ -104,48 +134,77 @@ export function ModelPicker({ api, disabled }: { api: ChatSettingsApi; disabled:
         : 'Model';
   const efforts = isCli(provider) ? cliEfforts(provider, model) : [];
   return (
-    <>
-      <div class="model-bar">
-        <select
-          aria-label="Chat provider"
-          value={provider}
-          disabled={disabled}
-          onChange={(event) => api.setProvider(event.currentTarget.value as ProviderId)}
-        >
-          {PROVIDERS.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.title}
-            </option>
-          ))}
-        </select>
-        <PresetChoice
-          key={`${provider}-model`}
-          id="chat-model"
-          label="Chat model"
-          presets={suggestions(provider)}
-          value={model}
-          placeholder={placeholder}
-          disabled={disabled}
-          onValue={(value) => api.setModel(provider, value)}
-        />
-        {isCli(provider) && efforts.length > 0 && (
-          <PresetChoice
-            key={`${provider}-effort`}
-            id="chat-effort"
-            label="Chat thinking effort"
-            presets={efforts}
-            value={settings.chat.efforts[provider]}
-            placeholder="Effort"
-            disabled={disabled}
-            onValue={(value) => api.setEffort(provider, value)}
-          />
-        )}
+    <div
+      class="model-picker"
+      ref={root}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || !open) return;
+        setOpen(false);
+        chip.current?.focus();
+      }}
+    >
+      <div id="chat-models" class="pop" hidden={!open}>
+        <div class="model-bar">
+          <label class="field">
+            <span>Provider</span>
+            <select
+              aria-label="Chat provider"
+              value={provider}
+              disabled={disabled}
+              onChange={(event) => api.setProvider(event.currentTarget.value as ProviderId)}
+            >
+              {PROVIDERS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div class="two">
+            <div class="field">
+              <label for="chat-model">Model</label>
+              <PresetChoice
+                key={`${provider}-model`}
+                id="chat-model"
+                label="Chat model"
+                presets={suggestions(provider)}
+                value={model}
+                placeholder={placeholder}
+                disabled={disabled}
+                onValue={(value) => api.setModel(provider, value)}
+              />
+            </div>
+            {isCli(provider) && efforts.length > 0 && (
+              <div class="field effort">
+                <label for="chat-effort">Thinking</label>
+                <PresetChoice
+                  key={`${provider}-effort`}
+                  id="chat-effort"
+                  label="Chat thinking effort"
+                  presets={efforts}
+                  value={settings.chat.efforts[provider]}
+                  placeholder="Effort"
+                  disabled={disabled}
+                  onValue={(value) => api.setEffort(provider, value)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      {error && (
-        <p class="notice error bar" role="alert">
-          {error}
-        </p>
-      )}
-    </>
+      <button
+        ref={chip}
+        type="button"
+        class="model-chip"
+        title="Chat model"
+        aria-expanded={open}
+        aria-controls="chat-models"
+        disabled={disabled}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{chipLabel(settings, provider, efforts)}</span>
+        <ChevronUpIcon />
+      </button>
+    </div>
   );
 }

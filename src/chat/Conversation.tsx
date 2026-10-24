@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { type ChatAttachment, type ChatTurn } from '../core/prompts';
+import { CopyIcon, InsertIcon, RetryIcon } from '../popup/icons';
 import { MarkdownView } from './MarkdownView';
 import { type TurnStatus } from './useChat';
 
@@ -28,13 +29,21 @@ export function Attachment({
           </button>
         )}
       </div>
-      {title && <p class="attach-title">{title}</p>}
+      {title && (
+        <p class="attach-title" dir="auto">
+          {title}
+        </p>
+      )}
       {url && (
         <p class="attach-url" title={url}>
           {url}
         </p>
       )}
-      {text && <p class={open || !long ? 'attach-text' : 'attach-text clamp'}>{text}</p>}
+      {text && (
+        <p class={open || !long ? 'attach-text' : 'attach-text clamp'} dir="auto">
+          {text}
+        </p>
+      )}
       {text && long && (
         <button type="button" class="link" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? 'Show less' : 'Show all text'}
@@ -58,7 +67,8 @@ function CopyButton({ text }: { text: string }) {
     );
   };
   return (
-    <button type="button" class="sm" onClick={copy}>
+    <button type="button" class="act" onClick={copy}>
+      <CopyIcon />
       {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : 'Copy'}
     </button>
   );
@@ -86,14 +96,19 @@ function InsertButton({ text, onInsert }: { text: string; onInsert(text: string)
     <>
       <button
         type="button"
-        class="sm"
+        class="act"
         title="Replace the last text field with this answer"
         disabled={busy}
         onClick={() => void insert()}
       >
+        <InsertIcon />
         {busy ? 'Inserting…' : 'Insert into field'}
       </button>
-      {message && <p role={failed ? 'alert' : 'status'}>{message}</p>}
+      {message && (
+        <p class="act-status" role={failed ? 'alert' : 'status'}>
+          {message}
+        </p>
+      )}
     </>
   );
 }
@@ -144,21 +159,24 @@ export function Conversation({
         />
       )}
       {turns.length === 0 && (
-        <p class="empty muted">
-          {attachment
-            ? 'Ask about the attached text.'
-            : 'Ask anything. Nothing is sent until you ask.'}
-        </p>
+        <div class="empty">
+          <h2 dir="auto">Ask about this page or anything else</h2>
+          <p class="muted" dir="auto">
+            {attachment
+              ? 'Ask about the attached text.'
+              : 'Ask anything. Nothing is sent until you ask.'}
+          </p>
+        </div>
       )}
       {turns.map((turn, index) =>
         turn.role === 'user' ? (
-          <div key={index} class="turn user">
-            <p>{turn.content}</p>
+          <div key={index} class="turn user msg-user">
+            <p dir="auto">{turn.content}</p>
           </div>
         ) : (
           <div key={index} class="turn answer">
             <MarkdownView text={turn.content} />
-            <div class="answer-actions">
+            <div class="msg-actions">
               <CopyButton text={turn.content} />
               <InsertButton text={turn.content} onInsert={onInsert} />
             </div>
@@ -177,7 +195,8 @@ export function Conversation({
         <div class="notice">
           <p>Stopped.</p>
           <div class="notice-actions">
-            <button type="button" class="sm" onClick={onRetry}>
+            <button type="button" class="act" onClick={onRetry}>
+              <RetryIcon />
               Retry
             </button>
           </div>
@@ -189,12 +208,13 @@ export function Conversation({
           <div class="notice-actions">
             {status.tooBig ? (
               lastAnswer !== undefined && (
-                <button type="button" class="sm" onClick={() => onNewChatWithAnswer(lastAnswer)}>
+                <button type="button" class="act" onClick={() => onNewChatWithAnswer(lastAnswer)}>
                   New chat with last answer
                 </button>
               )
             ) : (
-              <button type="button" class="sm" onClick={onRetry}>
+              <button type="button" class="act" onClick={onRetry}>
+                <RetryIcon />
                 Retry
               </button>
             )}
@@ -205,7 +225,7 @@ export function Conversation({
         <div class="notice warn" role="alert">
           <p>This chat was not saved to history. {saveError}</p>
           <div class="notice-actions">
-            <button type="button" class="sm" onClick={onNewChat}>
+            <button type="button" class="act" onClick={onNewChat}>
               New chat
             </button>
           </div>

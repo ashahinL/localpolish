@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { pendingKey, readChatTarget, watchPending, type PendingChat } from './pending';
+import {
+  checkedPending,
+  pendingKey,
+  readChatTarget,
+  watchPending,
+  type PendingChat,
+} from './pending';
 
 const PENDING_KEY = pendingKey(10);
 
@@ -26,6 +32,7 @@ afterEach(() => vi.unstubAllGlobals());
 const first = {
   sequence: '1',
   tabId: 7,
+  kind: 'chat' as const,
   attachment: { text: 'Cats sleep.', title: 'Cats', url: 'https://example.test/' },
 };
 
@@ -42,7 +49,7 @@ it('reads the stored entry, then follows only new valid entries', async () => {
   change({ sequence: '5', tabId: 8 });
   stop();
   change({ sequence: '6', tabId: 9 });
-  expect(seen).toEqual([first, { sequence: '5', tabId: 8 }]);
+  expect(seen).toEqual([first, { sequence: '5', tabId: 8, kind: 'chat' }]);
 });
 
 it('ignores a slow startup read once a newer entry has arrived', async () => {
@@ -55,7 +62,31 @@ it('ignores a slow startup read once a newer entry has arrived', async () => {
   resolve({ [PENDING_KEY]: first });
   await Promise.resolve();
   await Promise.resolve();
-  expect(seen).toEqual([{ sequence: '2', tabId: 3 }]);
+  expect(seen).toEqual([{ sequence: '2', tabId: 3, kind: 'chat' }]);
+});
+
+it('reads the entry kind and document id, treating old entries as chat', () => {
+  const base = { sequence: '1', tabId: 7 };
+  expect(checkedPending(base)).toEqual({ ...base, kind: 'chat' });
+  expect(checkedPending({ ...base, kind: 'document' })).toEqual({ ...base, kind: 'document' });
+  expect(checkedPending({ ...base, kind: 'document', documentId: 'doc-1' })).toEqual({
+    ...base,
+    kind: 'document',
+    documentId: 'doc-1',
+  });
+  expect(
+    checkedPending({ ...base, kind: 'document', documentId: 'd'.repeat(100) })?.documentId,
+  ).toHaveLength(100);
+  for (const bad of [
+    { kind: 'note' },
+    { kind: 1 },
+    { kind: 'chat', documentId: 'doc-1' },
+    { documentId: 'doc-1' },
+    { kind: 'document', documentId: '' },
+    { kind: 'document', documentId: 'd'.repeat(101) },
+    { kind: 'document', documentId: 5 },
+  ])
+    expect(checkedPending({ ...base, ...bad })).toBeUndefined();
 });
 
 it('ignores another window and resolves an entry target by sequence', async () => {

@@ -15,6 +15,8 @@ export interface ChatTarget {
 export interface PendingChat {
   sequence: string;
   tabId: number;
+  kind: 'chat' | 'document';
+  documentId?: string;
   attachment?: ChatAttachment;
 }
 
@@ -69,6 +71,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+export function isDocumentId(value: unknown): value is string {
+  return typeof value === 'string' && value !== '' && value.length <= 100;
+}
+
 export function checkedPending(value: unknown): PendingChat | undefined {
   if (
     !isRecord(value) ||
@@ -79,7 +85,13 @@ export function checkedPending(value: unknown): PendingChat | undefined {
   ) {
     return undefined;
   }
-  const pending: PendingChat = { sequence: value.sequence, tabId: value.tabId };
+  const kind = value.kind ?? 'chat';
+  if (kind !== 'chat' && kind !== 'document') return undefined;
+  const pending: PendingChat = { sequence: value.sequence, tabId: value.tabId, kind };
+  if (value.documentId !== undefined) {
+    if (kind !== 'document' || !isDocumentId(value.documentId)) return undefined;
+    pending.documentId = value.documentId;
+  }
   const attachment = value.attachment;
   if (attachment === undefined) return pending;
   if (

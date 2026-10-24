@@ -127,6 +127,11 @@ async function openPanel(page: Page): Promise<void> {
   await expect(page.getByLabel('Chat provider')).toHaveValue('openai-compatible');
 }
 
+async function openModels(page: Page): Promise<void> {
+  const chip = page.locator('.model-chip');
+  if ((await chip.getAttribute('aria-expanded')) !== 'true') await chip.click();
+}
+
 const answers = (page: Page) => page.locator('.turn.answer:not([aria-busy])');
 const composer = (page: Page) => page.getByRole('textbox', { name: 'Your question' });
 
@@ -201,6 +206,7 @@ test('renders answers as safe Markdown', async ({ page, mock }) => {
 
 test('keeps the chat provider and model separate from Fix', async ({ page, sw }) => {
   await openPanel(page);
+  await openModels(page);
   await page.getByLabel('Chat provider').selectOption('anthropic-api');
   await expect
     .poll(async () => ((await stored(sw, 'settings')) as { chat: { provider: string } }).chat)
@@ -226,6 +232,7 @@ test('keeps the chat provider and model separate from Fix', async ({ page, sw })
   expect(settings.chat.models['openai-compatible']).toBe('chat-model');
 
   await page.reload();
+  await openModels(page);
   await expect(page.getByLabel('Chat provider')).toHaveValue('anthropic-api');
   await expect(page.getByLabel('Chat model')).toHaveValue('claude-sonnet-5-5');
 });
@@ -235,6 +242,7 @@ test('Claude chat lists every model and preserves a custom choice across provide
   sw,
 }) => {
   await openPanel(page);
+  await openModels(page);
   await page.getByLabel('Chat provider').selectOption('claude-cli');
   const model = page.getByLabel('Chat model', { exact: true });
   await expect(model.locator('option')).toHaveText([
@@ -283,6 +291,7 @@ test('Claude chat lists every model and preserves a custom choice across provide
   await page.getByLabel('Chat provider').selectOption('claude-cli');
   await expect(custom).toHaveValue('claude-sonnet-5-5[1m]');
   await page.reload();
+  await openModels(page);
   await expect(model).toHaveValue('__custom__');
   await expect(custom).toHaveValue('claude-sonnet-5-5[1m]');
   const settings = (await stored(sw, 'settings')) as {
@@ -293,11 +302,11 @@ test('Claude chat lists every model and preserves a custom choice across provide
   expect(settings.models['openai-compatible']).toBe('fix-model');
 });
 
-test('chat dropdowns stay on one row with custom inputs below at narrow and wide widths', async ({
-  page,
-}) => {
+test('chat model panel fits at narrow and wide widths', async ({ page }) => {
   await openPanel(page);
+  await openModels(page);
   await page.getByLabel('Chat provider').selectOption('claude-cli');
+  const provider = page.getByLabel('Chat provider');
   const model = page.getByLabel('Chat model', { exact: true });
   const effort = page.getByLabel('Chat thinking effort', { exact: true });
   for (const colorScheme of ['light', 'dark'] as const) {
@@ -311,22 +320,26 @@ test('chat dropdowns stay on one row with custom inputs below at narrow and wide
           await model.selectOption('__custom__');
           await effort.selectOption('__custom__');
         }
-        const boxes = await page.locator('.model-bar select').evaluateAll((controls) =>
-          controls.map((control) => {
-            const { top, right, bottom } = control.getBoundingClientRect();
-            return { top, right, bottom };
-          }),
+        const [top, left, right] = await Promise.all(
+          [provider, model, effort].map(async (control) => (await control.boundingBox())!),
         );
-        expect(boxes).toHaveLength(3);
-        expect(boxes.map((box) => box.top)).toEqual([boxes[0]!.top, boxes[0]!.top, boxes[0]!.top]);
-        expect(boxes[2]!.right).toBeLessThanOrEqual(width);
+        expect(top!.y + top!.height).toBeLessThanOrEqual(left!.y);
+        expect(left!.y).toBe(right!.y);
+        expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x);
+        for (const box of [top!, left!, right!])
+          expect(box.x + box.width).toBeLessThanOrEqual(width);
         if (custom) {
-          const inputs = page.locator('.model-bar input');
-          await expect(inputs).toHaveCount(2);
-          for (const input of await inputs.all()) {
-            const box = await input.boundingBox();
-            expect(box!.y).toBeGreaterThanOrEqual(boxes[0]!.bottom);
-            expect(box!.width).toBe(width - 20);
+          const inputs = [
+            page.getByLabel('Custom chat model', { exact: true }),
+            page.getByLabel('Custom chat thinking effort', { exact: true }),
+          ];
+          for (const [index, input] of inputs.entries()) {
+            const box = (await input.boundingBox())!;
+            const select = [left!, right!][index]!;
+            expect(box.y).toBeGreaterThanOrEqual(select.y + select.height);
+            expect(box.x).toBeGreaterThanOrEqual(select.x - 1);
+            expect(box.x + box.width).toBeLessThanOrEqual(select.x + select.width + 1);
+            expect(box.x + box.width).toBeLessThanOrEqual(width);
           }
         }
       }
@@ -345,6 +358,7 @@ for (const [provider, model] of [
     sw,
   }) => {
     await openPanel(page);
+    await openModels(page);
     await page.getByLabel('Chat provider').selectOption(provider);
     await page.getByLabel('Chat model', { exact: true }).selectOption(model);
     await expect
@@ -356,6 +370,7 @@ for (const [provider, model] of [
       })
       .toBe(model);
     await page.reload();
+    await openModels(page);
     await expect(page.getByLabel('Chat model', { exact: true })).toHaveValue(model);
   });
 }
@@ -365,6 +380,7 @@ test('chat keeps its thinking effort separate and hides it for models without an
   sw,
 }) => {
   await openPanel(page);
+  await openModels(page);
   await page.getByLabel('Chat provider').selectOption('claude-cli');
   const effort = page.getByLabel('Chat thinking effort', { exact: true });
   await expect(page.getByText('Shared with Fix', { exact: true })).toHaveCount(0);
@@ -372,14 +388,15 @@ test('chat keeps its thinking effort separate and hides it for models without an
   await expect
     .poll(
       async () =>
-        ((await stored(sw, 'settings')) as { chat: { efforts: Record<string, string> } }).chat
-          .efforts['claude-cli'],
+        ((await stored(sw, 'settings')) as { chat?: { efforts?: Record<string, string> } }).chat
+          ?.efforts?.['claude-cli'],
     )
     .toBe('high');
   expect(
     ((await stored(sw, 'settings')) as { efforts: Record<string, string> }).efforts['claude-cli'],
   ).toBe('low');
   await page.reload();
+  await openModels(page);
   await expect(effort).toHaveValue('high');
   await effort.selectOption('__custom__');
   const custom = page.getByLabel('Custom chat thinking effort', { exact: true });
@@ -503,6 +520,7 @@ test('a later model save also stores a provider whose own save failed', async ({
   await guardProviders(sw, mock.url);
   try {
     const allowSaves = await openWithFailingSaves(page, sw);
+    await openModels(page);
     await page.getByLabel('Chat provider').selectOption('openai-compatible');
     await expect(page.getByText('Could not save: Disk is full.')).toBeVisible();
     expect((await storedChat(sw)).provider).toBe('claude-cli');
@@ -528,6 +546,7 @@ test('a later model save also stores a provider whose own save failed', async ({
 
 async function failedSaveThenRetry(page: Page, mock: MockOpenAI, sw: Worker): Promise<void> {
   const allowSaves = await openWithFailingSaves(page, sw);
+  await openModels(page);
   await page.getByLabel('Chat provider').selectOption('openai-compatible');
   await expect(page.getByText('Could not save: Disk is full.')).toBeVisible();
   await composer(page).fill('Hello?');
@@ -716,6 +735,7 @@ test('failed effort saves block sending and a later provider save retains the ef
   await guardProviders(sw, mock.url);
   try {
     const allowSaves = await openWithFailingSaves(page, sw);
+    await openModels(page);
     await page.getByLabel('Chat thinking effort', { exact: true }).selectOption('high');
     await expect(page.getByText('Could not save: Disk is full.')).toBeVisible();
     await page.getByRole('button', { name: 'Explain', exact: true }).click();
@@ -725,12 +745,13 @@ test('failed effort saves block sending and a later provider save retains the ef
     expect(mock.requests).toHaveLength(0);
     expect(await blockedAttempts(sw)).toEqual([]);
     await allowSaves();
+    await openModels(page);
     await page.getByLabel('Chat provider').selectOption('openai-compatible');
     await expect
       .poll(
         async () =>
-          ((await stored(sw, 'settings')) as { chat: { efforts: Record<string, string> } }).chat
-            .efforts['claude-cli'],
+          ((await stored(sw, 'settings')) as { chat?: { efforts?: Record<string, string> } }).chat
+            ?.efforts?.['claude-cli'],
       )
       .toBe('high');
     await page.getByRole('button', { name: 'Retry', exact: true }).click();
@@ -749,6 +770,7 @@ test('effort edits made during a held save settle before a chat request is sent'
   await guardProviders(sw, mock.url);
   try {
     await openPanel(page);
+    await openModels(page);
     await page.getByLabel('Chat provider').selectOption('claude-cli');
     await expect.poll(async () => (await storedChat(sw)).provider).toBe('claude-cli');
     await page.evaluate(() => {

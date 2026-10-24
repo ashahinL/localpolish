@@ -133,6 +133,7 @@ it('opens synchronously from a content click, then delivers sender-owned metadat
   expect(pending(bg.stored)).toEqual({
     sequence: expect.any(String),
     tabId: 7,
+    kind: 'chat',
     attachment: { text: 'Two words', title: 'Article', url: 'https://frame.test/article' },
   });
   const first = pending(bg.stored) as { sequence: string };
@@ -287,6 +288,7 @@ it.each([false, true])(
       expect(pending(bg.stored)).toEqual({
         sequence: expect.any(String),
         tabId: 7,
+        kind: 'chat',
         attachment: undefined,
       }),
     );
@@ -311,7 +313,7 @@ it('toolbar writes plain chat in its own window even when another entry has an a
       },
     ),
   ).toEqual({ ok: true });
-  expect(pending(bg.stored)).toEqual({ sequence: expect.any(String), tabId: 7 });
+  expect(pending(bg.stored)).toEqual({ sequence: expect.any(String), tabId: 7, kind: 'chat' });
   expect(pending(bg.stored, 11)).toEqual(other);
   expect(bg.open).toHaveBeenCalledTimes(1);
   expect(
@@ -324,6 +326,34 @@ it('toolbar writes plain chat in its own window even when another entry has an a
     ),
   ).toEqual({ ok: false, message: 'The chat window changed. Open the popup again.' });
   expect(pending(bg.stored, 11)).toEqual(other);
+});
+
+it('toolbar can open a document entry and rejects bad entry kinds', async () => {
+  const bg = setup();
+  const popup = { id: 'localpolish', url: 'chrome-extension://localpolish/popup.html' };
+  expect(
+    await bg.request(
+      { type: 'chat-open-plain', tabId: 7, windowId: 10, kind: 'document', documentId: 'doc-1' },
+      popup,
+    ),
+  ).toEqual({ ok: true });
+  expect(pending(bg.stored)).toEqual({
+    sequence: expect.any(String),
+    tabId: 7,
+    kind: 'document',
+    documentId: 'doc-1',
+  });
+  for (const bad of [
+    { kind: 'note' },
+    { kind: 'chat', documentId: 'doc-1' },
+    { documentId: 'doc-1' },
+    { kind: 'document', documentId: '' },
+    { kind: 'document', documentId: 'd'.repeat(101) },
+  ])
+    expect(
+      await bg.request({ type: 'chat-open-plain', tabId: 7, windowId: 10, ...bad }, popup),
+    ).toEqual({ ok: false, message: 'Invalid chat entry.' });
+  expect(pending(bg.stored)).toMatchObject({ kind: 'document', documentId: 'doc-1' });
 });
 
 it('keeps a slow older shortcut from replacing a newer selection in the same window', async () => {

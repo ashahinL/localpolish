@@ -44,13 +44,13 @@ function Blocks({ blocks }: { blocks: Block[] }) {
         switch (block.type) {
           case 'paragraph':
             return (
-              <p key={index}>
+              <p key={index} dir="auto">
                 <InlineNodes nodes={block.children} />
               </p>
             );
           case 'heading':
             return (
-              <p key={index} class="md-heading">
+              <p key={index} class="md-heading" dir="auto">
                 <InlineNodes nodes={block.children} />
               </p>
             );
@@ -62,7 +62,7 @@ function Blocks({ blocks }: { blocks: Block[] }) {
             );
           case 'quote':
             return (
-              <blockquote key={index}>
+              <blockquote key={index} dir="auto">
                 <Blocks blocks={block.children} />
               </blockquote>
             );
@@ -73,11 +73,13 @@ function Blocks({ blocks }: { blocks: Block[] }) {
               </li>
             ));
             return block.ordered ? (
-              <ol key={index} start={block.start}>
+              <ol key={index} start={block.start} dir="auto">
                 {items}
               </ol>
             ) : (
-              <ul key={index}>{items}</ul>
+              <ul key={index} dir="auto">
+                {items}
+              </ul>
             );
           }
         }

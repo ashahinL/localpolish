@@ -1,12 +1,20 @@
+import { type ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { CHAT_QUICK_ASKS } from '../core/prompts';
+import { SendIcon, StopIcon } from '../popup/icons';
 
 export function Composer({
   running,
+  followUp,
+  error,
+  picker,
   onSend,
   onStop,
 }: {
   running: boolean;
+  followUp: boolean;
+  error: string | null;
+  picker: ComponentChildren;
   /** Returns false when the message was not sent, so the draft stays. */
   onSend(text: string): boolean;
   onStop(): void;
@@ -20,7 +28,7 @@ export function Composer({
 
   return (
     <form
-      class="composer"
+      class="c-foot"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
@@ -31,7 +39,7 @@ export function Composer({
           <button
             key={ask.label}
             type="button"
-            class="sm chip"
+            class="chip"
             disabled={running}
             onClick={() => onSend(ask.text)}
           >
@@ -39,11 +47,16 @@ export function Composer({
           </button>
         ))}
       </div>
-      <div class="compose-row">
+      {error && (
+        <p class="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      <div class="box">
         <textarea
           aria-label="Your question"
-          placeholder="Ask a question"
-          rows={1}
+          placeholder={followUp ? 'Ask a follow-up' : 'Ask a question'}
+          rows={2}
           value={draft}
           onInput={(event) => setDraft(event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -52,15 +65,18 @@ export function Composer({
             submit();
           }}
         />
-        {running ? (
-          <button type="button" class="stop" onClick={onStop}>
-            Stop
-          </button>
-        ) : (
-          <button type="submit" class="primary" disabled={empty}>
-            Send
-          </button>
-        )}
+        <div class="box-row">
+          {picker}
+          {running ? (
+            <button type="button" class="send stop" aria-label="Stop" onClick={onStop}>
+              <StopIcon />
+            </button>
+          ) : (
+            <button type="submit" class="send" aria-label="Send" disabled={empty}>
+              <SendIcon />
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );

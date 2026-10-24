@@ -1,4 +1,4 @@
-import { pendingKey, targetKey, type PendingChat } from '../chat/pending';
+import { isDocumentId, pendingKey, targetKey, type PendingChat } from '../chat/pending';
 import type { ChatAttachment } from '../core/prompts';
 
 interface Tab {
@@ -160,6 +160,7 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
           {
             sequence,
             tabId: tab.id!,
+            kind: 'chat',
             attachment: attachment(
               info.selectionText,
               tab.title,
@@ -222,6 +223,7 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
           {
             sequence,
             tabId: tab.id!,
+            kind: 'chat',
             attachment: result.attachment,
           },
           result.frameId,
@@ -270,7 +272,7 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
           : message.type === 'chat-open-selection'
             ? ['type', 'text', 'title']
             : message.type === 'chat-open-plain'
-              ? ['type', 'tabId', 'windowId']
+              ? ['type', 'tabId', 'windowId', 'kind', 'documentId']
               : ['type'];
     if (Object.keys(message).some((key) => !keys.includes(key))) {
       respond({ ok: false, message: 'Invalid chat entry.' });
@@ -383,6 +385,7 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
             {
               sequence,
               tabId: sender.tab!.id!,
+              kind: 'chat',
               attachment: attachment(message.text as string, message.title as string, sender.url),
             },
             sender.frameId!,
@@ -406,6 +409,15 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
       id(message.tabId) &&
       id(message.windowId)
     ) {
+      const kind = message.kind ?? 'chat';
+      const documentId = message.documentId;
+      if (
+        (kind !== 'chat' && kind !== 'document') ||
+        (documentId !== undefined && (kind !== 'document' || !isDocumentId(documentId)))
+      ) {
+        respond({ ok: false, message: 'Invalid chat entry.' });
+        return;
+      }
       const tabId = message.tabId;
       const windowId = message.windowId;
       const sequence = begin(windowId);
@@ -414,7 +426,11 @@ export function registerChatEntries(ext: ChatEntryChrome): void {
         .then((tab) => {
           if (tab.windowId !== windowId)
             throw new Error('The chat window changed. Open the popup again.');
-          return deliver(windowId, { sequence, tabId }, 0);
+          return deliver(
+            windowId,
+            { sequence, tabId, kind, ...(documentId === undefined ? {} : { documentId }) },
+            0,
+          );
         })
         .then(
           () => respond({ ok: true }),

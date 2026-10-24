@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a–T26d done. Next: T26e.
+Status: T26a–T26e done. Next: T26f.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -29,6 +29,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 - **Default (Claude): autosave** 800 ms after the last change, and again when the panel closes or switches item. A document with an empty title and empty text is not saved.
 - **Default (Claude): two windows editing the same document** is not handled: the last save wins.
 - **Default (Claude): the popup's New chat and New document** reuse the existing `chat-open-plain` path, with a new `kind` field. So Insert works from a document exactly as it works from a plain chat today.
+- **Default (Claude): Retry stays in the Stopped and failed notices** (T26e). The mockup shows it under every answer, but that would be a new "regenerate answer" feature. The quick-ask chips also stay above the message box, because browser tests click them during and after answers.
 - **Default (Claude): shortcut routing, both ways.** Headless Chromium cannot press extension shortcuts, so no automated test can show whether Chrome delivers the `polish` shortcut to the side panel. So the panel handles both cases, and only one can fire: (1) the background's `polish` handler also sends `{ type: 'open-popup' }` with `runtime.sendMessage`, and the document page acts on it only while `document.hasFocus()`; (2) the document page also listens for the same keys itself (shortcut read from `chrome.commands.getAll()`), for the case where Chrome passes the keys to the page instead. The owner checks it by hand in T26j.
 
 ## Risks
@@ -57,7 +58,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
   - Shared pieces used by all three pages: buttons (filled ink, light, text), the segmented control, switches, chips, list rows, section headings in sentence case, and the highlighter tab mark.
   - The in-page Fix popup (`src/content/ui/popup.css`) is not changed in this release.
 
-- [ ] **T26e. Side panel: header, chat restyle and two-list history.** `art` lane. Depends on: T26b, T26d.
+- [x] **T26e. Side panel: header, chat restyle and two-list history.** `art` lane. Depends on: T26b, T26d.
   - Header: title, History, **+ Chat**, **+ Doc** (`src/chat/App.tsx`). The panel holds either a chat or a document. **+ Doc** opens an empty document view (the editor itself comes in T26f; until then a placeholder is fine on the branch).
   - The provider, model and thinking pickers move from the top bar into a chip inside the message box, which opens them in a small panel (`src/chat/ModelPicker.tsx`, `src/chat/Composer.tsx`).
   - Copy, Insert into field and Retry become small icon buttons (`src/chat/Conversation.tsx`).
@@ -91,16 +92,17 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
 
 T26a and T26b and T26d can start at once. Then T26c, T26e, T26f, T26g, T26h, T26i, T26j.
 
-## Handoff (24 October 2026, 12:20 Cairo)
+## Handoff (24 October 2026, 13:10 Cairo)
 
-- Current commit: the T26d commit on `main` (after `4eb9d32`). Everything is pushed. No delegate, dev server or test browser is running.
-- Done: T26a (spike), T26b (document storage), T26c (shared Fix wiring and shortcut routing), T26d (new tokens and shared styles, plus the icon recolor below).
-- Next: T26e (side panel header, chat restyle, two-list history), `art` lane. Write its brief from the T26e entry above and the mockup's chat frame.
+- Current commit: the T26e commit on `main`. Everything is pushed. No delegate, dev server or test browser is running.
+- Done: T26a–T26e. T26e built the panel header (History, + Chat, + Doc), the model chip and panel in the message box, icon-and-text answer actions, the Chats / Documents history with delete confirm, and `kind` / `documentId` on pending entries. **+ Doc** shows a placeholder `section.doc-placeholder` (with `data-document-id`) for T26f to replace.
+- Next: T26f (document editor), `art` lane. Fix wiring lives in `src/chat/documentFix.ts` (`startDocumentFix`). Write its brief from the T26f entry above and the mockup's document frame.
 - Required checks per task: lint, typecheck, `npm test`, build, Prettier; the full browser suite for anything touching `src/content`, `src/chat`, the background or the popup. Delegates' sandboxes cannot start Chromium or bind port 5179, so the orchestrator runs `npm run test:e2e` itself.
-- Visual checks: Opus wrote a helper at `/tmp/t26d/shots.cjs` that renders the side panel, options and setup pages with a stubbed `chrome` in both themes. It is not in the repo. It is worth adding as `scripts/shots-all.mjs` in T26g, when the screenshots are retaken.
-- Icon: the owner asked on 24 October 2026 for the yellow icon everywhere. The icon SVGs, `public/icon/*.png` and the header `LogoIcon` are now a `#FFE45C` tile with a `#18213A` nib.
-- Decided by the owner on 24 October 2026: the in-page Fix popup and floating button on web pages (`src/content/ui/popup.css`, `--lp-accent`) keep their current blue look in 1.5.0.
-- Grok fast mode (`--model grok-4.7-build-fast`) was allowed for the 24 October session only. Use the normal `feature` lane in a new session unless the owner says otherwise.
+- Visual checks: Opus's helpers `/tmp/t26d/shots.cjs` and `/tmp/t26e/shots.mjs` render the side panel with a stubbed `chrome` (they need `--single-process --disable-gpu` in the delegate sandbox). Not in the repo. Add one as `scripts/shots-all.mjs` in T26g, when the screenshots are retaken.
+- For T26g: the old icons in `src/popup/icons.tsx` use `strokeWidth` and similar camelCase SVG props. Preact without compat writes them as-is, so the browser ignores them and those icons draw with 1 px lines. Change them to `stroke-width` etc. when the popup is restyled. The T26e icons already do this.
+- For T26e's known gaps against the mockup: the model panel floats over the quick-ask chips instead of sitting between them and the box; history times use "Oct 24, 12:56 PM", not "12:40" / "Yesterday".
+- Decided by the owner on 24 October 2026: the in-page Fix popup and floating button on web pages (`src/content/ui/popup.css`, `--lp-accent`) keep their current blue look in 1.5.0. The icon is yellow everywhere.
+- Grok fast mode (`--model grok-4.7-build-fast`) was allowed for the 24 October session only. Use the normal `feature` lane unless the owner says otherwise.
 
 ## Spike result
 
