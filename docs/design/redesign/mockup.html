@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LocalPolish redesign</title>
+<style>
+  :root {
+    --bg: #f5f6f9;
+    --surface: #ffffff;
+    --ink: #18213a;
+    --text: #18213a;
+    --muted: #5b6478;
+    --faint: #8a92a3;
+    --rule: #e3e6ec;
+    --hover: #eef0f5;
+    --mark: #ffe45c;
+    --mark-ink: #18213a;
+    --primary-bg: #18213a;
+    --primary-fg: #ffffff;
+    --ok: #1f8a4c;
+    --err: #c2362b;
+    --focus: #2f4cc9;
+    --user-bubble: #e9ecf4;
+    color-scheme: light;
+  }
+  :root[data-theme='dark'] {
+    --bg: #11141b;
+    --surface: #181c25;
+    --ink: #e8eaf0;
+    --text: #e8eaf0;
+    --muted: #a1a9ba;
+    --faint: #6f788b;
+    --rule: #272d3a;
+    --hover: #212734;
+    --mark: #f2d543;
+    --mark-ink: #11141b;
+    --primary-bg: #f2d543;
+    --primary-fg: #11141b;
+    --ok: #4cc488;
+    --err: #ef6b5f;
+    --focus: #8ea6ff;
+    --user-bubble: #242b3a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #d9dce3;
+    font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: var(--text);
+  }
+  :root[data-theme='dark'] body { background: #05070a; }
+  .stage { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; padding: 32px 16px 64px; }
+  .frame-wrap { display: flex; flex-direction: column; gap: 10px; }
+  .frame-label { font-size: 13px; color: #5b6478; }
+  :root[data-theme='dark'] .frame-label { color: #a1a9ba; }
+  .frame {
+    width: 400px; max-width: calc(100vw - 32px); background: var(--bg); color: var(--text);
+    border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 12px 40px rgba(20,30,60,.18);
+    display: flex; flex-direction: column;
+  }
+  .popup { height: 600px; }
+  .chat { height: 720px; }
+  .controls { width: 100%; display: flex; gap: 8px; justify-content: center; padding-top: 20px; }
+  .controls button { font: inherit; padding: 6px 14px; border-radius: 8px; border: 1px solid #b8bdc9; background: #fff; color: #18213a; cursor: pointer; }
+
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12.5px; }
+
+  /* ---------- Popup ---------- */
+  .p-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px; background: var(--surface); }
+  .nib { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); display: grid; place-items: center; flex: none; }
+  .nib svg { width: 15px; height: 15px; fill: var(--bg); }
+  :root[data-theme='dark'] .nib { background: var(--mark); }
+  :root[data-theme='dark'] .nib svg { fill: #11141b; }
+  .wordmark { font-weight: 650; font-size: 15px; letter-spacing: -0.01em; flex: 1; }
+  .icon-btn { width: 32px; height: 32px; border: 0; background: transparent; border-radius: 8px; display: grid; place-items: center; color: var(--muted); }
+  .icon-btn:hover { background: var(--hover); color: var(--text); }
+  .icon-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+  .hero { padding: 4px 16px 14px; background: var(--surface); }
+  .new-chat {
+    width: 100%; display: flex; align-items: center; gap: 10px; padding: 13px 14px; border: 0; border-radius: 12px;
+    background: var(--primary-bg); color: var(--primary-fg); font-weight: 600; font-size: 15px; text-align: left;
+  }
+  .new-chat:hover { filter: brightness(1.12); }
+  :root[data-theme='dark'] .new-chat:hover { filter: brightness(1.05); }
+  .new-chat svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+  .starts { display: flex; gap: 8px; }
+  .starts .new-chat { flex: 1; justify-content: center; }
+  .new-chat.alt { background: var(--hover); color: var(--text); }
+  .new-chat.alt:hover { filter: none; background: var(--rule); }
+  .using { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+  .using b { font-weight: 600; }
+  .using .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .text-btn { border: 0; background: none; padding: 4px 6px; border-radius: 6px; color: var(--muted); font-size: 13px; font-weight: 500; }
+  .text-btn:hover { color: var(--text); background: var(--hover); }
+
+  .tabs { display: flex; gap: 2px; padding: 0 10px; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  .tab { border: 0; background: none; padding: 10px 8px 11px; color: var(--muted); font-weight: 550; font-size: 13.5px; position: relative; }
+  .tab span { padding: 0 2px; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected='true'] { color: var(--text); }
+  .tab[aria-selected='true'] span { background: linear-gradient(transparent 52%, var(--mark) 52%, var(--mark) 92%, transparent 92%); }
+  :root[data-theme='dark'] .tab[aria-selected='true'] span { background: none; color: var(--mark); box-shadow: inset 0 -2px 0 var(--mark); }
+  .alert-dot { position: absolute; top: 8px; right: 2px; width: 6px; height: 6px; background: var(--err); border-radius: 50%; }
+
+  .body { flex: 1; overflow-y: auto; }
+  .pane { display: none; }
+  .pane.on { display: block; }
+  .sec { padding: 16px; border-bottom: 1px solid var(--rule); }
+  .sec:last-child { border-bottom: 0; }
+  .sec h2 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .help { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+
+  .seg { display: flex; padding: 3px; gap: 3px; background: var(--hover); border-radius: 10px; }
+  .seg button { flex: 1; border: 0; background: none; padding: 7px 4px; border-radius: 7px; font-weight: 550; color: var(--muted); }
+  .seg button[aria-pressed='true'] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  :root[data-theme='dark'] .seg button[aria-pressed='true'] { background: var(--mark); color: var(--mark-ink); }
+
+  .recent { list-style: none; margin: 0; padding: 0; }
+  .recent li button { width: 100%; display: flex; gap: 10px; align-items: baseline; border: 0; background: none; text-align: left; padding: 8px 6px; margin: 0 -6px; border-radius: 8px; }
+  .recent li button:hover { background: var(--hover); }
+  .recent .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent .when { font-size: 12px; color: var(--faint); flex: none; }
+
+  .row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+  .row + .row { border-top: 1px solid var(--rule); }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .txt b { display: block; font-weight: 600; }
+  .row .txt span { display: block; font-size: 12.5px; color: var(--muted); }
+  .switch { width: 38px; height: 22px; border-radius: 11px; border: 0; background: var(--rule); position: relative; flex: none; padding: 0; }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .switch[aria-checked='true'] { background: var(--ok); }
+  .switch[aria-checked='true']::after { transform: translateX(16px); }
+  .langs { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 6px; }
+  .chip { border: 1px solid var(--rule); background: var(--surface); padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 550; color: var(--muted); }
+  .chip[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  :root[data-theme='dark'] .chip[aria-pressed='true'] { background: var(--mark); border-color: var(--mark); color: var(--mark-ink); }
+  .site-list { list-style: none; margin: 0; padding: 0; }
+  .site-list li { display: flex; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
+  .site-list li span { flex: 1; }
+  .site-list li .icon-btn { width: 26px; height: 26px; }
+  .add { display: flex; gap: 8px; margin-top: 10px; }
+  input[type='text'], select {
+    flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 7px 10px;
+  }
+  .btn { border: 1px solid var(--rule); background: var(--surface); padding: 7px 14px; border-radius: 8px; font-weight: 550; }
+  .btn:hover { background: var(--hover); }
+  .btn.dark { background: var(--primary-bg); color: var(--primary-fg); border-color: transparent; }
+
+  .prov-list { display: flex; flex-direction: column; }
+  .prov { display: flex; align-items: center; gap: 10px; border: 0; background: none; text-align: left; padding: 9px 6px; margin: 0 -6px; border-radius: 8px; }
+  .prov:hover { background: var(--hover); }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--faint); flex: none; display: grid; place-items: center; }
+  .prov[aria-checked='true'] .radio { border-color: var(--ink); }
+  .prov[aria-checked='true'] .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+  :root[data-theme='dark'] .prov[aria-checked='true'] .radio { border-color: var(--mark); }
+  :root[data-theme='dark'] .prov[aria-checked='true'] .radio::after { background: var(--mark); }
+  .prov .name { flex: 1; font-weight: 550; }
+  .prov .meta { font-size: 12px; color: var(--faint); }
+  .group-label { font-size: 12px; color: var(--faint); margin: 10px 0 2px; }
+  .group-label:first-child { margin-top: 0; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .field label { font-size: 12.5px; font-weight: 550; color: var(--muted); }
+  .two { display: flex; gap: 10px; }
+  .status-line { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .keys { display: flex; gap: 4px; }
+  .keys kbd { font: 600 12px system-ui; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 6px; padding: 3px 7px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td, th { text-align: left; padding: 6px 0; border-bottom: 1px solid var(--rule); font-weight: 400; }
+  th { color: var(--muted); font-size: 12px; font-weight: 550; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tfoot td { font-weight: 600; border-bottom: 0; }
+
+  /* ---------- Chat ---------- */
+  .c-head { display: flex; align-items: center; gap: 8px; padding: 10px 8px 10px 14px; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  .c-title { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c-new { display: flex; align-items: center; gap: 6px; border: 0; padding: 7px 12px; border-radius: 9px; background: var(--primary-bg); color: var(--primary-fg); font-weight: 600; font-size: 13px; }
+  .c-new svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+  .c-body { flex: 1; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 14px; }
+  .attach { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px dashed var(--rule); border-radius: 10px; font-size: 12.5px; color: var(--muted); }
+  .attach b { color: var(--text); font-weight: 550; }
+  .attach .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg-user { align-self: flex-end; max-width: 85%; background: var(--user-bubble); padding: 8px 12px; border-radius: 14px 14px 4px 14px; }
+  .msg-ai p { margin: 0 0 8px; }
+  .msg-ai ul { margin: 0 0 8px; padding-left: 20px; }
+  .msg-actions { display: flex; gap: 2px; margin-left: -6px; }
+  .msg-actions button { display: flex; align-items: center; gap: 5px; border: 0; background: none; color: var(--muted); font-size: 12.5px; font-weight: 550; padding: 5px 7px; border-radius: 7px; }
+  .msg-actions button:hover { background: var(--hover); color: var(--text); }
+  .msg-actions svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .empty { margin: auto 0; text-align: left; padding: 0 4px; }
+  .empty h3 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.01em; }
+  .suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .c-foot { padding: 10px 12px 12px; background: var(--surface); border-top: 1px solid var(--rule); }
+  .box { border: 1px solid var(--rule); border-radius: 14px; background: var(--bg); padding: 8px 8px 6px 12px; }
+  .box:focus-within { border-color: var(--focus); }
+  .box textarea { width: 100%; border: 0; outline: 0; resize: none; background: none; font: inherit; color: var(--text); min-height: 40px; }
+  .box-row { display: flex; align-items: center; gap: 6px; }
+  .model-chip { display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 5px 8px; margin-left: -6px; border-radius: 8px; color: var(--muted); font-size: 12.5px; font-weight: 550; }
+  .model-chip:hover { background: var(--hover); color: var(--text); }
+  .model-chip svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .send { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--primary-bg); color: var(--primary-fg); display: grid; place-items: center; }
+  .send svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .pop { display: none; margin-bottom: 8px; padding: 12px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px rgba(20,30,60,.12); }
+  .pop.on { display: flex; flex-direction: column; gap: 10px; }
+  .history { display: none; flex: 1; overflow-y: auto; padding: 8px 14px; }
+  .history.on { display: block; }
+  .history h4 { margin: 14px 0 4px; font-size: 12px; font-weight: 600; color: var(--faint); }
+  .chat.show-history .c-body, .chat.show-history .c-foot { display: none; }
+  .icon-btn[aria-pressed='true'] { background: var(--hover); color: var(--text); }
+  .c-new.alt { background: var(--hover); color: var(--text); }
+  .seg.sm { display: inline-flex; padding: 2px; }
+  .seg.sm button { flex: none; padding: 4px 10px; font-size: 12.5px; }
+  .hist-seg { margin: 6px 0 4px; }
+  .hist-seg button { flex: 1; }
+
+  /* ---------- Document ---------- */
+  .d-tools { display: flex; align-items: center; gap: 4px; padding: 8px 10px 8px 14px; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  .d-tools .msg-actions { margin-left: auto; }
+  .d-body { flex: 1; overflow-y: auto; padding: 18px 18px 8px; display: flex; flex-direction: column; position: relative; }
+  input.d-title { flex: none; border-radius: 0; border: 0; outline: 0; background: none; font: 650 20px/1.3 system-ui, -apple-system, sans-serif; letter-spacing: -0.015em; color: var(--text); padding: 0; margin-bottom: 12px; }
+  .d-title::placeholder { color: var(--faint); }
+  .d-text { flex: 1; border: 0; outline: 0; resize: none; background: none; font: 14.5px/1.65 system-ui, -apple-system, sans-serif; color: var(--text); padding: 0; min-height: 360px; }
+  .d-preview { display: none; flex: 1; font-size: 14.5px; line-height: 1.65; }
+  .d-preview h3 { font-size: 16px; margin: 0 0 6px; }
+  .d-preview p { margin: 0 0 10px; }
+  .d-preview ul { margin: 0 0 10px; padding-left: 20px; }
+  .doc.preview .d-text { display: none; }
+  .doc.preview .d-preview { display: block; }
+  .idle-dot { position: absolute; right: 14px; bottom: 14px; width: 12px; height: 12px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .d-foot { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--surface); border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--muted); }
+  .d-foot .grow { flex: 1; }
+
+  @media (prefers-reduced-motion: reduce) { .switch::after { transition: none; } }
+</style>
+</head>
+<body>
+<div class="controls">
+  <button type="button" id="theme">Switch to dark</button>
+</div>
+<div class="stage">
+
+  <!-- ================= POPUP ================= -->
+  <div class="frame-wrap">
+    <div class="frame-label">Toolbar popup, 400 × 600</div>
+    <div class="frame popup">
+      <header class="p-head">
+        <div class="nib" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 6 9l2 9h8l2-9-6-7Zm0 4.2 3.3 3.9-1.2 5.9h-1.4V11a1.6 1.6 0 1 0-1.4 0v5H9.9L8.7 10.1 12 6.2ZM8 19.5h8V22H8z"/></svg></div>
+        <div class="wordmark">LocalPolish</div>
+        <button class="icon-btn" aria-label="All options" title="All options"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+      </header>
+
+      <div class="hero">
+        <div class="starts">
+          <button class="new-chat" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            New chat
+          </button>
+          <button class="new-chat alt" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            New document
+          </button>
+        </div>
+        <div class="using">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="grow"><b>Codex</b> <span class="muted">GPT-6 Luna, no thinking</span></span>
+          <button class="text-btn" data-go="provider">Change</button>
+          <button class="text-btn">Test</button>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="home" aria-selected="true"><span>Home</span></button>
+        <button class="tab" role="tab" data-tab="provider" aria-selected="false"><span>Provider</span></button>
+        <button class="tab" role="tab" data-tab="sites" aria-selected="false"><span>Sites</span></button>
+        <button class="tab" role="tab" data-tab="more" aria-selected="false"><span>More</span></button>
+      </nav>
+
+      <div class="body">
+        <!-- Home -->
+        <div class="pane on" data-pane="home">
+          <section class="sec">
+            <h2>Recent documents</h2>
+            <ul class="recent">
+              <li><button><span class="t" dir="auto">Reply to the vendor about the delay</span><span class="when">12:40</span></button></li>
+              <li><button><span class="t" dir="auto">رد على إيميل العميل</span><span class="when">Yesterday</span></button></li>
+              <li><button><span class="t" dir="auto">Release notes 1.5 draft</span><span class="when">Mon</span></button></li>
+            </ul>
+          </section>
+          <section class="sec">
+            <h2>Button and shortcut do</h2>
+            <div class="seg" role="group">
+              <button aria-pressed="true" data-mode="Corrects spelling and grammar, keeps your words.">Fix</button>
+              <button aria-pressed="false" data-mode="Rewrites for clarity and keeps your tone.">Rephrase</button>
+              <button aria-pressed="false" data-mode="Trims the text and keeps the meaning.">Shorter</button>
+            </div>
+            <p class="help" id="mode-help">Corrects spelling and grammar, keeps your words.</p>
+          </section>
+        </div>
+
+        <!-- Provider -->
+        <div class="pane" data-pane="provider">
+          <section class="sec">
+            <div class="prov-list" role="radiogroup">
+              <div class="group-label">Your subscription, through the bridge</div>
+              <button class="prov" role="radio" aria-checked="false"><span class="radio"></span><span class="name">Claude Code</span><span class="meta">2.4.1</span></button>
+              <button class="prov" role="radio" aria-checked="true"><span class="radio"></span><span class="name">Codex</span><span class="meta">0.98.0</span></button>
+              <button class="prov" role="radio" aria-checked="false"><span class="radio"></span><span class="name">Antigravity CLI</span><span class="meta">1.4.4</span></button>
+              <button class="prov" role="radio" aria-checked="false"><span class="radio"></span><span class="name">Grok CLI</span><span class="meta">1.3.0</span></button>
+              <div class="group-label">API key</div>
+              <button class="prov" role="radio" aria-checked="false"><span class="radio"></span><span class="name">OpenAI-compatible</span></button>
+              <button class="prov" role="radio" aria-checked="false"><span class="radio"></span><span class="name">Anthropic API</span></button>
+            </div>
+          </section>
+          <section class="sec">
+            <h2>Codex for Fix</h2>
+            <div class="two">
+              <div class="field"><label>Model</label><select><option>GPT-6 Luna</option></select></div>
+              <div class="field" style="flex:.7"><label>Thinking</label><select><option>None</option></select></div>
+            </div>
+            <p class="help">Lower thinking is faster. None is enough for fixing text. Chat picks its own model in the side panel.</p>
+          </section>
+          <section class="sec">
+            <div class="status-line"><span class="dot"></span><span style="flex:1">Bridge ready, 4 CLIs found</span><button class="btn">Test connection</button></div>
+          </section>
+        </div>
+
+        <!-- Sites -->
+        <div class="pane" data-pane="sites">
+          <section class="sec">
+            <div class="row">
+              <div class="txt"><b>On mail.google.com</b><span>Show the button and fix while I type here</span></div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="On mail.google.com"></button>
+            </div>
+            <div class="row" style="flex-wrap:wrap">
+              <div class="txt"><b>Fix while I type</b><span>Fixes a field after a 3 s pause, on every site</span></div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="Fix while I type"></button>
+              <div class="langs" style="width:100%">
+                <button class="chip" aria-pressed="true">English</button>
+                <button class="chip" aria-pressed="true">Arabic</button>
+                <button class="chip" aria-pressed="true">Franco</button>
+                <button class="chip" aria-pressed="false">Other</button>
+              </div>
+            </div>
+          </section>
+          <section class="sec">
+            <h2>Hidden on 2 sites</h2>
+            <ul class="site-list">
+              <li><span>bank.example.com</span><button class="icon-btn" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></li>
+              <li><span>docs.google.com</span><button class="icon-btn" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></li>
+            </ul>
+            <div class="add"><input type="text" placeholder="example.com" /><button class="btn">Add</button></div>
+            <p class="help">Subdomains count too. The shortcut still works on hidden sites.</p>
+          </section>
+        </div>
+
+        <!-- More -->
+        <div class="pane" data-pane="more">
+          <section class="sec">
+            <div class="row">
+              <div class="txt"><b>Polish shortcut</b><span>Select text in a field, then press</span></div>
+              <div class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>K</kbd></div>
+            </div>
+            <div class="row">
+              <div class="txt"><b>Change shortcut</b><span>Opens Chrome's shortcut settings</span></div>
+              <button class="btn">Open</button>
+            </div>
+            <div class="row">
+              <div class="txt"><b>All options</b><span>The full settings page</span></div>
+              <button class="btn">Open</button>
+            </div>
+          </section>
+          <section class="sec">
+            <h2>Usage on this browser</h2>
+            <table>
+              <thead><tr><th>Model</th><th>Provider</th><th class="n">Requests</th></tr></thead>
+              <tbody>
+                <tr><td>GPT-6 Luna</td><td>Codex</td><td class="n">412</td></tr>
+                <tr><td>Sonnet 5.5</td><td>Claude Code</td><td class="n">138</td></tr>
+              </tbody>
+              <tfoot><tr><td colspan="2">Total</td><td class="n">550</td></tr></tfoot>
+            </table>
+          </section>
+          <section class="sec"><p class="help" style="margin:0">LocalPolish 1.4.0</p></section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CHAT ================= -->
+  <div class="frame-wrap">
+    <div class="frame-label">Chat side panel</div>
+    <div class="frame chat" id="chat">
+      <header class="c-head">
+        <div class="nib" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 6 9l2 9h8l2-9-6-7Zm0 4.2 3.3 3.9-1.2 5.9h-1.4V11a1.6 1.6 0 1 0-1.4 0v5H9.9L8.7 10.1 12 6.2ZM8 19.5h8V22H8z"/></svg></div>
+        <div class="c-title" id="c-title">Summarize the Q3 planning thread</div>
+        <button class="icon-btn" id="hist-btn" aria-pressed="false" aria-label="History" title="History"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
+        <button class="c-new" type="button" id="c-new"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Chat</button>
+        <button class="c-new alt" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Doc</button>
+      </header>
+
+      <div class="history" id="history">
+        <div class="seg hist-seg" role="group">
+          <button aria-pressed="true">Chats</button>
+          <button aria-pressed="false">Documents</button>
+        </div>
+        <h4>Today</h4>
+        <ul class="recent">
+          <li><button><span class="t" dir="auto">Summarize the Q3 planning thread</span><span class="when">12:40</span></button></li>
+          <li><button><span class="t" dir="auto">Make this reply shorter</span><span class="when">09:15</span></button></li>
+        </ul>
+        <h4>Earlier</h4>
+        <ul class="recent">
+          <li><button><span class="t" dir="auto">رد مختصر على إيميل العميل</span><span class="when">Yesterday</span></button></li>
+          <li><button><span class="t" dir="auto">Explain this regex from the PR</span><span class="when">Mon</span></button></li>
+        </ul>
+      </div>
+
+      <div class="c-body" id="c-body">
+        <div class="attach"><span class="grow"><b>Q3 planning</b> mail.google.com</span><button class="icon-btn" style="width:24px;height:24px" aria-label="Remove page"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <div class="msg-user">Summarize this thread for me</div>
+        <div class="msg-ai">
+          <p>The team agreed on three goals for Q3:</p>
+          <ul>
+            <li>Ship the billing rewrite by August</li>
+            <li>Cut support tickets by a fifth</li>
+            <li>Hire two backend engineers</li>
+          </ul>
+          <p>Sara still needs a budget answer by Friday.</p>
+          <div class="msg-actions">
+            <button><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copy</button>
+            <button><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Insert into field</button>
+            <button><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>Retry</button>
+          </div>
+        </div>
+      </div>
+      <div class="c-body" id="c-empty" style="display:none">
+        <div class="empty">
+          <h3>Ask about this page or anything else</h3>
+          <p class="muted" style="margin:0">Select text on a page first to attach it.</p>
+          <div class="suggest">
+            <button class="chip">Summarize</button>
+            <button class="chip">Explain</button>
+            <button class="chip">Translate</button>
+            <button class="chip">Draft a reply</button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="c-foot">
+        <div class="pop" id="pop">
+          <div class="field"><label>Provider</label><select><option>Codex</option></select></div>
+          <div class="two">
+            <div class="field"><label>Model</label><select><option>GPT-6 Luna</option></select></div>
+            <div class="field" style="flex:.7"><label>Thinking</label><select><option>None</option></select></div>
+          </div>
+        </div>
+        <div class="box">
+          <textarea placeholder="Ask a follow-up" rows="2"></textarea>
+          <div class="box-row">
+            <button class="model-chip" id="model-chip" aria-expanded="false">Codex, GPT-6 Luna <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+            <button class="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ================= DOCUMENT ================= -->
+  <div class="frame-wrap">
+    <div class="frame-label">Document, same side panel</div>
+    <div class="frame chat doc" id="doc">
+      <header class="c-head">
+        <div class="nib" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 6 9l2 9h8l2-9-6-7Zm0 4.2 3.3 3.9-1.2 5.9h-1.4V11a1.6 1.6 0 1 0-1.4 0v5H9.9L8.7 10.1 12 6.2ZM8 19.5h8V22H8z"/></svg></div>
+        <div class="c-title muted">Document</div>
+        <button class="icon-btn" aria-label="History" title="History"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
+        <button class="c-new" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Chat</button>
+        <button class="c-new alt" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Doc</button>
+      </header>
+      <div class="d-tools">
+        <div class="seg sm" role="group" aria-label="View">
+          <button aria-pressed="true" data-view="edit">Edit</button>
+          <button aria-pressed="false" data-view="preview">Preview</button>
+        </div>
+        <div class="msg-actions">
+          <button title="Copy as plain text"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copy</button>
+          <button title="Insert into the page field"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Insert</button>
+          <button title="Start a new chat with this document attached"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg>Ask in chat</button>
+        </div>
+      </div>
+      <div class="d-body">
+        <input class="d-title" type="text" value="Reply to the vendor about the delay" placeholder="Untitled" aria-label="Title" dir="auto" />
+        <textarea class="d-text" dir="auto" aria-label="Document text">Hi Omar,
+
+Thanks for the update on the shipment. I understand the delay isn't on your side, but we need a clear date to plan around.
+
+**What we need by Thursday:**
+- A confirmed delivery date
+- The tracking number for the first batch
+
+If the date moves past the 15th, we will have to split the order.
+
+Best,
+Ahmed</textarea>
+        <div class="d-preview" dir="auto">
+          <p>Hi Omar,</p>
+          <p>Thanks for the update on the shipment. I understand the delay isn't on your side, but we need a clear date to plan around.</p>
+          <p><b>What we need by Thursday:</b></p>
+          <ul><li>A confirmed delivery date</li><li>The tracking number for the first batch</li></ul>
+          <p>If the date moves past the 15th, we will have to split the order.</p>
+          <p>Best,<br />Ahmed</p>
+        </div>
+        <span class="idle-dot" title="Fixed. Click to see the changes, then Accept or Undo"></span>
+      </div>
+      <footer class="d-foot">
+        <span class="grow">Saved</span>
+        <span>68 words</span>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  document.getElementById('theme').onclick = (e) => {
+    const dark = root.dataset.theme !== 'dark';
+    root.dataset.theme = dark ? 'dark' : 'light';
+    e.target.textContent = dark ? 'Switch to light' : 'Switch to dark';
+  };
+  const show = (name) => {
+    document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+    document.querySelectorAll('.pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === name));
+  };
+  document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => show(t.dataset.tab)));
+  document.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => show(b.dataset.go)));
+  document.querySelectorAll('.seg').forEach((seg) => seg.querySelectorAll('button').forEach((b) => (b.onclick = () => {
+    seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    if (b.dataset.mode) document.getElementById('mode-help').textContent = b.dataset.mode;
+    if (b.dataset.view) document.getElementById('doc').classList.toggle('preview', b.dataset.view === 'preview');
+  })));
+  document.querySelectorAll('.switch, .chip[aria-pressed], .prov').forEach((b) => (b.onclick = () => {
+    if (b.classList.contains('prov')) {
+      document.querySelectorAll('.prov').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+    } else {
+      const attr = b.hasAttribute('aria-checked') ? 'aria-checked' : 'aria-pressed';
+      b.setAttribute(attr, String(b.getAttribute(attr) !== 'true'));
+    }
+  }));
+  const chip = document.getElementById('model-chip');
+  chip.onclick = () => {
+    const open = chip.getAttribute('aria-expanded') !== 'true';
+    chip.setAttribute('aria-expanded', String(open));
+    document.getElementById('pop').classList.toggle('on', open);
+  };
+  const chat = document.getElementById('chat');
+  const hist = document.getElementById('hist-btn');
+  hist.onclick = () => {
+    const open = hist.getAttribute('aria-pressed') !== 'true';
+    hist.setAttribute('aria-pressed', String(open));
+    chat.classList.toggle('show-history', open);
+    document.getElementById('history').classList.toggle('on', open);
+  };
+  document.getElementById('c-new').onclick = () => {
+    hist.setAttribute('aria-pressed', 'false');
+    chat.classList.remove('show-history');
+    document.getElementById('history').classList.remove('on');
+    document.getElementById('c-body').style.display = 'none';
+    document.getElementById('c-empty').style.display = 'flex';
+    document.getElementById('c-title').textContent = 'New chat';
+  };
+</script>
+</body>
+</html>

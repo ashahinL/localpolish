@@ -3,8 +3,9 @@
 Status: T0-T14 done.
 Released follow-up: [1.1.0 audit fixes and release record](plans/next-release.md).
 Completed release work: [1.3–1.4 feature plan](plans/features-1.3-1.4.md). See the [1.4 release record](handoff-1.4.md). The [performance plan](plans/performance.md) records completed earlier work.
+Current work: [1.5.0 plan: new look and documents](plans/redesign-1.5.md).
 Started: 2026-10-17
-Current orchestrator: Codex. Choose fleet implementers by task size as the owner directed. The task assignments below are the original build history.
+Current orchestrator: Claude. Choose fleet implementers by task size as the owner directed. The task assignments below are the original build history.
 
 LocalPolish is a Chrome extension (Manifest V3) that fixes or rewrites text you write in any text field. It uses the AI subscriptions you already pay for, through their CLIs, so no API keys are needed. API-key providers stay as an option.
 
