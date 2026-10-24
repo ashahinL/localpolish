@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { type SavedChat } from '../core/chatHistory';
 import { type ChatAttachment } from '../core/prompts';
 import { HistoryIcon, LogoIcon, PlusIcon } from '../popup/icons';
 import { Composer } from './Composer';
 import { Conversation } from './Conversation';
+import { DocumentView } from './DocumentView';
 import { insertAnswer } from './insert';
 import { History } from './History';
 import { ModelPicker } from './ModelPicker';
@@ -11,7 +12,8 @@ import { watchPending, type PendingChat } from './pending';
 import { chatTitle, useChat } from './useChat';
 import { useChatSettings } from './useChatSettings';
 
-type View = { kind: 'chat' } | { kind: 'document'; id?: string };
+// `editor` changes only when another document opens, so a first save does not remount the editor.
+type View = { kind: 'chat' } | { kind: 'document'; id?: string; editor: number };
 
 function attached(attachment?: ChatAttachment): ChatAttachment | undefined {
   if (!attachment) return undefined;
@@ -27,6 +29,13 @@ export function App() {
   const [historyOpen, setHistoryOpen] = useState(false);
   // The tab the panel was opened for, kept for inserting answers into that page.
   const [entry, setEntry] = useState<PendingChat | undefined>(undefined);
+  const editors = useRef(0);
+
+  const openDocument = useCallback((id?: string) => {
+    editors.current += 1;
+    setView({ kind: 'document', id, editor: editors.current });
+    setHistoryOpen(false);
+  }, []);
 
   useEffect(
     () =>
@@ -34,13 +43,13 @@ export function App() {
         setEntry(pending);
         setHistoryOpen(false);
         if (pending.kind === 'document') {
-          setView({ kind: 'document', id: pending.documentId });
+          openDocument(pending.documentId);
           return;
         }
         setView({ kind: 'chat' });
         start(attached(pending.attachment));
       }),
-    [start],
+    [start, openDocument],
   );
 
   const open = useCallback(
@@ -96,11 +105,7 @@ export function App() {
           type="button"
           class="c-new alt"
           aria-label="New document"
-          onClick={() => {
-            setEntry(undefined);
-            setView({ kind: 'document' });
-            setHistoryOpen(false);
-          }}
+          onClick={() => openDocument()}
         >
           <PlusIcon />
           Doc
@@ -111,18 +116,29 @@ export function App() {
           initialList={view.kind === 'document' ? 'documents' : 'chats'}
           onOpen={open}
           onDeleted={chat.forget}
-          onOpenDocument={(id) => {
-            setView({ kind: 'document', id });
-            setHistoryOpen(false);
-          }}
+          onOpenDocument={openDocument}
           onDocumentDeleted={(id) => {
             if (view.kind === 'document' && view.id === id) newChat();
           }}
         />
       ) : view.kind === 'document' ? (
-        <section class="doc-placeholder" data-document-id={view.id}>
-          <p class="empty muted">The document editor comes in the next update.</p>
-        </section>
+        <DocumentView
+          key={view.editor}
+          id={view.id}
+          insertSequence={entry?.sequence}
+          onSaved={(id) => {
+            const { editor } = view;
+            setView((current) =>
+              current.kind === 'document' && current.editor === editor
+                ? { ...current, id }
+                : current,
+            );
+          }}
+          onAskInChat={({ title, body }) => {
+            setView({ kind: 'chat' });
+            start({ text: body, title: title || 'Untitled', url: '' });
+          }}
+        />
       ) : (
         <>
           <Conversation

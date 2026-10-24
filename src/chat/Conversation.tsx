@@ -53,7 +53,7 @@ export function Attachment({
   );
 }
 
-function CopyButton({ text }: { text: string }) {
+export function CopyButton({ text }: { text: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
   useEffect(() => {
     if (state === 'idle') return;
@@ -74,7 +74,17 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function InsertButton({ text, onInsert }: { text: string; onInsert(text: string): Promise<void> }) {
+export function InsertButton({
+  text,
+  label = 'Insert into field',
+  hint = 'Replace the last text field with this answer',
+  onInsert,
+}: {
+  text: string;
+  label?: string;
+  hint?: string;
+  onInsert(text: string): Promise<void>;
+}) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [failed, setFailed] = useState(false);
@@ -94,15 +104,9 @@ function InsertButton({ text, onInsert }: { text: string; onInsert(text: string)
   };
   return (
     <>
-      <button
-        type="button"
-        class="act"
-        title="Replace the last text field with this answer"
-        disabled={busy}
-        onClick={() => void insert()}
-      >
+      <button type="button" class="act" title={hint} disabled={busy} onClick={() => void insert()}>
         <InsertIcon />
-        {busy ? 'Inserting…' : 'Insert into field'}
+        {busy ? 'Inserting…' : label}
       </button>
       {message && (
         <p class="act-status" role={failed ? 'alert' : 'status'}>
