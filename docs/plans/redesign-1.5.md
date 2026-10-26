@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a–T26i done. Next: T26j (release, needs the owner's hand checks).
+Status: T26a–T26i done. T26j: pre-release review fixed, all gates green; waiting for the owner's hand checks, then version, changelog date, tag and release.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -97,6 +97,7 @@ T26a and T26b and T26d can start at once. Then T26c, T26e, T26f, T26g, T26h, T26
 
 ## Handoff (24 October 2026, 14:10 Cairo)
 
+- 26 October 2026 update: a read-only Sol review of the 1.5.0 diff found 7 issues, all fixed and pushed (draft loss on leaving the editor, false "Saved", document times, sender check on `open-popup`, one unused export). The popup Provider tab is two columns without CLI versions, small gray and green text meets 4.5:1 (`--subtle`), small popup controls have a 32px click area. Full browser suite: 268 passed. Unit tests: 884 passed. Next: the owner's hand checks, then RELEASING.md steps 4–9.
 - Current commit: the T26i commit on `main`. Everything is pushed. No delegate, dev server or test browser is running.
 - Done: T26a–T26g. T26g rebuilt the toolbar popup (top area with New chat, New document, provider line with Change and Test; tabs Home, Provider, Sites, More; recent documents on Home), added `src/core/when.ts` (short times, also used by the panel history), fixed the old icons' stroke attributes, and retook `docs/screenshots/` (`about.png` is now `more.png`). The browser suite has 266 tests.
 - T26h restyled the options page (centered column, ruled sections, provider radio rows, switches and chips). Default mode there is still a dropdown. After T26g the owner asked for popup fixes, now committed: no "Effort:" word in the provider line, a hover title with the full line, bordered Change and Test, a more compact provider list, and only the version number per CLI.
