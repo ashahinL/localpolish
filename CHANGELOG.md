@@ -6,6 +6,10 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+## 1.5.0 — 2026-10-26
+
+**Bridge users:** nothing to do. The bridge did not change, so no `git pull`, reinstall or new login is needed.
+
 **New**
 
 - Documents: a drafting board in the side panel, next to chat. Write in Markdown, switch between Edit and Preview, and Fix the text with Fix while I type, the button and the shortcut, the same as in a web field. Accepted fixes undo with `Cmd+Z` / `Ctrl+Z`. **Copy**, **Insert** into the page field the panel came from, and **Ask in chat** with the document attached.

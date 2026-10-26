@@ -97,7 +97,7 @@
 
 ## Assistant chat
 
-LocalPolish 1.4.0 includes an assistant in Chrome's side panel.
+LocalPolish 1.5.0 includes an assistant in Chrome's side panel.
 
 Open chat in any of these ways:
 
@@ -142,7 +142,7 @@ server.
 
 **From the release:**
 
-1. Download `localpolish-1.4.0.zip` from the
+1. Download `localpolish-1.5.0.zip` from the
    [latest release](https://github.com/ashahinL/localpolish/releases/latest) and extract it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the
    extracted folder.
@@ -473,7 +473,7 @@ docs/               plan, ADR, benchmark, briefs, design, screenshots
 bench/              the Fix prompt benchmark
 ```
 
-The original build plan is in [docs/plan.md](docs/plan.md). The completed release work is in the [1.3–1.4 feature plan](docs/plans/features-1.3-1.4.md), with a [machine handoff](docs/handoff-1.4.md). Release notes are in [CHANGELOG.md](CHANGELOG.md). How a version ships is in [RELEASING.md](RELEASING.md).
+The original build plan is in [docs/plan.md](docs/plan.md). The completed release work is in the [1.3–1.4 feature plan](docs/plans/features-1.3-1.4.md), with a [machine handoff](docs/handoff-1.4.md). The 1.5 redesign and documents are in the [1.5 plan](docs/plans/redesign-1.5.md). Release notes are in [CHANGELOG.md](CHANGELOG.md). How a version ships is in [RELEASING.md](RELEASING.md).
 
 ## Not yet
 

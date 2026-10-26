@@ -1,6 +1,6 @@
 # LocalPolish 1.5.0 plan: new look and documents
 
-Status: T26a–T26i done. T26j: pre-release review fixed, all gates green; waiting for the owner's hand checks, then version, changelog date, tag and release.
+Status: T26a–T26j done. Released as 1.5.0 on 26 October 2026.
 Baseline: `v1.4.0`, commit `76b1448`.
 Design: [mockup](../design/redesign/mockup.html) and [decisions](../design/redesign/notes.md). The owner approved both on 24 October 2026, after a grill session. Each decision in the notes is the owner's pick. The ones below marked "default (Claude)" are not.
 
@@ -89,7 +89,7 @@ No other features. Fix, chat and the bridge behave as in 1.4.0.
   - `docs/manual-checklist.md`: a document section (write, idle Fix, Accept, undo, Insert, Ask in chat, delete).
   - `CHANGELOG.md` entry for 1.5.0.
 
-- [ ] **T26j. Release 1.5.0.** Claude. Follow `RELEASING.md`. The owner hand-checks: the popup in both themes, writing and fixing a real document in English and Arabic, Insert into a real field (without sending), and Ask in chat.
+- [x] **T26j. Release 1.5.0.** Claude. Follow `RELEASING.md`. The owner hand-checks: the popup in both themes, writing and fixing a real document in English and Arabic, Insert into a real field (without sending), and Ask in chat.
 
 ## Order
 
