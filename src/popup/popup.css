@@ -422,6 +422,17 @@ button.new-chat.alt:hover:not(:disabled) {
   height: 22px;
 }
 
+/* Small controls keep their look; an invisible margin brings the click area to about 32px. */
+:is(.using button.text-btn, .site-list .icon-btn, button.chip) {
+  position: relative;
+}
+
+:is(.using button.text-btn, .site-list .icon-btn, button.chip)::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
 /* Tooltip */
 
 span.tip-wrap {
