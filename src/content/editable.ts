@@ -328,7 +328,8 @@ function textWithImages(node: Node): string {
     if (block && !out.endsWith('\n')) out += '\n';
   };
   visit(node);
-  return out;
+  // The last block's own line break is not part of the text.
+  return out.replace(/\n$/, '');
 }
 
 function renderedText(root: HTMLElement): string {

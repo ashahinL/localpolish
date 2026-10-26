@@ -134,6 +134,18 @@ test('Slate takes the fix when the draft holds an emoji image', async ({ page })
   await expect.poll(editorText).toBe('I went :joy: home.');
 });
 
+test('Slate with an emoji reads the whole field without a trailing line break', async ({
+  page,
+}) => {
+  const editor = page.locator('#slate');
+  await editor.click();
+  await page.evaluate(() => (window as unknown as PageApi).__lp.slateSetEmoji());
+  await editor.click();
+  await page.keyboard.press('End');
+
+  expect(await captureText(page, true)).toBe('i has went :joy: home');
+});
+
 test('Slate keeps the draft editable when a page ignores the paste', async ({ page }) => {
   const editor = page.locator('#slate');
   const editorText = () => page.evaluate(() => (window as unknown as PageApi).__lp.slateText());
