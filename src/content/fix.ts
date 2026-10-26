@@ -14,12 +14,12 @@ export interface FixDeps {
   isIdleEnabled(): boolean; // Fix while I type
   detect: DetectFn;
   isMac: boolean;
-  accepts?(el: HTMLElement): boolean; // which fields Fix may act on; default: all
+  accepts?(el: HTMLElement): boolean; // default: all fields
 }
 
 export interface FixHandle {
-  refresh(): void; // calls idle.refresh() and button.refresh()
-  openFromShortcut(): void; // what the open-popup message does today
+  refresh(): void;
+  openFromShortcut(): void;
 }
 
 export function startFix(deps: FixDeps): FixHandle {

@@ -292,7 +292,6 @@ h2 {
   flex: none;
 }
 
-/* A custom value goes under its preset list. */
 .inline:has(> select + input) {
   flex-direction: column;
 }

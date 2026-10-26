@@ -13,10 +13,7 @@ interface HeroProps {
   bridge: BridgeState;
   test: TestState;
   chat: TargetState;
-  /**
-   * False on the Provider tab, which has its own Test connection, bridge status and result.
-   * The hero then drops those.
-   */
+  /** False on the Provider tab, which shows its own bridge status and test result. */
   full: boolean;
   onOpenProvider(): void;
 }

@@ -19,7 +19,6 @@ type Note =
   { kind: 'none' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'failed'; message: string };
 
 interface Autosave {
-  /** Records an edit, starts the save timer and returns the whole draft. */
   change(patch: Partial<Draft>): Draft;
   /** Saves any unsaved edit now. Resolves to false when the last save failed. */
   flush(): Promise<boolean>;

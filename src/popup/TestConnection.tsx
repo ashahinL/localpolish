@@ -24,7 +24,6 @@ export function TestConnection({ test, wide }: { test: TestState; wide?: boolean
   );
 }
 
-/** The hero's compact output: the spinner while running, then the result. */
 export function TestStatus({ test }: { test: TestState }) {
   return (
     <>
