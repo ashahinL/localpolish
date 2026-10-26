@@ -257,6 +257,9 @@ it('does not move grok history when another provider reports a model', async () 
   );
   expect(events.at(-1)).toEqual({ type: 'done', text: 'I went home.' });
   const rows = await loadUsage();
-  expect(rows).toEqual([...history, { provider: 'codex-cli', model: 'gpt-6-luna', requests: 1 }]);
+  expect(rows).toEqual([
+    ...history,
+    { provider: 'codex-cli', model: 'gpt-6.1-terra', requests: 1 },
+  ]);
   expect(total(rows)).toBe(10);
 });

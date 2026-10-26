@@ -42,7 +42,7 @@ export interface Settings {
 
 const MODEL_DEFAULTS: Record<ProviderId, string> = {
   'claude-cli': 'haiku',
-  'codex-cli': 'gpt-6-luna',
+  'codex-cli': 'gpt-6.1-terra',
   'grok-cli': '',
   'antigravity-cli': 'gemini-3.8-flash',
   'openai-compatible': '',

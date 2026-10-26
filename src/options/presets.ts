@@ -36,6 +36,7 @@ export const CLI_MODELS: Record<CliProviderId, Preset[]> = {
     { value: 'claude-opus-4-5-20251101', label: 'Opus 4.5' },
   ],
   'codex-cli': [
+    { value: 'gpt-6.1-terra', label: 'GPT-6.1 Terra' },
     { value: 'gpt-6-luna', label: 'GPT-6 Luna' },
     { value: 'gpt-6.1-sol', label: 'GPT-6.1 Sol' },
   ],

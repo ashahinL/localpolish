@@ -53,7 +53,7 @@ describe('providerSummary', () => {
     expect(providerSummary(DEFAULT_SETTINGS)).toEqual({
       title: 'Codex',
       mark: 'Cx',
-      detail: 'GPT-6 Luna · None',
+      detail: 'GPT-6.1 Terra · None',
     });
   });
 

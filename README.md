@@ -291,12 +291,12 @@ Hold the pointer on a label, or focus it with the keyboard, for 2 seconds to see
 
 ## Providers
 
-Choose a provider on the popup's **Provider** tab or on the options page. The default is Codex with `gpt-6-luna`, because it scored best on Fix. Model and thinking effort are dropdowns. Each one has presets and **Custom**. You can change them at any time.
+Choose a provider on the popup's **Provider** tab or on the options page. The default is Codex with `gpt-6.1-terra`, because it scored best on Fix. Model and thinking effort are dropdowns. Each one has presets and **Custom**. You can change them at any time.
 
 | Provider              | How it connects                                                                            | Default model and effort                                     |
 | --------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
 | Claude Code           | Bridge to the `claude` CLI, on your Claude subscription                                    | `haiku`, effort `low`                                        |
-| Codex                 | Bridge to the `codex` CLI, on your ChatGPT subscription                                    | `gpt-6-luna`, effort `none`                                  |
+| Codex                 | Bridge to the `codex` CLI, on your ChatGPT subscription                                    | `gpt-6.1-terra`, effort `none`                               |
 | Grok CLI              | Bridge to the `grok` CLI, on your SuperGrok subscription                                   | CLI default, `grok-4.7`, effort `low`                        |
 | OpenAI-compatible API | HTTP, with an optional API key. This covers OpenAI, xAI, OpenRouter, LM Studio, and Ollama | Base URL `http://localhost:11434/v1` for Ollama. Set a model |
 | Antigravity CLI       | Bridge to `agy`, through your Google account                                               | `gemini-3.8-flash`, effort `low`                             |

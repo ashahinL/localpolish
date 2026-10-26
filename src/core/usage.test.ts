@@ -89,10 +89,12 @@ it('stores only counts and leaves settings and private text untouched', async ()
     output: 'private answer',
   };
   memory.settings = structuredClone(privateSettings);
-  memory.usage = [{ provider: 'codex-cli', model: 'gpt-6-luna', requests: 2, prompt: 'old draft' }];
+  memory.usage = [
+    { provider: 'codex-cli', model: 'gpt-6.1-terra', requests: 2, prompt: 'old draft' },
+  ];
   await recordUsage(privateSettings);
   expect(set).toHaveBeenCalledExactlyOnceWith({
-    usage: [{ provider: 'codex-cli', model: 'gpt-6-luna', requests: 3 }],
+    usage: [{ provider: 'codex-cli', model: 'gpt-6.1-terra', requests: 3 }],
   });
   expect(memory.settings).toEqual(privateSettings);
 });

@@ -91,7 +91,7 @@ describe('loadSettings', () => {
     expect(settings.defaultMode).toBe('fix');
     expect(settings.models).toEqual({
       'claude-cli': 'opus',
-      'codex-cli': 'gpt-6-luna',
+      'codex-cli': 'gpt-6.1-terra',
       'grok-cli': '',
       'antigravity-cli': 'gemini-3.8-flash',
       'openai-compatible': '',
@@ -412,10 +412,10 @@ describe('chat settings', () => {
     expect(DEFAULT_SETTINGS.chat.models).not.toBe(DEFAULT_SETTINGS.models);
     loaded.chat.models['codex-cli'] = 'changed';
     loaded.models['codex-cli'] = 'changed-too';
-    expect(DEFAULT_SETTINGS.chat.models['codex-cli']).toBe('gpt-6-luna');
-    expect(DEFAULT_SETTINGS.models['codex-cli']).toBe('gpt-6-luna');
-    expect((await loadSettings()).chat.models['codex-cli']).toBe('gpt-6-luna');
-    expect((await loadSettings()).models['codex-cli']).toBe('gpt-6-luna');
+    expect(DEFAULT_SETTINGS.chat.models['codex-cli']).toBe('gpt-6.1-terra');
+    expect(DEFAULT_SETTINGS.models['codex-cli']).toBe('gpt-6.1-terra');
+    expect((await loadSettings()).chat.models['codex-cli']).toBe('gpt-6.1-terra');
+    expect((await loadSettings()).models['codex-cli']).toBe('gpt-6.1-terra');
   });
 
   it('keeps saved chat choices when Fix changes later', async () => {

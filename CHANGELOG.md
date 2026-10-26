@@ -6,6 +6,10 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+**Changes**
+
+- Codex now offers `gpt-6.1-terra`, and it is the default for new installs. It scored 28 of 28 on the Fix test at about 5 s, against 23 of 28 for `gpt-6-luna`. If you already chose a model, nothing changes for you.
+
 **Fixes**
 
 - On a narrow side panel (about 320 px), a document's toolbar stays on one row: Insert and Ask in chat show only their icons.
