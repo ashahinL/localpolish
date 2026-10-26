@@ -5,6 +5,7 @@
   --text: #18213a;
   --muted: #5b6478;
   --faint: #8a92a3;
+  --subtle: #656e80;
   --border: #e3e6ec;
   --hover: #eef0f5;
   --control: var(--card);
@@ -16,7 +17,7 @@
   --mark: #ffe45c;
   --mark-ink: #18213a;
   --focus: #2f4cc9;
-  --ok: #1f8a4c;
+  --ok: #1a7a43;
   --ok-soft: color-mix(in srgb, var(--ok) 10%, var(--card));
   --ok-border: color-mix(in srgb, var(--ok) 35%, var(--card));
   --error: #c2362b;
@@ -33,6 +34,7 @@
     --text: #e8eaf0;
     --muted: #a1a9ba;
     --faint: #6f788b;
+    --subtle: #8a93a6;
     --border: #272d3a;
     --hover: #212734;
     --accent: #f2d543;

@@ -510,7 +510,7 @@ textarea.d-text[hidden] {
 }
 
 .d-title::placeholder {
-  color: var(--faint);
+  color: var(--subtle);
   opacity: 1;
 }
 
@@ -739,7 +739,7 @@ textarea.d-text[hidden] {
   padding: 0 14px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--faint);
+  color: var(--subtle);
 }
 
 .history-list {
@@ -791,7 +791,7 @@ button.history-open {
 .history-when {
   flex: none;
   font-size: 12px;
-  color: var(--faint);
+  color: var(--subtle);
 }
 
 /* Composer */

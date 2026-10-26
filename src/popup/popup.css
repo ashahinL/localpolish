@@ -718,7 +718,7 @@ button.chip[aria-pressed='true']:hover:not(:disabled) {
 .recent .when {
   flex: none;
   font-size: 12px;
-  color: var(--faint);
+  color: var(--subtle);
 }
 
 /* Notes */
@@ -900,7 +900,7 @@ button.copy {
   grid-column: 1 / -1;
   margin: 8px 0 0;
   font-size: 12px;
-  color: var(--faint);
+  color: var(--subtle);
 }
 
 .group-label:first-child {
