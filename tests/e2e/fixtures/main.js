@@ -199,7 +199,7 @@ function DraftBox() {
           type: 'paragraph',
           children: [
             { text: 'i has went ' },
-            { type: 'emoji', char: '\u{1F600}', children: [{ text: '' }] },
+            { type: 'emoji', char: ':joy:', children: [{ text: '' }] },
             { text: ' home' },
           ],
         },
@@ -229,7 +229,8 @@ const root = document.getElementById('draft');
 if (!root) throw new Error('missing #draft');
 ReactDOM.render(React.createElement(DraftBox), root);
 
-// Discord's composer is Slate. It shows an emoji as an inline void element holding an <img>.
+// Discord's composer is Slate. It shows an emoji as an inline void element holding an <img> and
+// the shortcode as visually hidden text.
 const slate = withHistory(withReact(createSlateEditor()));
 const { isInline, isVoid, insertData } = slate;
 slate.isInline = (element) => element.type === 'emoji' || isInline(element);
@@ -237,8 +238,8 @@ slate.isVoid = (element) => element.type === 'emoji' || isVoid(element);
 slate.insertData = (data) => {
   const text = data.getData('text/plain');
   if (!text) return insertData(data);
-  for (const part of text.split(/(\p{Extended_Pictographic})/u)) {
-    if (/^\p{Extended_Pictographic}$/u.test(part)) {
+  for (const part of text.split(/(:\w+:)/)) {
+    if (/^:\w+:$/.test(part)) {
       slate.insertNode({ type: 'emoji', char: part, children: [{ text: '' }] });
       Transforms.move(slate, { distance: 1, unit: 'offset' });
     } else if (part) slate.insertText(part);
@@ -265,6 +266,20 @@ function SlateElement({ attributes, children, element }) {
         draggable: false,
         src: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
       }),
+      // Discord also keeps the shortcode as text, clipped out of sight.
+      React.createElement(
+        'span',
+        {
+          style: {
+            position: 'absolute',
+            clip: 'rect(0 0 0 0)',
+            width: 1,
+            height: 1,
+            overflow: 'hidden',
+          },
+        },
+        element.char,
+      ),
     ),
     children,
   );

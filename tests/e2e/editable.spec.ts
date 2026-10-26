@@ -128,10 +128,10 @@ test('Slate takes the fix when the draft holds an emoji image', async ({ page })
   await editor.click();
   await page.keyboard.press('ControlOrMeta+a');
 
-  expect(await captureText(page, false)).toBe('i has went \u{1F600} home');
+  expect(await captureText(page, false)).toBe('i has went :joy: home');
   await page.locator('#outside').click();
-  expect(await apply(page, 'I went \u{1F600} home.')).toEqual({ ok: true });
-  await expect.poll(editorText).toBe('I went \u{1F600} home.');
+  expect(await apply(page, 'I went :joy: home.')).toEqual({ ok: true });
+  await expect.poll(editorText).toBe('I went :joy: home.');
 });
 
 test('Slate keeps the draft editable when a page ignores the paste', async ({ page }) => {

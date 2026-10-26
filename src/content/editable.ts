@@ -314,7 +314,8 @@ function textWithImages(node: Node): string {
       return;
     }
     if (current instanceof HTMLImageElement) {
-      out += current.alt;
+      // Discord also keeps the shortcode as hidden text next to the image.
+      if (!current.parentElement?.textContent?.includes(current.alt)) out += current.alt;
       return;
     }
     if (current instanceof HTMLBRElement) {
