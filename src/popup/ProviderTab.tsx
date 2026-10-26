@@ -34,7 +34,7 @@ export function ProviderTab({ settings, bridge, test }: ProviderTabProps) {
 
   return (
     <>
-      <ProviderPicker settings={settings} status={bridge.status} />
+      <ProviderPicker settings={settings} />
       <ProviderDetails settings={settings} />
       {isCli(provider) && <BridgeCard bridge={bridge} />}
       <section class="sec" aria-labelledby="tc-h">

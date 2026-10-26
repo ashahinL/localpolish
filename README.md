@@ -73,7 +73,7 @@
   Shorter).
 - **Provider**: pick Claude Code, Codex, Antigravity or Grok CLI (your subscription, through the
   bridge), or the OpenAI-compatible or Anthropic API. Model and thinking effort are presets plus
-  **Custom**. Each found CLI shows its version.
+  **Custom**.
 - **Sites**: **Show on** the site you are on, **Fix while I type** with its languages, and the
   sites where the button and Fix while I type stay off. Subdomains are included. The shortcut
   still works there.
@@ -283,7 +283,7 @@ Click the pen nib icon in the toolbar (pin it from the puzzle-piece menu). Rewri
 
 - At the top, **New chat** and **New document** open the side panel. Under them, one line shows the provider, model and effort you use, with a colored dot and a status (Bridge ready, No bridge, Key saved, No API key or Local server). Hold the pointer on the line to see all of it. **Change** jumps to the Provider tab. **Test** sends a short sample and shows the answer and how long it took.
 - **Home** lists your three newest documents; click one to open it in the side panel. Below that, choose what the button and shortcut do: Fix, Rephrase or Shorter.
-- **Provider** has the six providers in two groups, _Your subscription, through the bridge_ and _API key_. Each found CLI shows its version. CLI providers have Model and Thinking effort pickers (Antigravity shows effort only for models that have one), and the bridge status with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. **Test connection** is at the bottom. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
+- **Provider** has the six providers in two groups, _Your subscription, through the bridge_ and _API key_. CLI providers have Model and Thinking effort pickers (Antigravity shows effort only for models that have one), and the bridge status with each CLI's version and **Check again**. The API providers have the base URL, model, API key (with Show and Hide) and temperature. **Test connection** is at the bottom. The tab gets a red dot when a CLI provider is picked and the bridge is missing.
 - **Sites** starts with **Show on** _this site_ and **Fix while I type** with its **Languages**. Below them is the list of hidden sites, with remove buttons and an Add field. The current host is tagged _This tab_.
 - **More** shows the shortcut, **Change shortcut** (opens `chrome://extensions/shortcuts`), **All options**, **Usage**, and the version. Usage lists each provider and model you have used, with its request count and a total. The options page shows the same table.
 
