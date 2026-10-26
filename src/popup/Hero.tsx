@@ -52,7 +52,7 @@ export function Hero({ settings, bridge, test, chat, full, onOpenProvider }: Her
         </p>
       )}
       <div class="using">
-        <span class={`dot ${link.tone}`} aria-hidden="true" />
+        <span class={`dot ${link.tone}`} role="img" aria-label={link.label} title={link.label} />
         <span class="grow" title={`${summary.title} ${summary.detail}`}>
           <b>{summary.title}</b> <span class="muted">{summary.detail}</span>
         </span>
@@ -74,7 +74,7 @@ export function Hero({ settings, bridge, test, chat, full, onOpenProvider }: Her
           {bridgeError ? (
             <BridgeErrorNote message={bridgeError} />
           ) : (
-            <span class={`link-label ${link.tone}`}>{link.label}</span>
+            link.tone !== 'ok' && <span class={`link-label ${link.tone}`}>{link.label}</span>
           )}
           <TestStatus test={test} />
         </div>
