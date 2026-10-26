@@ -15,7 +15,7 @@ interface HeroProps {
   chat: TargetState;
   /**
    * False on the Provider tab, which has its own Test connection, bridge status and result.
-   * The hero then hides those (keeping its height, so the tabs do not move).
+   * The hero then drops those.
    */
   full: boolean;
   onOpenProvider(): void;
@@ -72,15 +72,16 @@ export function Hero({ settings, bridge, test, chat, full, onOpenProvider }: Her
           Test
         </button>
       </div>
-      <div class="hero-status">
-        {bridgeError ? (
-          <BridgeErrorNote message={bridgeError} />
-        ) : (
-          // A blank line on Provider keeps the height without repeating the Bridge section.
-          <span class={`link-label ${link.tone}`}>{full ? link.label : ' '}</span>
-        )}
-        {full && <TestStatus test={test} />}
-      </div>
+      {full && (
+        <div class="hero-status">
+          {bridgeError ? (
+            <BridgeErrorNote message={bridgeError} />
+          ) : (
+            <span class={`link-label ${link.tone}`}>{link.label}</span>
+          )}
+          <TestStatus test={test} />
+        </div>
+      )}
     </div>
   );
 }

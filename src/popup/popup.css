@@ -409,7 +409,7 @@ button.new-chat.alt:hover:not(:disabled) {
   color: var(--error);
 }
 
-/* Hidden, not removed, so the hero keeps its height and the tabs stay put. */
+/* Hidden, not removed, so the line keeps its height. */
 .hero.quiet .text-btn {
   visibility: hidden;
 }
@@ -891,11 +891,13 @@ button.copy {
 /* Provider list */
 
 .prov-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 8px;
 }
 
 .group-label {
+  grid-column: 1 / -1;
   margin: 8px 0 0;
   font-size: 12px;
   color: var(--faint);
@@ -976,6 +978,9 @@ button.copy {
 .prov .name {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 550;
 }
 
