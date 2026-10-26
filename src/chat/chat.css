@@ -465,6 +465,18 @@ button.act:hover:not(:disabled) {
   margin: 0 0 0 auto;
 }
 
+/* On a narrow panel Insert and Ask in chat keep only their icons; the label stays for readers. */
+@media (max-width: 400px) {
+  .d-tools .act .lbl {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 .d-body {
   flex: 1;
   min-height: 0;

@@ -224,7 +224,7 @@ export function DocumentView({
             onClick={() => void ask()}
           >
             <ChatIcon />
-            Ask in chat
+            <span class="lbl">Ask in chat</span>
           </button>
         </div>
       </div>

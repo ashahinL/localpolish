@@ -106,7 +106,7 @@ export function InsertButton({
     <>
       <button type="button" class="act" title={hint} disabled={busy} onClick={() => void insert()}>
         <InsertIcon />
-        {busy ? 'Inserting…' : label}
+        <span class="lbl">{busy ? 'Inserting…' : label}</span>
       </button>
       {message && (
         <p class="act-status" role={failed ? 'alert' : 'status'}>
