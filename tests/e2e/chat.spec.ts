@@ -1295,10 +1295,15 @@ for (const change of [
           el.type = 'password';
         });
       if (change === 'navigation') await article.reload();
-      if (change === 'frame-navigation')
+      if (change === 'frame-navigation') {
         await article.locator('#cross-host').evaluate((el: HTMLIFrameElement) => {
           el.src += '?new-document';
         });
+        // Insert must meet the new document, not the old one that is still unloading.
+        await expect
+          .poll(() => article.frames().some((frame) => frame.url().includes('?new-document')))
+          .toBe(true);
+      }
       if (change === 'history') {
         await expect
           .poll(async () => ((await stored(sw, 'chat-history')) as unknown[] | undefined)?.length)
