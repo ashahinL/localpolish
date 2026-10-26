@@ -21,6 +21,11 @@
   --ok-soft: color-mix(in srgb, var(--ok) 10%, var(--card));
   --ok-border: color-mix(in srgb, var(--ok) 35%, var(--card));
   --error: #c2362b;
+  --warn: #b45309;
+  --warn-soft: color-mix(in srgb, var(--warn) 10%, var(--card));
+  --warn-border: color-mix(in srgb, var(--warn) 35%, var(--card));
+  --on-color: #ffffff;
+  --thumb: #ffffff;
   --error-soft: color-mix(in srgb, var(--error) 10%, var(--card));
   --error-border: color-mix(in srgb, var(--error) 35%, var(--card));
   --info-soft: var(--bg);
@@ -44,5 +49,6 @@
     --focus: #8ea6ff;
     --ok: #4cc488;
     --error: #ef6b5f;
+    --warn: #fbbf24;
   }
 }

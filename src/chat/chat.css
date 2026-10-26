@@ -1,13 +1,9 @@
 :root {
-  --warn: #b45309;
-  --warn-soft: color-mix(in srgb, var(--warn) 10%, var(--card));
-  --warn-border: color-mix(in srgb, var(--warn) 35%, var(--card));
   --user: #e9ecf4;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --warn: #fbbf24;
     --user: #242b3a;
   }
 }
@@ -144,7 +140,7 @@ button.link.danger:hover:not(:disabled) {
 button.danger-fill {
   background: var(--error);
   border-color: var(--error);
-  color: #fff;
+  color: var(--on-color);
 }
 
 button[aria-pressed='true'] {
@@ -667,7 +663,7 @@ textarea.d-text[hidden] {
 }
 
 .notice-actions button.danger-fill {
-  color: #fff;
+  color: var(--on-color);
 }
 
 /* History */

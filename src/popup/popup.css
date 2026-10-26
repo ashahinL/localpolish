@@ -1,7 +1,4 @@
 :root {
-  --warn: #b45309;
-  --warn-soft: color-mix(in srgb, var(--warn) 10%, var(--card));
-  --warn-border: color-mix(in srgb, var(--warn) 35%, var(--card));
   --seg: var(--hover);
   --seg-on: var(--card);
   --shadow: 0 1px 2px rgb(0 0 0 / 0.08);
@@ -9,7 +6,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --warn: #fbbf24;
     --seg-on: var(--mark);
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   }
@@ -494,7 +490,7 @@ span.tip.on {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--thumb);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
 }
 

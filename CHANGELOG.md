@@ -6,6 +6,14 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 ## Unreleased
 
+**Fixes**
+
+- On a narrow side panel (about 320 px), a document's toolbar stays on one row: Insert and Ask in chat show only their icons.
+
+**For contributors**
+
+- The warning color and the white used on switches and danger buttons are now tokens in `tokens.css`, defined once for the popup, side panel and options page.
+
 ## 1.5.0 — 2026-10-26
 
 **Bridge users:** nothing to do. The bridge did not change, so no `git pull`, reinstall or new login is needed.
