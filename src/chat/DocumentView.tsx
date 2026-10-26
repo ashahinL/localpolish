@@ -60,7 +60,7 @@ function createAutosave(
         id = saved.id;
         onCreated(saved.id);
       }
-      onNote({ kind: 'saved' });
+      if (!dirty && timer === undefined) onNote({ kind: 'saved' });
       return (ok = true);
     } catch (error) {
       onNote({ kind: 'failed', message: error instanceof Error ? error.message : String(error) });
@@ -70,6 +70,7 @@ function createAutosave(
 
   const flush = (): Promise<boolean> => {
     clearTimeout(timer);
+    timer = undefined;
     if (!dirty) return queue.then(() => ok);
     dirty = false;
     queue = queue.then(saveOnce);
@@ -79,6 +80,7 @@ function createAutosave(
   return {
     change(patch) {
       draft = { ...draft, ...patch };
+      onNote({ kind: 'none' });
       dirty = true;
       clearTimeout(timer);
       timer = setTimeout(() => void flush(), SAVE_DELAY_MS);
@@ -109,11 +111,13 @@ function SaveNote({ note }: { note: Note }) {
 export function DocumentView({
   id,
   insertSequence,
+  flushRef,
   onSaved,
   onAskInChat,
 }: {
   id?: string;
   insertSequence?: string;
+  flushRef: { current: (() => Promise<boolean>) | undefined };
   onSaved(id: string): void;
   onAskInChat(document: { title: string; body: string }): void;
 }) {
@@ -135,6 +139,7 @@ export function DocumentView({
       autosave.current = createAutosave(start, savedId, setNote, (newId) =>
         savedCallback.current(newId),
       );
+      flushRef.current = autosave.current.flush;
       setDraft(start);
       setNote(savedId ? { kind: 'saved' } : { kind: 'none' });
       setLoaded({ draft: start, missing });
@@ -151,6 +156,7 @@ export function DocumentView({
       );
     return () => {
       alive = false;
+      flushRef.current = undefined;
     };
   }, []);
 

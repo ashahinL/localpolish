@@ -243,3 +243,42 @@ test('emptying a saved document saves it empty', async ({ page, mock, sw }) => {
   await expect.poll(async () => (await storedDocuments(sw))?.[0]?.body).toBe('');
   expect(await storedDocuments(sw)).toHaveLength(1);
 });
+
+test('a failed save keeps the editor open until the draft can be saved', async ({
+  page,
+  mock,
+  sw,
+}) => {
+  await writeSettings(sw, `${mock.url}/v1`, { idleFix: false });
+  await openDocument(page);
+  const oversized = 'x'.repeat(128 * 1024 + 1);
+  await text(page).fill(oversized);
+  await page.getByRole('button', { name: 'New chat' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('Not saved:');
+  await expect(page.getByRole('alert')).toContainText('over the 128 KiB save limit');
+  await expect(text(page)).toHaveValue(oversized);
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveCount(0);
+
+  await text(page).fill('Short draft.');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByRole('button', { name: 'New chat' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toBeVisible();
+  expect((await storedDocuments(sw))?.[0]?.body).toBe('Short draft.');
+});
+
+test('editing a saved document clears Saved until autosave finishes', async ({
+  page,
+  mock,
+  sw,
+}) => {
+  await writeSettings(sw, `${mock.url}/v1`, { idleFix: false });
+  await openDocument(page);
+  await text(page).fill('First draft.');
+  await expect(page.locator('.d-foot .grow')).toHaveText('Saved');
+
+  await text(page).fill('Updated draft.');
+  await expect(page.locator('.d-foot .grow')).toHaveText('');
+  await expect(page.locator('.d-foot .grow')).toHaveText('Saved');
+  expect((await storedDocuments(sw))?.[0]?.body).toBe('Updated draft.');
+});

@@ -30,6 +30,25 @@ export function App() {
   // The tab the panel was opened for, kept for inserting answers into that page.
   const [entry, setEntry] = useState<PendingChat | undefined>(undefined);
   const editors = useRef(0);
+  const flushRef = useRef<(() => Promise<boolean>) | undefined>(undefined);
+  const leaving = useRef(false);
+
+  const leave = useCallback((next: () => void) => {
+    if (leaving.current) return;
+    const flush = flushRef.current;
+    if (!flush) {
+      next();
+      return;
+    }
+    leaving.current = true;
+    void flush()
+      .then((ok) => {
+        if (ok) next();
+      })
+      .finally(() => {
+        leaving.current = false;
+      });
+  }, []);
 
   const openDocument = useCallback((id?: string) => {
     editors.current += 1;
@@ -39,35 +58,41 @@ export function App() {
 
   useEffect(
     () =>
-      watchPending((pending) => {
-        setEntry(pending);
-        setHistoryOpen(false);
-        if (pending.kind === 'document') {
-          openDocument(pending.documentId);
-          return;
-        }
-        setView({ kind: 'chat' });
-        start(attached(pending.attachment));
-      }),
-    [start, openDocument],
+      watchPending((pending) =>
+        leave(() => {
+          setEntry(pending);
+          setHistoryOpen(false);
+          if (pending.kind === 'document') {
+            openDocument(pending.documentId);
+            return;
+          }
+          setView({ kind: 'chat' });
+          start(attached(pending.attachment));
+        }),
+      ),
+    [start, openDocument, leave],
   );
 
   const open = useCallback(
     (saved: SavedChat) => {
-      setEntry(undefined);
-      setView({ kind: 'chat' });
-      start(saved.attachment, { id: saved.id, turns: saved.turns });
-      setHistoryOpen(false);
+      leave(() => {
+        setEntry(undefined);
+        setView({ kind: 'chat' });
+        start(saved.attachment, { id: saved.id, turns: saved.turns });
+        setHistoryOpen(false);
+      });
     },
-    [start],
+    [start, leave],
   );
 
   const newChat = useCallback(() => {
-    setEntry(undefined);
-    setView({ kind: 'chat' });
-    start();
-    setHistoryOpen(false);
-  }, [start]);
+    leave(() => {
+      setEntry(undefined);
+      setView({ kind: 'chat' });
+      start();
+      setHistoryOpen(false);
+    });
+  }, [start, leave]);
 
   const { conversation, status } = chat;
   const title =
@@ -93,7 +118,7 @@ export function App() {
           title="History"
           aria-pressed={historyOpen}
           disabled={chat.running}
-          onClick={() => setHistoryOpen(!historyOpen)}
+          onClick={() => leave(() => setHistoryOpen(!historyOpen))}
         >
           <HistoryIcon />
         </button>
@@ -105,7 +130,7 @@ export function App() {
           type="button"
           class="c-new alt"
           aria-label="New document"
-          onClick={() => openDocument()}
+          onClick={() => leave(() => openDocument())}
         >
           <PlusIcon />
           Doc
@@ -116,7 +141,7 @@ export function App() {
           initialList={view.kind === 'document' ? 'documents' : 'chats'}
           onOpen={open}
           onDeleted={chat.forget}
-          onOpenDocument={openDocument}
+          onOpenDocument={(id) => leave(() => openDocument(id))}
           onDocumentDeleted={(id) => {
             if (view.kind === 'document' && view.id === id) newChat();
           }}
@@ -126,6 +151,7 @@ export function App() {
           key={view.editor}
           id={view.id}
           insertSequence={entry?.sequence}
+          flushRef={flushRef}
           onSaved={(id) => {
             const { editor } = view;
             setView((current) =>
@@ -135,8 +161,10 @@ export function App() {
             );
           }}
           onAskInChat={({ title, body }) => {
-            setView({ kind: 'chat' });
-            start({ text: body, title: title || 'Untitled', url: '' });
+            leave(() => {
+              setView({ kind: 'chat' });
+              start({ text: body, title: title || 'Untitled', url: '' });
+            });
           }}
         />
       ) : (
@@ -152,8 +180,10 @@ export function App() {
             onRetry={chat.retry}
             onNewChat={newChat}
             onNewChatWithAnswer={(answer) => {
-              setEntry(undefined);
-              start({ text: answer, title: 'Previous answer', url: '' });
+              leave(() => {
+                setEntry(undefined);
+                start({ text: answer, title: 'Previous answer', url: '' });
+              });
             }}
           />
           <Composer
