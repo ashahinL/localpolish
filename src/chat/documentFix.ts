@@ -12,8 +12,8 @@ interface DocumentChrome {
   runtime: {
     connect(info: { name: string }): PortLike;
     onMessage: {
-      addListener(cb: (message: unknown) => void): void;
-      removeListener(cb: (message: unknown) => void): void;
+      addListener(cb: (message: unknown, sender: { tab?: unknown }) => void): void;
+      removeListener(cb: (message: unknown, sender: { tab?: unknown }) => void): void;
     };
   };
   storage: {
@@ -48,8 +48,8 @@ export async function startDocumentFix(accepts: (el: HTMLElement) => boolean): P
     });
   });
 
-  const onMessage = (message: unknown): void => {
-    if (isOpenPopup(message)) fix.openFromShortcut();
+  const onMessage = (message: unknown, sender: { tab?: unknown }): void => {
+    if (sender.tab === undefined && isOpenPopup(message)) fix.openFromShortcut();
   };
   ext.runtime.onMessage.addListener(onMessage);
 

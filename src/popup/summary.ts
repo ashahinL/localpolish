@@ -18,7 +18,7 @@ const MARKS: Record<ProviderId, string> = {
   'anthropic-api': 'An',
 };
 
-export const CLI_KEY: Record<CliProviderId, 'claude' | 'codex' | 'grok' | 'agy'> = {
+const CLI_KEY: Record<CliProviderId, 'claude' | 'codex' | 'grok' | 'agy'> = {
   'claude-cli': 'claude',
   'codex-cli': 'codex',
   'grok-cli': 'grok',

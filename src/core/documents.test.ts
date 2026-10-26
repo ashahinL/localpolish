@@ -124,6 +124,19 @@ describe('documents', () => {
     expect(stored.get(KEY)).toEqual([updated]);
   });
 
+  it('keeps an updated document readable when the clock moves back', async () => {
+    const first = await saveDocument({ title: 'A', body: 'one' });
+    vi.setSystemTime(NOW - 1000);
+    const second = await saveDocument({ id: first.id, title: 'A', body: 'two' });
+    expect(second.updatedAt).toBe(first.createdAt);
+    expect(await loadDocument(first.id)).toEqual(second);
+  });
+
+  it('ignores a stored document whose time is beyond what a Date can hold', async () => {
+    stored.set(KEY, [record({ createdAt: 1e100, updatedAt: 1e100 })]);
+    expect(await listDocuments()).toEqual([]);
+  });
+
   it('creates a document when the id is not stored', async () => {
     vi.setSystemTime(NOW + 5);
     const saved = await saveDocument({ id: 'from-another-window', title: 'Draft', body: 'text' });

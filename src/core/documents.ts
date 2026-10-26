@@ -33,8 +33,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** The last moment a JavaScript Date can hold. */
+const MAX_TIMESTAMP = 8.64e15;
+
 function isTimestamp(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  return typeof value === 'number' && value >= 0 && value <= MAX_TIMESTAMP;
 }
 
 function recordBytes(document: SavedDocument): number {
@@ -98,7 +101,7 @@ export function saveDocument(input: SaveDocumentInput): Promise<SavedDocument> {
       title: input.title,
       body: input.body,
       createdAt: previous?.createdAt ?? now,
-      updatedAt: now,
+      updatedAt: Math.max(now, previous?.createdAt ?? now),
     };
     if (recordBytes(saved) > MAX_RECORD_BYTES) {
       throw new Error('This document is over the 128 KiB save limit. Split it into two documents.');
