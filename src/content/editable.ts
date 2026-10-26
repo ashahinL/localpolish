@@ -43,7 +43,7 @@ export function captureTarget(opts: { wholeFieldIfEmpty: boolean }): Target | nu
 
 export function fieldText(el: HTMLElement): string {
   if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) return el.value;
-  return readRich(el, el.innerText);
+  return readRich(el, renderedText(el));
 }
 
 export function isIdleField(el: HTMLElement): boolean {
@@ -136,7 +136,7 @@ function captureRich(wholeFieldIfEmpty: boolean): Target | null {
   }
   // selection.toString() keeps breaks between blocks. range.toString() does not.
   // It puts two newlines between <p> blocks, but each block is one line.
-  const text = readRich(root, selection.toString());
+  const text = readRich(root, selectedText(selection));
   if (text.trim() === '') return null;
   const whole = expanded || nothingOutside(root, range);
   return { kind: 'rich', root, range, text, whole };
@@ -224,10 +224,10 @@ async function applyRich(
   if (!selection) return { ok: false, reason: 'rejected' };
   selection.removeAllRanges();
   selection.addRange(range);
-  if (normalize(selection.toString()) !== normalize(target.text)) {
+  if (normalize(selectedText(selection)) !== normalize(target.text)) {
     return { ok: false, reason: 'changed' };
   }
-  const before = normalize(root.innerText);
+  const before = normalize(renderedText(root));
 
   // Editors that keep their own copy of the text (Lexical, Draft.js, Slate, ProseMirror, Quill)
   // all handle paste themselves. insertText changes only the page, so their copy goes stale and
@@ -279,7 +279,7 @@ function selectionMatches(root: HTMLElement, selection: Selection, original: str
   return (
     root.contains(selection.anchorNode) &&
     root.contains(selection.focusNode) &&
-    normalize(selection.toString()) === normalize(original)
+    normalize(selectedText(selection)) === normalize(original)
   );
 }
 
@@ -290,7 +290,7 @@ function contentsOf(root: HTMLElement): Range {
 }
 
 function showsText(root: HTMLElement, text: string): boolean {
-  return normalize(root.innerText).includes(normalize(text));
+  return normalize(renderedText(root)).includes(normalize(text));
 }
 
 function replaced(root: HTMLElement, before: string, text: string, original: string): boolean {
@@ -298,12 +298,51 @@ function replaced(root: HTMLElement, before: string, text: string, original: str
   // field changed, or the replacement is the text that was already there.
   return (
     showsText(root, text) &&
-    (normalize(root.innerText) !== before || normalize(text) === normalize(original))
+    (normalize(renderedText(root)) !== before || normalize(text) === normalize(original))
   );
+}
+
+const BLOCK_TAGS = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'BLOCKQUOTE', 'PRE', 'H1', 'H2', 'H3']);
+
+/** Discord and similar editors draw an emoji as an <img alt="😀">, which innerText and
+ * Selection.toString() leave out. This reads the text with each image's alt in its place. */
+function textWithImages(node: Node): string {
+  let out = '';
+  const visit = (current: Node): void => {
+    if (current instanceof Text) {
+      out += current.data.replace(/[\u200b\ufeff]/g, '');
+      return;
+    }
+    if (current instanceof HTMLImageElement) {
+      out += current.alt;
+      return;
+    }
+    if (current instanceof HTMLBRElement) {
+      out += '\n';
+      return;
+    }
+    const block = current instanceof Element && BLOCK_TAGS.has(current.tagName);
+    if (block && out !== '' && !out.endsWith('\n')) out += '\n';
+    current.childNodes.forEach(visit);
+    if (block && !out.endsWith('\n')) out += '\n';
+  };
+  visit(node);
+  return out;
+}
+
+function renderedText(root: HTMLElement): string {
+  return root.querySelector('img[alt]') ? textWithImages(root) : root.innerText;
+}
+
+function selectedText(selection: Selection): string {
+  if (selection.rangeCount === 0) return selection.toString();
+  const contents = selection.getRangeAt(0).cloneContents();
+  return contents.querySelector('img[alt]') ? textWithImages(contents) : selection.toString();
 }
 
 function normalize(value: string): string {
   return value
+    .replace(/[\u200b\ufeff]/g, '')
     .replaceAll('\u00a0', ' ')
     .replace(/\r\n?/g, '\n')
     .replace(/\s+/g, (space) => (space.includes('\n') ? '\n' : ' '))

@@ -5,7 +5,7 @@ import 'draft-js/dist/Draft.css';
 import { $getRoot, createEditor } from 'lexical';
 import { createEmptyHistoryState, registerHistory } from '@lexical/history';
 import { registerRichText } from '@lexical/rich-text';
-import { createEditor as createSlateEditor, Node as SlateNode } from 'slate';
+import { createEditor as createSlateEditor, Transforms } from 'slate';
 import { withHistory } from 'slate-history';
 import { Editable, Slate, withReact } from 'slate-react';
 import { EditorState as PmState } from 'prosemirror-state';
@@ -192,7 +192,20 @@ function DraftBox() {
     captureTarget,
     applyReplacement,
     draftText: () => editorState.getCurrentContent().getPlainText(),
-    slateText: () => slate.children.map((block) => SlateNode.string(block)).join('\n'),
+    slateText: () => slate.children.map(slateString).join('\n'),
+    slateSetEmoji: () => {
+      slate.children = [
+        {
+          type: 'paragraph',
+          children: [
+            { text: 'i has went ' },
+            { type: 'emoji', char: '\u{1F600}', children: [{ text: '' }] },
+            { text: ' home' },
+          ],
+        },
+      ];
+      slate.onChange();
+    },
     proseMirrorText: () =>
       proseMirror.state.doc.textBetween(0, proseMirror.state.doc.content.size, '\n'),
     quillText: () => quill.getText().replace(/\n$/, ''),
@@ -216,15 +229,57 @@ const root = document.getElementById('draft');
 if (!root) throw new Error('missing #draft');
 ReactDOM.render(React.createElement(DraftBox), root);
 
-// Discord's composer is Slate.
+// Discord's composer is Slate. It shows an emoji as an inline void element holding an <img>.
 const slate = withHistory(withReact(createSlateEditor()));
+const { isInline, isVoid, insertData } = slate;
+slate.isInline = (element) => element.type === 'emoji' || isInline(element);
+slate.isVoid = (element) => element.type === 'emoji' || isVoid(element);
+slate.insertData = (data) => {
+  const text = data.getData('text/plain');
+  if (!text) return insertData(data);
+  for (const part of text.split(/(\p{Extended_Pictographic})/u)) {
+    if (/^\p{Extended_Pictographic}$/u.test(part)) {
+      slate.insertNode({ type: 'emoji', char: part, children: [{ text: '' }] });
+      Transforms.move(slate, { distance: 1, unit: 'offset' });
+    } else if (part) slate.insertText(part);
+  }
+};
+
+function slateString(node) {
+  if (node.type === 'emoji') return node.char;
+  if ('text' in node) return node.text;
+  return node.children.map(slateString).join('');
+}
+
+function SlateElement({ attributes, children, element }) {
+  if (element.type !== 'emoji') return React.createElement('div', attributes, children);
+  return React.createElement(
+    'span',
+    attributes,
+    React.createElement(
+      'span',
+      { contentEditable: false },
+      React.createElement('img', {
+        className: 'emoji',
+        alt: element.char,
+        draggable: false,
+        src: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+      }),
+    ),
+    children,
+  );
+}
 
 function SlateBox() {
   const [value] = React.useState(() => [{ type: 'paragraph', children: [{ text: '' }] }]);
   return React.createElement(
     Slate,
     { editor: slate, initialValue: value },
-    React.createElement(Editable, { id: 'slate', spellCheck: true }),
+    React.createElement(Editable, {
+      id: 'slate',
+      spellCheck: true,
+      renderElement: (props) => React.createElement(SlateElement, props),
+    }),
   );
 }
 

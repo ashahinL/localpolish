@@ -27,6 +27,7 @@ type PageApi = {
     applyReplacement: (target: { text: string } | null, text: string) => Promise<ApplyResult>;
     draftText: () => string;
     slateText: () => string;
+    slateSetEmoji: () => void;
     proseMirrorText: () => string;
     quillText: () => string;
     plainText: () => string;
@@ -118,6 +119,20 @@ for (const [name, selector, reader] of [
     await expect(page.locator(selector)).toHaveText('I went home');
   });
 }
+
+test('Slate takes the fix when the draft holds an emoji image', async ({ page }) => {
+  const editor = page.locator('#slate');
+  const editorText = () => page.evaluate(() => (window as unknown as PageApi).__lp.slateText());
+  await editor.click();
+  await page.evaluate(() => (window as unknown as PageApi).__lp.slateSetEmoji());
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+a');
+
+  expect(await captureText(page, false)).toBe('i has went \u{1F600} home');
+  await page.locator('#outside').click();
+  expect(await apply(page, 'I went \u{1F600} home.')).toEqual({ ok: true });
+  await expect.poll(editorText).toBe('I went \u{1F600} home.');
+});
 
 test('Slate keeps the draft editable when a page ignores the paste', async ({ page }) => {
   const editor = page.locator('#slate');

@@ -17,11 +17,12 @@ finished but not released yet waits under Unreleased. How a version ships:
 
 - A new look on the popup, side panel and options page: navy ink, a yellow highlighter for the active tab, and sections split by thin lines. The icon is yellow. The in-page Fix popup on web pages keeps its look.
 - Chat's provider, model and thinking pickers moved into a chip in the message box. Copy and Insert into field are smaller buttons under each answer.
-- The provider line in the popup leaves out the word "Effort" and shows the full line on hover. The Provider tab lists providers in two columns.
+- The provider line in the popup leaves out the word "Effort" and shows the full line on hover. The Provider tab lists providers in two columns. The status line under it is gone when all is well: the green dot says it, and holding the pointer on it names the status.
 
 **Fixes**
 
 - Popup icons now draw at their intended line width.
+- Fix on Discord and other editors that draw emoji as images: the text with emoji is read in full, and Accept no longer fails with "The text in the field changed".
 - After the extension reloads, a tab that was already open no longer logs "Extension context invalidated" each time you focus a field in it.
 - The Fix popup no longer covers a tall field. When there is no room above or below the field, it opens under the line with the caret. In documents it uses the side panel's smaller text and buttons.
 
